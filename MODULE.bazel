@@ -1,0 +1,2 @@
+bazel_dep(name = "catch2", version = "3.6.0")
+bazel_dep(name = "google_benchmark", version = "1.8.5")
