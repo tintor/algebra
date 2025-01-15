@@ -24,52 +24,7 @@ private:
 
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
-#if 0
-    constexpr integer_backend(std::signed_integral auto a) : _single_word(static_cast<ulong>(a)), _size(signum(a)), _capacity(0) {
-        // because abs(a) doesn't work for INT32_MIN  and INT64_MIN
-        if (_single_word & (1lu << 63))
-            _single_word = ~(_single_word - 1);
-    }
-#endif
     constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size(a > 0), _capacity(0) { }
-
-#if 0
-    constexpr integer_backend(cent a) {
-        if (a > 0) {
-            if (a <= std::numeric_limits<ulong>::max()) {
-                _single_word = a;
-                _size = 1;
-                _capacity = 0;
-                return;
-            }
-            _words = new word[2];
-            _words[0] = a;
-            _words[1] = a >> 64;
-            _size = 2;
-            _capacity = 2;
-            return;
-        }
-        if (a < 0) {
-            a = -a;
-            if (a <= std::numeric_limits<ulong>::max()) {
-                _single_word = a;
-                _size = -1;
-                _capacity = 0;
-                return;
-            }
-            _words = new word[2];
-            _words[0] = a;
-            _words[1] = a >> 64;
-            _size = 2;
-            _capacity = 2;
-            return;
-        }
-        _single_word = 0;
-        _size = 0;
-        _capacity = 0;
-    }
-#endif
-
     constexpr integer_backend(unsigned __int128 a) {
         if (a > 0) {
             if (a <= std::numeric_limits<word>::max()) {
@@ -109,21 +64,24 @@ public:
             delete[] _words;
     }
 
-    // TODO this might not work for cent / ucent
     constexpr void operator=(std::unsigned_integral auto a) {
         if (a > 0) {
+            if constexpr (sizeof(a) == 16) {
+                if (a > std::numeric_limits<uint64_t>::max()) {
+                    operator[](0) = a;
+                    operator[](1) = a >> 64;
+                    _size = 2;
+                } else {
+                    operator[](0) = a;
+                    _size = 1;
+                }
+                return;
+            }
             operator[](0) = a;
             _size = 1;
             return;
         }
-#if 0
-        if (a < 0) {
-            operator[](0) = -a;
-            _size = -1;
-            return;
-        }
-#endif
-        operator[](0) = a;
+        operator[](0) = 0;
         _size = 0;
     }
 

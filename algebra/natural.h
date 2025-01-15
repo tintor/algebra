@@ -53,12 +53,10 @@ struct natural {
     constexpr bool is_even() const { return (words[0] % 2) == 0; }
     constexpr bool is_odd() const { return words[0] % 2; }
 
-    constexpr bool is_uchar() const;
-    constexpr bool is_ushort() const;
-    constexpr bool is_uint() const { return (words.size() == 1 || words.size() == 0) && words[0] <= UINT32_MAX; }
-    constexpr bool is_ulong() const { return words.size() == 1 || words.size() == 0; }
+    constexpr bool is_uint8() const;
+    constexpr bool is_uint16() const;
+    constexpr bool is_uint32() const { return (words.size() == 1 || words.size() == 0) && words[0] <= UINT32_MAX; }
     constexpr bool is_uint64() const { return words.size() == 1 || words.size() == 0; }
-    constexpr bool is_ucent() const { return 0 <= words.size() && words.size() <= 2; }
     constexpr bool is_uint128() const { return 0 <= words.size() && words.size() <= 2; }
 
     constexpr operator uint8_t() const { return words[0]; }
@@ -582,7 +580,7 @@ constexpr natural::word __word_div(const natural& a, const natural& b) {
 }
 
 constexpr void div(const natural& dividend, const natural& divisor, natural& quotient, natural& remainder) {
-    if (divisor.is_ulong()) {
+    if (divisor.is_uint64()) {
         remainder = div(dividend, static_cast<uint64_t>(divisor), quotient);
         return;
     }
@@ -905,8 +903,8 @@ constexpr std::ostream& operator<<(std::ostream& os, const algebra::natural& a) 
 
 namespace algebra {
 
-constexpr bool natural::is_uchar() const { return is_uint() && *this <= 255u; }
-constexpr bool natural::is_ushort() const { return is_uint() && *this <= 65535u; }
+constexpr bool natural::is_uint8() const { return is_uint32() && *this <= 255u; }
+constexpr bool natural::is_uint16() const { return is_uint32() && *this <= 65535u; }
 
 constexpr natural pow(natural base, std::integral auto exp) {
     if (exp < 0)
@@ -936,7 +934,7 @@ constexpr natural pow(natural base, std::integral auto exp) {
 }
 
 constexpr natural pow(natural base, const natural& _exp) {
-    if (_exp.is_ulong())
+    if (_exp.is_uint64())
         return pow(base, static_cast<uint64_t>(_exp));
 
     natural result = 1;
@@ -952,7 +950,7 @@ constexpr natural pow(natural base, const natural& _exp) {
 
 constexpr natural uniform_int(const natural& min, const natural& max, auto& rng) {
     const natural count = max - min + 1;
-    if (count.is_ulong()) {
+    if (count.is_uint64()) {
         std::uniform_int_distribution<uint64_t> dist(0, static_cast<uint64_t>(max - min));
         return min + dist(rng);
     }

@@ -54,13 +54,17 @@ Overloaded operators:
 - Same as `(a & 1) == 0`, but avoids temporary allocation for result of `&`
 #### `bool natural::is_odd() const`
 - Same as `(a & 1) == 1`, but avoids temporary allocation for result of `&`
+#### `bool natural::is_uint8() const`
+#### `bool natural::is_uint16() const`
+#### `bool natural::is_uint32() const`
+#### `bool natural::is_uint64() const`
+#### `bool natural::is_uint128() const`
 #### `void natural::mul_add(natural::word a, natural::word carry)`
 #### `std::string natural::str(uint32_t base = 10, bool upper = true) const`
 #### `std::string natural::hex() const`
 - Same as `natual::str(16)`
 #### `size_type natural::str_size_upper_bound(uint32_t base = 10) const`
 #### `size_type natural::str(char* buffer, int buffer_size, uint32_t base = 10, bool upper = true) const`
-
 #### `size_t natural::num_bits() const`
 #### `bool natural::bit(size_t i) const`
 #### `size_t natural::popcount() const`
@@ -93,20 +97,12 @@ Overloaded operators:
 #### `bool integer::is_int8() const`
 #### `bool integer::is_int16() const`
 #### `bool integer::is_int32() const`
-#### `bool integer::is_int() const`
 #### `bool integer::is_int64() const`
-#### `bool integer::is_long() const`
 #### `bool integer::is_int128() const`
-#### `bool integer::is_cent() const`
-#### `bool integer::is_uchar() const`
 #### `bool integer::is_uint8() const`
-#### `bool integer::is_ushort() const`
 #### `bool integer::is_uint16() const`
-#### `bool integer::is_uint() const`
 #### `bool integer::is_uint32() const`
-#### `bool integer::is_ulong() const`
 #### `bool integer::is_uint64() const`
-#### `bool integer::is_ucent() const`
 #### `bool integer::is_uint128() const`
 
 #### `std::string integer::str(unsigned base = 10, bool upper = true) const`
@@ -124,17 +120,19 @@ Overloaded operators:
 ### `class rational`
 #### `integer rational::num`
 #### `integer rational::den`
-`rational()`
-`rational(integer a)`
-`rational(integer a, integer b)`
-`rational(integer a, integer b, int)`
-`rational(std::integral auto a)`
-`rational(std::integral auto a, std::integral auto b)`
-`rational(float x)`
-`rational(double x)`
-`rational(std::string_view s)`
-`rational(const std::string& s)`
-`rational(const char* s)`
+#### `rational::rational()`
+#### `rational::rational(integer a)`
+#### `rational::rational(integer a, integer b)`
+- Ininializes rational as a/b, and simplifies by removing common divisor.
+#### `rational::rational(integer a, integer b, int)`
+- Same as `rational::rational(integer a, integer b)`, but assuming a and b are already simplified.
+#### `rational::rational(std::integral auto a)`
+#### `rational::rational(std::integral auto a, std::integral auto b)`
+#### `rational::rational(float x)`
+#### `rational::rational(double x)`
+#### `rational::rational(std::string_view s)`
+#### `rational::rational(const std::string& s)`
+#### `rational::rational(const char* s)`
 
 #### `void rational::simplify()`
 - You can use `.simplify()` after directly modifying `.num` and `.den` fields, to remove common factors from them.

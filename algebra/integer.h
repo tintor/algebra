@@ -11,8 +11,6 @@ struct neg_integer {
 };
 #endif
 
-// TODO char/short/ucent for all integral overloads
-// TODO std::formatter parser
 struct integer {
     using size_type = natural::size_type;
     using word = natural::word;
@@ -73,7 +71,6 @@ struct integer {
             return true;
         return sign() < 0 && abs.words[0] == static_cast<word>(INT32_MAX) + 1;
     }
-    constexpr bool is_int() const { return is_int32(); }
 
     constexpr bool is_int64() const {
         if (abs.words.size() > 1)
@@ -82,7 +79,6 @@ struct integer {
             return true;
         return sign() < 0 && abs.words[0] == static_cast<word>(INT64_MAX) + 1;
     }
-    constexpr bool is_long() const { return is_int64(); }
 
     constexpr bool is_int128() const {
         if (abs.words.size() > 2)
@@ -95,18 +91,12 @@ struct integer {
             return true;
         return sign() < 0 && w == word(1) << 63;
     }
-    constexpr bool is_cent() const { return is_int128(); }
 
-    constexpr bool is_uchar() const { return sign() >= 0 && abs.is_uchar(); }
-    constexpr bool is_uint8() const { return sign() >= 0 && abs.is_uchar(); }
-    constexpr bool is_ushort() const { return sign() >= 0 && abs.is_ushort(); }
-    constexpr bool is_uint16() const { return sign() >= 0 && abs.is_ushort(); }
-    constexpr bool is_uint() const { return sign() >= 0 && abs.is_uint(); }
-    constexpr bool is_uint32() const { return sign() >= 0 && abs.is_uint(); }
-    constexpr bool is_ulong() const { return sign() >= 0 && abs.is_ulong(); }
-    constexpr bool is_uint64() const { return sign() >= 0 && abs.is_ulong(); }
-    constexpr bool is_ucent() const { return sign() >= 0 && abs.is_ucent(); }
-    constexpr bool is_uint128() const { return sign() >= 0 && abs.is_ucent(); }
+    constexpr bool is_uint8() const { return sign() >= 0 && abs.is_uint8(); }
+    constexpr bool is_uint16() const { return sign() >= 0 && abs.is_uint16(); }
+    constexpr bool is_uint32() const { return sign() >= 0 && abs.is_uint32(); }
+    constexpr bool is_uint64() const { return sign() >= 0 && abs.is_uint64(); }
+    constexpr bool is_uint128() const { return sign() >= 0 && abs.is_uint128(); }
 
     constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s) {
         if (s.size() && s[0] == '-')
@@ -123,6 +113,8 @@ struct integer {
     constexpr operator long() const { return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0]; }
     constexpr operator unsigned long() const { return abs.operator unsigned long(); }
     constexpr operator unsigned long long() const { return abs.operator unsigned long long(); }
+    static_assert(sizeof(long) == 8);
+    static_assert(sizeof(long long) == 8);
 
     constexpr operator __int128() const {
         if (sign() == 2) return (dword(abs.words[1]) << 64) | abs.words[0];
@@ -217,11 +209,8 @@ constexpr integer operator-(integer a) { a.negate(); return a; }
 constexpr integer operator>>(integer a, std::integral auto i) { a >>= i; return a; }
 constexpr integer operator<<(integer a, std::integral auto i) { a <<= i; return a; }
 
-template<bool plus> // otherwise minus
 constexpr void add(const integer& a, const integer& b, integer& c) {
-    if (plus == (a.is_negative() == b.is_negative())) {
-        // TODO small a or b optimization
-        // here it doesn't matter if it is a += b OR b += a
+    if (a.is_negative() == b.is_negative()) {
         c.abs = a.abs + b.abs;
         return;
     }
@@ -232,95 +221,72 @@ constexpr void add(const integer& a, const integer& b, integer& c) {
     }
     c.abs = b.abs - a.abs;
     c.abs.words.set_negative(b.is_negative());
-    if (!plus)
-        c.negate();
+}
+
+constexpr void sub(const integer& a, const integer& b, integer& c) {
+    if (a.is_negative() != b.is_negative()) {
+        c.abs = a.abs + b.abs;
+        return;
+    }
+    if (b.abs < a.abs) {
+        c.abs = a.abs - b.abs;
+        c.abs.words.set_negative(a.is_negative());
+        return;
+    }
+    c.abs = b.abs - a.abs;
+    c.abs.words.set_negative(b.is_negative());
+    c.negate();
 }
 
 constexpr integer operator+(const integer& a, const integer& b) {
     integer c;
-    add<true>(a, b, c);
-    return c;
-}
-
-constexpr integer operator+(integer a, std::integral auto b) {
-    integer c;
-    add<true>(a, integer(b), c);
-    return c;
-}
-
-constexpr integer operator+(std::integral auto a, integer b) {
-    integer c;
-    add<true>(integer(a), b, c);
+    add(a, b, c);
     return c;
 }
 
 constexpr integer operator-(const integer& a, const integer& b) {
     integer c;
-    add<false>(a, b, c);
+    sub(a, b, c);
     return c;
 }
 
-constexpr integer operator-(integer a, std::integral auto b) {
-    integer c;
-    add<false>(a, integer(b), c);
-    return c;
-}
+constexpr integer operator+(const integer& a, std::integral auto b) { return a + integer(b); }
+constexpr integer operator+(std::integral auto a, const integer& b) { return integer(a) + b; }
 
-constexpr integer operator-(std::integral auto a, integer b) {
-    integer c;
-    add<false>(integer(a), b, c);
-    return c;
-}
+constexpr integer operator-(integer a, std::integral auto b) { return a - integer(b); }
+constexpr integer operator-(std::integral auto a, integer b) { return integer(a) - b; }
 
-template<bool plus>
-constexpr void add(integer& a, const integer& b) {
-    if (plus == (a.is_negative() == b.is_negative())) {
+constexpr integer& operator+=(integer& a, const integer& b) {
+    if (a.is_negative() == b.is_negative()) {
         a.abs += b.abs;
-        return;
+        return a;
     }
     if (b.abs < a.abs) {
         a.abs -= b.abs;
-        return;
+        return a;
     }
     a.abs = b.abs - a.abs; // TODO optimize this temporary
     a.abs.words.set_negative(b.is_negative());
-    if (!plus)
-        a.negate();
-}
-
-constexpr integer& operator+=(integer& a, const integer& b) {
-    add<true>(a, b);
-    return a;
-}
-
-constexpr integer& operator+=(integer& a, const natural& b) {
-    if (!a.is_negative()) {
-        a.abs += b;
-        return a;
-    }
-    if (b < a.abs) {
-        a.abs -= b;
-        return a;
-    }
-    a.abs = b - a.abs; // TODO optimize this temporary
-    a.abs.words.set_negative(false);
-    return a;
-}
-
-constexpr integer& operator+=(integer& a, std::integral auto b) {
-    add<true>(a, integer(b));
     return a;
 }
 
 constexpr integer& operator-=(integer& a, const integer& b) {
-    add<false>(a, b);
+    if (a.is_negative() != b.is_negative()) {
+        a.abs += b.abs;
+        return a;
+    }
+    if (b.abs < a.abs) {
+        a.abs -= b.abs;
+        return a;
+    }
+    a.abs = b.abs - a.abs; // TODO optimize this temporary
+    a.abs.words.set_negative(b.is_negative());
+    a.negate();
     return a;
 }
 
-constexpr integer& operator-=(integer& a, std::integral auto b) {
-    add<false>(a, integer(b));
-    return a;
-}
+constexpr integer& operator+=(integer& a, std::integral auto b) { return a += integer(b); }
+constexpr integer& operator-=(integer& a, std::integral auto b) { return a -= integer(b); }
 
 constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
 

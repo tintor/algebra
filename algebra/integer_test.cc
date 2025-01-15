@@ -449,58 +449,58 @@ TEST_CASE("mod") {
 
 TEST_CASE("is_x") {
     integer z = 0;
-    REQUIRE(z.is_int());
-    REQUIRE(z.is_uint());
-    REQUIRE(z.is_long());
-    REQUIRE(z.is_ulong());
+    REQUIRE(z.is_int32());
+    REQUIRE(z.is_uint32());
+    REQUIRE(z.is_int64());
+    REQUIRE(z.is_uint64());
 
     integer o = 1;
-    REQUIRE(o.is_int());
-    REQUIRE(o.is_uint());
-    REQUIRE(o.is_long());
-    REQUIRE(o.is_ulong());
+    REQUIRE(o.is_int32());
+    REQUIRE(o.is_uint32());
+    REQUIRE(o.is_int64());
+    REQUIRE(o.is_uint64());
 
     integer n = -1;
-    REQUIRE(n.is_int());
-    REQUIRE(!n.is_uint());
-    REQUIRE(n.is_long());
-    REQUIRE(!n.is_ulong());
+    REQUIRE(n.is_int32());
+    REQUIRE(!n.is_uint32());
+    REQUIRE(n.is_int64());
+    REQUIRE(!n.is_uint64());
 
     integer p = std::numeric_limits<uint>::max();
-    REQUIRE(!p.is_int());
-    REQUIRE(p.is_uint());
-    REQUIRE(p.is_long());
-    REQUIRE(p.is_ulong());
+    REQUIRE(!p.is_int32());
+    REQUIRE(p.is_uint32());
+    REQUIRE(p.is_int64());
+    REQUIRE(p.is_uint64());
 
     integer q = (ulong)std::numeric_limits<uint>::max() + 1;
-    REQUIRE(!q.is_int());
-    REQUIRE(!q.is_uint());
-    REQUIRE(q.is_long());
-    REQUIRE(q.is_ulong());
+    REQUIRE(!q.is_int32());
+    REQUIRE(!q.is_uint32());
+    REQUIRE(q.is_int64());
+    REQUIRE(q.is_uint64());
 
     integer a = std::numeric_limits<long>::max();
-    REQUIRE(!a.is_int());
-    REQUIRE(!a.is_uint());
-    REQUIRE(a.is_long());
-    REQUIRE(a.is_ulong());
+    REQUIRE(!a.is_int32());
+    REQUIRE(!a.is_uint32());
+    REQUIRE(a.is_int64());
+    REQUIRE(a.is_uint64());
 
     integer b = (ulong)std::numeric_limits<long>::max() + 1;
-    REQUIRE(!b.is_int());
-    REQUIRE(!b.is_uint());
-    REQUIRE(!b.is_long());
-    REQUIRE(b.is_ulong());
+    REQUIRE(!b.is_int32());
+    REQUIRE(!b.is_uint32());
+    REQUIRE(!b.is_int64());
+    REQUIRE(b.is_uint64());
 
     integer c = std::numeric_limits<ulong>::max();
-    REQUIRE(!c.is_int());
-    REQUIRE(!c.is_uint());
-    REQUIRE(!c.is_long());
-    REQUIRE(c.is_ulong());
+    REQUIRE(!c.is_int32());
+    REQUIRE(!c.is_uint32());
+    REQUIRE(!c.is_int64());
+    REQUIRE(c.is_uint64());
 
     integer d = c + 1;
-    REQUIRE(!d.is_int());
-    REQUIRE(!d.is_uint());
-    REQUIRE(!d.is_long());
-    REQUIRE(!d.is_ulong());
+    REQUIRE(!d.is_int32());
+    REQUIRE(!d.is_uint32());
+    REQUIRE(!d.is_int64());
+    REQUIRE(!d.is_uint64());
 }
 
 TEST_CASE("<<=") {

@@ -489,35 +489,35 @@ TEST_CASE("uniform_int") {
 
 TEST_CASE("is_x") {
     natural z = 0;
-    REQUIRE(z.is_uint());
+    REQUIRE(z.is_uint32());
     REQUIRE(z.is_uint64());
 
     natural o = 1;
-    REQUIRE(o.is_uint());
+    REQUIRE(o.is_uint32());
     REQUIRE(o.is_uint64());
 
     natural p = std::numeric_limits<uint>::max();
-    REQUIRE(p.is_uint());
+    REQUIRE(p.is_uint32());
     REQUIRE(p.is_uint64());
 
     natural q = (uint64_t)std::numeric_limits<uint>::max() + 1;
-    REQUIRE(!q.is_uint());
+    REQUIRE(!q.is_uint32());
     REQUIRE(q.is_uint64());
 
     natural a = std::numeric_limits<long>::max();
-    REQUIRE(!a.is_uint());
+    REQUIRE(!a.is_uint32());
     REQUIRE(a.is_uint64());
 
     natural b = (uint64_t)std::numeric_limits<long>::max() + 1;
-    REQUIRE(!b.is_uint());
+    REQUIRE(!b.is_uint32());
     REQUIRE(b.is_uint64());
 
     natural c = std::numeric_limits<uint64_t>::max();
-    REQUIRE(!c.is_uint());
+    REQUIRE(!c.is_uint32());
     REQUIRE(c.is_uint64());
 
     natural d = c + 1;
-    REQUIRE(!d.is_uint());
+    REQUIRE(!d.is_uint32());
     REQUIRE(!d.is_uint64());
 }
 
