@@ -1,6 +1,6 @@
 package(default_visibility = ["//visibility:public"])
 
-cc_library(name = "integer_backend", hdrs = ["integer_backend.h"], srcs = ["integer_backend.cc"])
+cc_library(name = "integer_backend", hdrs = ["integer_backend.h"])
 cc_library(name = "natural", hdrs = ["natural.h"], deps = [":integer_backend"])
 cc_library(name = "integer", hdrs = ["integer.h"], deps = [":natural"])
 cc_library(name = "rational", hdrs = ["rational.h"], deps = [":integer"])
