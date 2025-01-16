@@ -5,6 +5,8 @@
 #include <bit>
 #include <stdexcept>
 #include <algorithm>
+#include <print>
+#include <vector>
 
 namespace algebra {
 
@@ -40,7 +42,10 @@ struct natural {
     integer_backend words;
 
     constexpr natural() {}
-    constexpr natural(std::integral auto a) : words(a) {}
+    constexpr natural(std::integral auto a) : words(a) {
+        if (a < 0)
+            throw std::runtime_error("assigning negative number to natural");
+    }
     constexpr natural(natural&& o) : words(std::move(o.words)) { }
     constexpr natural(const natural& o) : words(o.words) { }
 
@@ -49,23 +54,47 @@ struct natural {
     constexpr void operator=(natural&& o) { words = std::move(o.words); }
     constexpr void operator=(const natural& o) { words = o.words; }
 
-    constexpr bool is_one() const { return words.size() == 1 && words[0] == 1; }
+    constexpr bool is_one() const { return words[0] == 1 && words.size() == 1; }
     constexpr bool is_even() const { return (words[0] % 2) == 0; }
     constexpr bool is_odd() const { return words[0] % 2; }
 
     constexpr bool is_uint8() const;
     constexpr bool is_uint16() const;
-    constexpr bool is_uint32() const { return (words.size() == 1 || words.size() == 0) && words[0] <= UINT32_MAX; }
-    constexpr bool is_uint64() const { return words.size() == 1 || words.size() == 0; }
-    constexpr bool is_uint128() const { return 0 <= words.size() && words.size() <= 2; }
+    constexpr bool is_uint32() const { return words.size() <= 1 && words[0] <= UINT32_MAX; }
+    constexpr bool is_uint64() const { return words.size() <= 1; }
+    constexpr bool is_uint128() const { return words.size() <= 2; }
 
-    constexpr operator uint8_t() const { return words[0]; }
-    constexpr operator uint16_t() const { return words[0]; }
-    constexpr operator uint32_t() const { return words[0]; }
-    constexpr operator unsigned long() const { return words[0]; }
-    constexpr operator unsigned long long() const { return words[0]; }
+    constexpr operator uint8_t() const {
+        if (!is_uint8())
+            throw std::runtime_error("cast overflow");
+        return words[0];
+    }
+    constexpr operator uint16_t() const {
+        if (!is_uint16())
+            throw std::runtime_error("cast overflow");
+        return words[0];
+    }
+    constexpr operator uint32_t() const {
+        if (!is_uint32())
+            throw std::runtime_error("cast overflow");
+        return words[0];
+    }
+    constexpr operator unsigned long() const {
+        static_assert(sizeof(unsigned long) == 8);
+        if (!is_uint64())
+            throw std::runtime_error("cast overflow");
+        return words[0];
+    }
+    constexpr operator unsigned long long() const {
+        static_assert(sizeof(unsigned long long) == 8);
+        if (!is_uint64())
+            throw std::runtime_error("cast overflow");
+        return words[0];
+    }
 
     constexpr operator unsigned __int128() const {
+        if (!is_uint128())
+            throw std::runtime_error("cast overflow");
         dword a = words[0];
         if (words.size() >= 2)
             a |= dword(words[1]) << 64;
@@ -83,7 +112,7 @@ struct natural {
     }
 
     constexpr natural& operator+=(word b) {
-        for (size_t i = 0; i < words.size(); ++i) {
+        for (size_type i = 0; b && i < words.size(); ++i) {
             dword acc = (dword)words[i] + b;
             words[i] = acc;
             b = acc >> 64;
@@ -160,11 +189,19 @@ struct natural {
                 borrow = 0;
             }
         }
+        if (borrow)
+            throw std::format_error("natural subtraction out of domain");
         words.normalize();
         return *this;
     }
 
-    constexpr void mul_add(word a, word carry) {
+    constexpr void mul_add(uint64_t a, uint64_t carry) {
+        if (a == 0) {
+            words.set_zero();
+            if (carry)
+                words += carry;
+            return;
+        }
         for (size_type i = 0; i < words.size(); ++i) {
             dword acc = (dword)words[i] * a + carry;
             words[i] = acc;
@@ -172,13 +209,12 @@ struct natural {
         }
         if (carry)
             words += carry;
-        words.normalize();
     }
-    constexpr natural& operator*=(word b) { mul_add(b, 0); return *this; }
+    constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
 
-    constexpr word operator%(std::integral auto b) const {
+    constexpr uint64_t operator%(std::integral auto b) const {
         if (b <= 0)
-            throw std::runtime_error((b == 0) ? "division by zero" : "division of natural by negative");
+            throw std::runtime_error((b == 0) ? "division by zero" : "division of natural by negative number");
         dword acc = 0;
         for (size_type i = words.size(); i-- > 0;) {
             acc <<= 64;
@@ -186,6 +222,33 @@ struct natural {
             acc %= static_cast<word>(b);
         }
         return acc;
+    }
+
+    constexpr uint64_t mod2() const { return words[0] % 2; }
+
+    constexpr uint64_t mod3() const {
+        word acc = 0;
+        for (size_type i = words.size(); i-- > 0;)
+            acc += words[i] % 3;
+        return acc % 3;
+    }
+
+    constexpr uint64_t mod4() const { return words[0] % 4; }
+
+    constexpr uint64_t mod5() const {
+        word acc = 0;
+        if (words.size() > std::numeric_limits<word>::max() / 4) {
+            for (size_type i = words.size(); i-- > 0;) {
+                acc += words[i] % 5;
+                if ((i % 65536) == 0)
+                    acc %= 5;
+            }
+        } else {
+            // (2**64) mod 5 == 1
+            for (size_type i = words.size(); i-- > 0;)
+                acc += words[i] % 5;
+        }
+        return acc % 5;
     }
 
     constexpr natural& operator%=(std::integral auto b) { *this = operator%(b); return *this; }
@@ -238,13 +301,23 @@ struct natural {
 
 constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - __builtin_clzl(a); }
 
-constexpr natural operator+(const natural& a, const natural& b) { natural c = a; return c += b; }
-constexpr natural operator+(const natural& a, uint64_t b) { natural c = a; return c += b; }
-constexpr natural operator+(const natural& a, int b) { return a + (uint64_t)b; }
+constexpr natural operator+(const natural& a, const natural& b) { natural c = a; c += b; return c; }
+constexpr natural operator+(natural a, const std::integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("addition of natural and negative number");
+    a += static_cast<natural::word>(b);
+    return a;
+}
+constexpr natural operator+(const std::integral auto a, natural b) { return std::move(b) + a; }
 
-constexpr natural operator-(const natural& a, const natural& b) { natural c = a; return c -= b; }
-constexpr natural operator-(const natural& a, uint64_t b) { natural c = a; return c -= b; }
-constexpr natural operator-(const natural& a, int b) { return a - (uint64_t)b; }
+constexpr natural operator-(const natural& a, const natural& b) { natural c = a; c -= b; return c; }
+constexpr natural operator-(natural a, const std::integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("subtraction of natural and negative number");
+    a -= static_cast<natural::word>(b);
+    return a;
+}
+constexpr natural operator-(const std::integral auto a, natural b) { return natural(a) - b; }
 
 constexpr bool operator<(const natural& a, const natural& b) {
     if (a.words.size() > b.words.size())
@@ -411,8 +484,13 @@ constexpr void mul(natural& a, const natural& b) {
 }
 
 constexpr natural operator*(const natural& a, const natural& b) { natural c; mul(a, b, /*out*/c); return c; }
-constexpr natural operator*(const natural& a, std::integral auto b) { natural c = a; c *= static_cast<natural::word>(b); return c; }
-constexpr natural operator*(std::integral auto a, const natural& b) { natural c = b; c *= static_cast<natural::word>(a); return c; }
+constexpr natural operator*(natural a, std::integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("multiplication of natural with negative number");
+    a *= static_cast<natural::word>(b);
+    return a;
+}
+constexpr natural operator*(std::integral auto a, natural b) { return std::move(b) * a; }
 
 constexpr natural& operator*=(natural& a, const natural& b) { mul(a, b); return a; }
 
@@ -584,23 +662,35 @@ constexpr void div(const natural& dividend, const natural& divisor, natural& quo
         remainder = div(dividend, static_cast<uint64_t>(divisor), quotient);
         return;
     }
-
     if (divisor.words.size() == 0)
         throw std::runtime_error("division by zero");
     if (&dividend != &quotient)
         quotient.words.reset(dividend.words.size());
-
+    remainder.words.set_zero();
     for (auto i = dividend.words.size(); i-- > 0;) {
-        remainder.words.insert_first_word(dividend.words[i]);
-        remainder.words.normalize();
-
+        if (remainder.words.size() || dividend.words[i])
+            remainder.words.insert_first_word(dividend.words[i]);
         const natural::word q = __word_div(divisor, remainder);
         quotient.words[i] = q;
         sub_product(remainder, divisor, q); // remainder -= divisor * q
     }
-
     quotient.words.normalize();
-    remainder.words.normalize();
+}
+
+constexpr void mod(const natural& dividend, const natural& divisor, natural& remainder) {
+    if (divisor.is_uint64()) {
+        remainder = dividend % static_cast<uint64_t>(divisor);
+        return;
+    }
+    if (divisor.words.size() == 0)
+        throw std::runtime_error("division by zero");
+    remainder.words.set_zero();
+    for (auto i = dividend.words.size(); i-- > 0;) {
+        if (remainder.words.size() || dividend.words[i])
+            remainder.words.insert_first_word(dividend.words[i]);
+        const natural::word q = __word_div(divisor, remainder);
+        sub_product(remainder, divisor, q); // remainder -= divisor * q
+    }
 }
 
 constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const bool upper) const {
@@ -672,12 +762,24 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
 }
 
 constexpr natural operator/(const natural& a, const natural& b) { natural quot, rem; div(a, b, /*out*/quot, /*out*/rem); return quot; }
-constexpr natural operator/(const natural& a, std::integral auto b) { natural q; div(a, static_cast<natural::word>(b), q); return q; }
+constexpr natural operator/(const natural& a, std::integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("division of natural with negative number");
+    natural q;
+    div(a, static_cast<natural::word>(b), q);
+    return q;
+}
 
 constexpr natural& operator/=(natural& a, const natural &b) { natural rem; div(a, b, /*out*/a, /*out*/rem); return a; }
-constexpr natural& operator/=(natural& a, std::integral auto b) { div(a, static_cast<natural::word>(b), a); return a; }
+constexpr natural& operator/=(natural& a, std::integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("division of natural with negative number");
+    div(a, static_cast<natural::word>(b), a);
+    return a;
+}
 
-constexpr natural operator%(const natural& a, const natural& b) { natural quot, rem; div(a, b, /*out*/quot, /*out*/rem); return rem; }
+constexpr natural operator%(const natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); return rem; }
+constexpr natural& operator%=(natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); a = rem; return a; }
 
 constexpr natural& operator>>=(natural& a, size_t i) {
     size_t bits_per_word = sizeof(natural::word) * 8;
@@ -823,7 +925,10 @@ constexpr natural& operator^=(natural& a, natural::word b) {
     return a;
 }
 
+namespace literals {
 constexpr auto operator""_n(const char* s) { return natural(s); }
+}
+
 }
 
 template <>
@@ -948,42 +1053,94 @@ constexpr natural pow(natural base, const natural& _exp) {
     return result;
 }
 
-constexpr natural uniform_int(const natural& min, const natural& max, auto& rng) {
-    const natural count = max - min + 1;
+// uniformly sample from [0, (2**n)-1]
+constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
+    static_assert(sizeof(rng()) == 8);
+    auto w = (n + 63) / 64;
+    out.words.reset(w, /*initialize*/false);
+    while (w--)
+        out.words[w] = rng();
+    if ((n % 64) != 0)
+        out.words.back() &= (natural::word(1) << (n % 64)) - 1;
+    out.words.normalize();
+}
+
+constexpr natural uniform_sample_bits(const size_t n, auto& rng) {
+    natural out;
+    uniform_sample_bits(n, rng, /*out*/out);
+    return out;
+}
+
+// uniformly sample from [0, count-1]
+constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
     if (count.is_uint64()) {
-        std::uniform_int_distribution<uint64_t> dist(0, static_cast<uint64_t>(max - min));
-        return min + dist(rng);
+        out = std::uniform_int_distribution<uint64_t>(0, static_cast<uint64_t>(count) - 1)(rng);
+        return;
+    }
+    if (count.words.size() == 2 && count.words[0] == 0 && count.words[1] == 1) {
+        static_assert(sizeof(rng()) == 8);
+        out = rng();
+        return;
     }
 
-    if (min.words.size() == 0 && max.words.size() > 0) {
-        const auto e = max.num_bits();
-        if (e % 64 == 0 && max.popcount() == e) {
-            const natural::size_type n = (e + 1) / 64;
-            natural raw;
-            raw.words.reset(n);
-            for (natural::size_type i = 0; i < n; i++) {
-                auto w = rng();
-                static_assert(sizeof(w) == 8);
-                raw.words[i] = w;
-            }
-            return raw;
+    const auto z = count.num_trailing_zeros();
+    const auto b = count.num_bits();
+    if (b == z + 1) { // if count is power of 2
+        uniform_sample_bits(z, rng, /*out*/out);
+        return;
+    }
+
+    const natural::size_type n = (b + 63) / 64;
+    if (b == 64 * n) {
+        // Note: power of two case is handled above!
+        // mq = pow(2_n, 64 * n) / count
+        // assert mq == 1
+        while (true) {
+            uniform_sample_bits(n * 64, rng, /*out*/out);
+            if (out < count)
+                return;
         }
     }
-
-    const natural::size_type n = (count.num_bits() + 63) / 64;
-    natural raw, quotient, remainder;
-    const natural mq = pow(2_n, 64 * n) / count;
+    // TODO avoid this division in mq == 2 case
+    natural temp;
+    natural mq = pow(natural(2), n * 64);
+    mq /= count;
+    if (mq == 2) {
+        temp = count;
+        temp <<= 1;
+    }
     while (true) {
-        raw.words.reset(n);
-        for (natural::size_type i = 0; i < n; i++) {
-            auto w = rng();
-            static_assert(sizeof(w) == 8);
-            raw.words[i] = w;
+        if (mq == 2) {
+            // optimization: avoid expensive div() for small mq
+            uniform_sample_bits(n * 64, rng, /*out*/out);
+            if (out < temp) {
+                if (out >= count)
+                    out -= count;
+                return;
+            }
+        } else {
+            uniform_sample_bits(n * 64, rng, /*out*/temp);
+            div(temp, count, /*out*/temp, /*out*/out);
+            if (temp < mq)
+                return;
         }
-        div(raw, count, quotient, remainder);
-        if (quotient < mq)
-            return min + remainder;
     }
+}
+
+constexpr natural uniform_sample(const natural& count, auto& rng) {
+    natural out;
+    uniform_sample(count, rng, /*out*/out);
+    return out;
+}
+
+constexpr natural uniform_sample(const natural& min, const natural& max, auto& rng) {
+    natural count = max;
+    count -= min;
+    count += 1;
+    natural out;
+    uniform_sample(count, rng, /*out*/out);
+    out += min;
+    return out;
 }
 
 constexpr auto num_trailing_zeros(std::unsigned_integral auto a) { return a ? __builtin_ctzl(a) : 0; }
@@ -991,10 +1148,9 @@ constexpr auto num_trailing_zeros(std::unsigned_integral auto a) { return a ? __
 template<std::unsigned_integral T>
 constexpr T __gcd_inner(T a, T b) {
     while (b) {
-        b >>= num_trailing_zeros(b);
-        if (a > b) {
+        b >>= __builtin_ctzl(b); // since b is non-zero
+        if (a > b)
             std::swap(a, b);
-        }
         b -= a;
     }
     return a;
@@ -1011,6 +1167,22 @@ constexpr T gcd(T a, T b) {
         return __gcd_inner(a, b);
     auto common = std::min(az, num_trailing_zeros(b));
     return __gcd_inner(a >> az, b >> common) << common;
+}
+
+constexpr uint64_t gcd(uint64_t a, uint64_t b) {
+    if (a == 0)
+        return b;
+    if (b == 0)
+        return a;
+    auto common = __builtin_ctzl(a | b);
+    a >>= __builtin_ctzl(a);
+    do {
+        b >>= __builtin_ctzl(b);
+        if (a > b)
+            std::swap(a, b);
+        b -= a;
+    } while (b);
+    return a << common;
 }
 
 constexpr natural gcd(natural a, natural b) {
@@ -1041,6 +1213,16 @@ constexpr natural gcd(natural a, natural b) {
     return a;
 }
 
+constexpr natural gcd(std::integral auto a, natural b) { return gcd(natural(abs_ulong(a)), std::move(b)); }
+constexpr natural gcd(natural a, std::integral auto b) { return gcd(std::move(a), natural(abs_ulong(b))); }
+
+// least common multiple
+constexpr natural lcm(const natural& a, const natural& b) {
+    natural m = a * b;
+    m /= gcd(a, b);
+    return m;
+}
+
 constexpr natural isqrt(const natural& x) {
     if (x == 0 || x == 1)
         return x;
@@ -1062,49 +1244,195 @@ constexpr natural isqrt(const natural& x) {
 }
 
 constexpr bool is_prime(const uint64_t a) {
-    if (a == 2)
-        return true;
-    if (a < 2 || a % 2 == 0)
+    if (a <= 3)
+        return a >= 2;
+    if (a % 2 == 0 || a % 3 == 0)
         return false;
-    uint64_t e = 3;
-    uint64_t ee = 9;
+    uint32_t i = 5;
     while (true) {
-        if (ee > a)
+        // overflow here is not possible
+        if (uint64_t(i) * i > a)
             return true;
-        if (a % e == 0)
+        if (a % i == 0 || a % (i + 2) == 0)
             return false;
-        uint64_t m = 2 * e + 1;
-        if (ee > std::numeric_limits<uint64_t>::max() - m)
-            throw std::runtime_error("uint64_t overflow");
-        ee += m;
-        e += 2;
+        i += 6;
+        // uint32_t oveflow check
+        if (i <= 5)
+            return true;
     }
 }
 
 constexpr bool is_prime(const natural& a) {
-    if (a == 2)
-        return true;
-    if (a < 2 || a.is_even())
+    if (a.is_uint64())
+        return is_prime(static_cast<uint64_t>(a));
+    if (a <= 3)
+        return a >= 2;
+    if (a.is_even() == 0 || a.mod3() == 0)
         return false;
-    uint64_t e = 3;
-    uint64_t ee = 9;
+    uint64_t i = 5;
     while (true) {
-        if (ee > a)
+        if (i * i > a)
             return true;
-        if (a % e == 0)
+        if (a % i == 0 || a % (i + 2) == 0)
             return false;
-        uint64_t m = 2 * e + 1;
-        if (ee > std::numeric_limits<uint64_t>::max() - m)
+        i += 6;
+        // uint64_t oveflow check
+        if (i <= 5)
             break;
-        ee += m;
-        e += 2;
+    }
+    natural ni = i - 6; // rollback to i before overflow
+    ni += 6; // overflow safe
+    natural q;
+    while (true) {
+        mul(ni, ni, /*out*/q); // q = ni * ni
+        if (q > a)
+            return true;
+
+        mod(a, ni, /*out*/q); // q = a % ni
+        if (!q)
+            return false;
+
+        ni += 2;
+        mod(a, ni, /*out*/q); // q = a % ni
+        if (!q)
+            return false;
+
+        ni += 4;
+    }
+}
+
+// returns (a ** n) mod p
+constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
+    uint64_t b = 1;
+    a %= p;
+     while (n) {
+        if (n & 1)
+            b = (static_cast<__uint128_t>(b) * a) % p;
+        n >>= 1;
+        a = (static_cast<__uint128_t>(a) * a) % p;
+    }
+    return b;
+}
+
+// assumes are a and b are in [0, m-1] range
+// a = (a * b) % m
+constexpr void mul_mod(natural& a, const natural& b, const natural& m) {
+    // TODO optimize
+    a *= b;
+    if (a >= m)
+        a %= m;
+}
+
+// returns (a**n) mod p
+constexpr void pow_mod(natural a, natural n, const natural& p, natural& out) {
+    out = 1;
+    if (a >= p)
+        a %= p;
+    for (size_t i = 0; i < n.num_bits(); i++) {
+        if (n.bit(i))
+            mul_mod(out, a, p);
+        mul_mod(a, a, p);
+    }
+}
+
+constexpr natural pow_mod(natural a, natural n, natural p) {
+    natural out;
+    pow_mod(a, n, p, /*out*/out);
+    return out;
+}
+
+// Miller-Rabin algorithm
+// It returns false if n is composite and returns true if n
+// is probably prime.  k is an input parameter that determines
+// accuracy level. Higher value of `rounds` indicates more accuracy.
+constexpr bool is_likely_prime(const uint64_t n, int rounds, auto& rng) {
+    if (n <= 4)
+        return n == 2 || n == 3;
+    if (n % 2 == 0)
+        return false;
+
+    const auto s = num_trailing_zeros(n - 1);
+    const uint64_t d = (n - 1) >> s;
+
+    for (int i = 0; i < rounds; i++) {
+        const uint64_t a = std::uniform_int_distribution<uint64_t>(2, n-2)(rng);
+
+        uint64_t x = pow_mod(a, d, n);
+        if (x == 1 || x == n - 1)
+            continue;
+
+        int r = 1;
+        for (; r < s; r++) {
+            x = (static_cast<__uint128_t>(x) * x) % n;
+            if (x == n - 1)
+                break;
+        }
+        if (r == s)
+            return false;
+    }
+    return true;
+}
+
+constexpr bool is_likely_prime(const natural& n, int rounds, auto& rng) {
+    if (n.is_uint64())
+        return is_likely_prime(static_cast<uint64_t>(n), rounds, rng);
+
+    if (n <= 4)
+        return n == 2 || n == 3;
+    if (n.is_even())
+        return false;
+
+    const natural n_minus_1 = n - 1;
+    const natural n_minus_3 = n - 3;
+    auto s = n_minus_1.num_trailing_zeros();
+    natural d = n_minus_1;
+    d >>= s;
+    natural x, a;
+
+    for (int i = 0; i < rounds; i++) {
+        // sample uniformly from [2, n-2] and store in a
+        uniform_sample(n_minus_3, rng, /*out*/a);
+        a += 2;
+
+        pow_mod(a, d, n, /*out*/x);
+        if (x == 1 || x == n_minus_1)
+            continue;
+
+        int r = 1;
+        for (; r < s; r++) {
+            mul_mod(x, x, n); // x = (x * x) % n
+            if (x == n_minus_1)
+                break;
+        }
+        if (r == s)
+            return false;
+    }
+    return true;
+}
+
+constexpr std::vector<std::pair<uint64_t, int>> factorize(uint64_t a) {
+    if (a <= 1)
+        return {};
+
+    std::vector<std::pair<uint64_t, int>> out;
+    auto z = num_trailing_zeros(a);
+    if (z) {
+        out.emplace_back(2, z);
+        a >>= z;
     }
 
-    const natural sqrt_a = isqrt(a);
-    for (natural i = e + 2; i <= sqrt_a; i += 2)
-        if (a % i == 0)
-            return false;
-    return true;
+    uint64_t p = 3;
+    while (a > 1) {
+        int count = 0;
+        while (a % p == 0) {
+            a /= p;
+            count += 1;
+        }
+        if (count)
+            out.emplace_back(p, count);
+        p += 2;
+    }
+    return out;
 }
 
 constexpr bool is_power_of_two(const natural& a) {

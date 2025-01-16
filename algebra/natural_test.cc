@@ -6,6 +6,17 @@ using std::print;
 using std::format;
 using ucent = unsigned __int128;
 using namespace algebra;
+using namespace algebra::literals;
+
+namespace std::__1 {
+bool __is_posix_terminal(__sFILE*) { return true; }
+}
+
+TEST_CASE("div 10") {
+    natural a = 10;
+    int b = 10;
+    REQUIRE(div(a, b, a) == 0);
+}
 
 class Random {
 public:
@@ -469,11 +480,11 @@ TEST_CASE("stress div with remainder") {
     }
 }
 
-TEST_CASE("uniform_int") {
+TEST_CASE("uniform_sample") {
     natural a = (1_n << 128) - 1;
     Random rng;
     for (int i = 0; i < 20; i++) {
-        natural m = uniform_int(0, a, rng.get());
+        natural m = uniform_sample(0, a, rng.get());
         REQUIRE(m.words.size() <= a.words.size());
         REQUIRE(0 <= m);
         REQUIRE(m <= a);
@@ -483,6 +494,32 @@ TEST_CASE("uniform_int") {
             div(m, 10ull, /*out*/m);
         }
     }
+}
+
+natural diff(const natural& a, const natural& b) {
+    return (a >= b) ? (a - b) : (b - a);
+}
+
+TEST_CASE("uniform_sample2") {
+    natural a = 999'999'999'999'999'999'999'999'999'999'999'999_n;
+    natural b = 500'000'000'000'000'000'000'000'000'000'000'000_n;
+    Random rng;
+    natural sum;
+    int n = 100000;
+    for (int i = 0; i < n; i++) {
+        natural m = uniform_sample(0, a, rng.get());
+        REQUIRE(m.words.size() <= a.words.size());
+        REQUIRE(0 <= m);
+        REQUIRE(m <= a);
+        REQUIRE(0 <= m.words.size());
+        REQUIRE(m.words.size() <= 2);
+        if (i < 20)
+            print("{}\n", m);
+        sum += m;
+    }
+    sum /= n;
+    print("avg {}\n", sum);
+    REQUIRE(diff(sum, b) <= b / 100);
 }
 
 // TODO randomized long division test against cpp_int for big naturals!
@@ -651,9 +688,32 @@ TEST_CASE("power_of_two") {
     REQUIRE(pow(2_n, 64) == 1_n << 64);
 }
 
-TEST_CASE("merseinne primes") {
-    std::vector<int> p = {2, 3, 5, 7, 13, 17, 19, 31, 61};
-    for (int i = 0; i <= 70; i++) {
-        REQUIRE(is_prime(pow(2_n, i) - 1) == (std::find(p.begin(), p.end(), i) != p.end()));
+TEST_CASE("factorize") {
+    using f = std::vector<std::pair<uint64_t, int>>;
+    REQUIRE(factorize(0_n) == f{});
+    REQUIRE(factorize(1_n) == f{});
+    REQUIRE(factorize(12_n) == f{{2, 2}, {3, 1}});
+    REQUIRE(factorize(16_n) == f{{2, 4}});
+    REQUIRE(factorize(13_n) == f{{13, 1}});
+    REQUIRE(factorize(30_n) == f{{2, 1}, {3, 1}, {5, 1}});
+}
+
+TEST_CASE("is_prime vs is_likely_prime") {
+    Random rng(0);
+    for (uint64_t p = 50'000'000; p <= 50'100'000; p++) {
+        bool m = is_likely_prime(natural(p), 10, rng.get());
+        bool e = is_prime(p);
+        REQUIRE(m == e);
+    }
+}
+
+TEST_CASE("merseinne primes vs is_likely_prime") {
+    Random rng;
+    std::vector<int> mp = {2, 3, 5, 7, 13, 17, 19, 31, 61, 89, 107, 127, 521, 607, 1279};
+    for (int p = 2; p <= mp.back() + 1; p++) {
+        natural a = pow(2_n, p) - 1;
+        bool actual = is_likely_prime(a, 10, rng.get());
+        bool expected = (std::find(mp.begin(), mp.end(), p) != mp.end());
+        REQUIRE(actual == expected);
     }
 }

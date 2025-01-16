@@ -223,7 +223,9 @@ constexpr std::ostream& operator<<(std::ostream& os, const algebra::rational& a)
 
 namespace algebra {
 
+namespace literals {
 constexpr auto operator""_q(const char* s) { return rational(s); }
+}
 
 constexpr rational::rational(float x) {
     if (std::isnan(x))
@@ -635,7 +637,7 @@ constexpr BinarySplit __PI(unsigned a, unsigned b) {
 // Chudnovsky algorithm
 constexpr rational PI(unsigned n) {
     BinarySplit e = __PI(1, std::max(2u, n));
-    return sqrt(10005_q, n) * rational{426880 * e.q, 13591409 * e.q + e.r};
+    return sqrt(rational(10005), n) * rational{426880 * e.q, 13591409 * e.q + e.r};
 }
 
 constexpr rational sin(rational x, unsigned n) {

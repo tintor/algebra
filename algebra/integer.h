@@ -571,14 +571,19 @@ constexpr std::ostream& operator<<(std::ostream& os, const algebra::integer& a) 
 
 namespace algebra {
 
-constexpr integer uniform_int(const integer& min, const integer& max, auto& rng) {
-    const integer max_min = max - min;
+constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
+    integer max_min = max - min;
     if (max_min.sign() < 0)
-        throw std::runtime_error("max smaller than min in uniform_int()");
-    return integer(uniform_int(natural(0), max_min.abs, rng)) - min;
+        throw std::runtime_error("max smaller than min in uniform_sample()");
+    ++max_min;
+    return integer(uniform_sample(max_min.abs, rng)) + min;
 }
 
+namespace literals {
+
 constexpr auto operator""_i(const char* s) { return integer(s); }
+
+}
 
 constexpr void operator<<=(integer& a, size_t i) { a.abs <<= i; }
 constexpr void operator>>=(integer& a, size_t i) { a.abs >>= i; }

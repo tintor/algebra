@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 using std::format;
 using namespace algebra;
+using namespace algebra::literals;
 
 TEST_CASE("basic") {
     REQUIRE((sqrt(3_e) - sqrt(3_e))->sign() == 0);

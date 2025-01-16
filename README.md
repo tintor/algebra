@@ -2,7 +2,9 @@
 
 ```
 #include "algebra/rational.h"
+#include <print>
 using namespace algebra;
+using namespace algebra::literals;
 
 int main(int argc, char* argv[]) {
     int e = 2;
@@ -11,6 +13,9 @@ int main(int argc, char* argv[]) {
     rational a = r * i;
     std::print("{} | {:.2f}\n", a, a); // prints 15/2 7.50
     std::print("{:.20}\n", sqrt(2_q,  8)); // prints 1.41421356237309504880
+
+    decimal d = 1.1_d; // stored exactly (unlike float and double which can't represent this value)
+    std::print("{}\n", d); // prints 1.1
     return 0;
 }
 ```
@@ -22,6 +27,7 @@ int main(int argc, char* argv[]) {
 - `natural` / `integer` / `rational` / `real<>` / `decimal` classes behave similarly to built-in `int` and `float` types (except for overflow)
 - no heap allocation for integer values in `[-UINT64, UINT64]` range
 - all types support casting to and from all built-in integer and floating point types
+- no silent overflow / failures (std::runtime_error is thrown)
 - output using `std::format()` / `std::print()` / `std::ostream` / `.str()`
 - `real` allows more compact and efficient representation than `rational`, but requires rounding
 - `real<2>` is similar to built-in `float` and `double`, but with arbitrary long mantissa, and 32-bit exponent
@@ -59,7 +65,7 @@ Overloaded operators:
 #### `bool natural::is_uint32() const`
 #### `bool natural::is_uint64() const`
 #### `bool natural::is_uint128() const`
-#### `void natural::mul_add(natural::word a, natural::word carry)`
+#### `void natural::mul_add(uint64_t a, uint64_t carry)`
 #### `std::string natural::str(uint32_t base = 10, bool upper = true) const`
 #### `std::string natural::hex() const`
 - Same as `natual::str(16)`
@@ -69,6 +75,10 @@ Overloaded operators:
 #### `bool natural::bit(size_t i) const`
 #### `size_t natural::popcount() const`
 #### `size_t natural::size_of() const`
+#### `uint64_t mod2() const`
+#### `uint64_t mod3() const`
+#### `uint64_t mod4() const`
+#### `uint64_t mod5() const`
 
 ### `class integer`
 #### `natural integer::abs`
@@ -149,9 +159,19 @@ Overloaded operators:
 #### `bool rational::is_odd() const`
 
 ### `class real<int Base>`
+#### `integer real::num`
+#### `int real::exp`
+#### `real::real(I a, int exp = 0)`
+#### `real::real(integer a, int exp = 0)`
+#### `real::real(float a)`
+#### `real::real(double a)`
+#### `real::real(const rational& a, int prec = -53)`
+#### `void real::normalize()`
+
 ### `class expr`
 ### `class expr_ptr`
 - Alias for `std::shared_ptr<expr>`
+
 Overloaded operators:
 - arithmetic 	`+` `-` `*` `/` `%`
 - relational `<` `>` `<=` `>=` `==` `!=`
@@ -169,14 +189,35 @@ Overloaded operators:
 #### `uint64_t extract_64bits(const natural& a, uint e)`
 - returns `static_cast<uint64_t>(a >> e)` without memory allocation
 #### `void div(const natural& dividend, const natural& divisor, natural& quotient, natural& remainder)`
+#### `void mod(const natural& dividend, const natural& divisor, natural& remainder)`
+#### `void uniform_sample_bits(const size_t n, auto& rng, natural& out)`
+#### `natural uniform_sample_bits(const size_t n, auto& rng)`
+#### `void uniform_sample(const natural& count, auto& rng, natural& out)`
+- uniformly sample from [0, count-1]
+#### `natural uniform_sample(const natural& count, auto& rng)`
+#### `natural uniform_sample(const natural& min, const natural& max, auto& rng)`
 #### `natural pow(natural base, std::integral auto exp)`
 #### `natural pow(natural base, const natural& _exp)`
-#### `natural uniform_int(const natural& min, const natural& max, auto& rng)`
+#### `natural uniform_sample(const natural& min, const natural& max, auto& rng)`
 #### `auto num_trailing_zeros(std::unsigned_integral auto a)`
 #### `natural gcd(natural a, natural b)`
 #### `natural isqrt(const natural& x)`
-#### `constexpr bool is_prime(const uint64_t a)`
+#### `bool is_prime(uint64_t a)`
 #### `bool is_prime(const natural& a)`
+#### `uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p)`
+#### `void mul_mod(natural& a, const natural& b, const natural& m)`
+- assumes that `a` and `b` are in `[0, m-1]` range
+- updates `a` to `(a * b) % m`
+#### `void pow_mod(natural a, natural n, const natural& p, natural& out)`
+- returns `(a**n) % p`
+#### `natural pow_mod(natural a, natural n, natural p)`
+#### `bool is_likely_prime(uint64_t n, int rounds, auto& rng)`
+#### `bool is_likely_prime(const natural& n, int rounds, auto& rng)`
+- Miller-Rabin algorithm
+- It returns false if n is composite and returns true if n is probably prime.
+- `rounds` is an input parameter that determines accuracy level.
+- Higher value of `rounds` indicates more accuracy.
+#### `std::vector<std::pair<uint64_t, int>> factorize(uint64_t a)`
 #### `bool is_power_of_two(const natural& a)`
 #### `uint64_t log_lower(natural a, uint64_t base)`
 #### `uint64_t log_upper(natural a, uint64_t base)`
@@ -188,7 +229,7 @@ Overloaded operators:
 #### `long div(const integer& a, long b, integer& quot)`
 #### `uint64_t mod(const integer& a, uint64_t b)`
 #### `integer abs(integer a)`
-#### `integer uniform_int(const integer& min, const integer& max, auto& rng)`
+#### `integer uniform_sample(const integer& min, const integer& max, auto& rng)`
 #### `integer pow(integer base, std::integral auto exp)`
 #### `integer pow(integer base, const natural& exp)`
 

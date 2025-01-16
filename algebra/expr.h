@@ -113,8 +113,8 @@ struct expr_power : public expr {
 constexpr bool is_power(expr_ptr a) { return dcast<expr_power>(a); }
 constexpr const auto& power_base(expr_ptr a) { return dcast<expr_power>(a)->base; }
 constexpr const auto& power_exp(expr_ptr a) { return dcast<expr_power>(a)->exp; }
-constexpr bool is_sqrt(expr_ptr a) { return is_power(a) && power_exp(a) == 1/2_q; }
-constexpr bool is_cbrt(expr_ptr a) { return is_power(a) && power_exp(a) == 1/3_q; }
+constexpr bool is_sqrt(expr_ptr a) { using namespace algebra::literals; return is_power(a) && power_exp(a) == 1/2_q; }
+constexpr bool is_cbrt(expr_ptr a) { using namespace algebra::literals; return is_power(a) && power_exp(a) == 1/3_q; }
 
 struct expr_sum : public expr {
     std::vector<expr_ptr> values;
@@ -165,9 +165,12 @@ constexpr expr_ptr make_rational(const rational& a) {
     return std::make_shared<expr_rational>(a);
 }
 
+namespace literals {
 constexpr auto operator""_e(const char* s) { return make_rational(rational(s)); }
-const expr_ptr ZERO_EXPR = 0_e;
-const expr_ptr ONE_EXPR = 1_e;
+}
+
+const expr_ptr ZERO_EXPR = make_integer(0);
+const expr_ptr ONE_EXPR = make_integer(1);
 const expr_ptr E_EXPR = std::make_shared<expr_e>();
 const expr_ptr PI_EXPR = std::make_shared<expr_pi>();
 
@@ -447,6 +450,7 @@ constexpr expr_ptr cos(expr_ptr a) {
 }
 
 constexpr expr_ptr pow(expr_ptr a, const rational& b) {
+    using namespace algebra::literals;
     if (b == 1)
         return a;
     if (b == 0)
@@ -476,8 +480,8 @@ constexpr expr_ptr pow(expr_ptr a, const rational& b) {
     return std::make_shared<expr_power>(a, b);
 }
 
-constexpr expr_ptr sqrt(expr_ptr a) { return pow(a, 1/2_q); }
-constexpr expr_ptr cbrt(expr_ptr a) { return pow(a, 1/3_q); }
+constexpr expr_ptr sqrt(expr_ptr a) { using namespace algebra::literals; return pow(a, 1/2_q); }
+constexpr expr_ptr cbrt(expr_ptr a) { using namespace algebra::literals; return pow(a, 1/3_q); }
 
 constexpr expr_ptr operator-(expr_ptr a, expr_ptr b) {
     if (is_rational(a) && is_rational(b))
@@ -486,6 +490,7 @@ constexpr expr_ptr operator-(expr_ptr a, expr_ptr b) {
 }
 
 constexpr expr_ptr operator/(expr_ptr a, expr_ptr b) {
+    using namespace algebra::literals;
     if (b->sign() == 0)
         throw std::runtime_error("division by zero");
     if (is_rational(a) && is_rational(b))
@@ -517,6 +522,7 @@ struct std::formatter<const algebra::expr*, char> {
 
     void format_expression(const algebra::expr* a, auto& ctx) const {
         using namespace algebra;
+        using namespace algebra::literals;
         if (auto integer = dcast<expr_integer>(a)) {
             std::format_to(ctx.out(), "{}", integer->value);
         } else if (auto rational = dcast<expr_rational>(a)) {
@@ -697,6 +703,7 @@ constexpr interval<T> pow(const interval<T>& a, const integer& b) {
 
 // TODO make this a virtual function
 constexpr std::optional<interval<rational>> bounds(expr_ptr a) {
+    using namespace algebra::literals;
     if (is_rational(a))
         return interval<rational>{rational_value(a), rational_value(a)};
     if (dcast<expr_e>(a))

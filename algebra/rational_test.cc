@@ -3,6 +3,7 @@
 using std::format;
 using std::print;
 using namespace algebra;
+using namespace algebra::literals;
 
 TEST_CASE("simplify") {
     REQUIRE(rational(3, -4).num == -3);

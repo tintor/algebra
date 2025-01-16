@@ -24,7 +24,7 @@ private:
 
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
-    constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size(a > 0), _capacity(0) { }
+    constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size((a > 0) ? 1 : 0), _capacity(0) { }
     constexpr integer_backend(unsigned __int128 a) {
         if (a > 0) {
             if (a <= std::numeric_limits<word>::max()) {

@@ -8,6 +8,7 @@ using ucent = unsigned __int128;
 using ulong = unsigned long;
 using uint = unsigned int;
 using namespace algebra;
+using namespace algebra::literals;
 
 class Random {
 public:
@@ -352,12 +353,12 @@ TEST_CASE("div10 stress with ucent 2") {
     }
 }
 
-TEST_CASE("uniform_int") {
+TEST_CASE("uniform_sample") {
     integer a;
     a.abs = pow(2_n, 128) - 1;
     Random rng;
     for (int i = 0; i < 20; i++) {
-        integer m = uniform_int(0, a, rng.get());
+        integer m = uniform_sample(0, a, rng.get());
         REQUIRE(m.sign() <= a.sign());
         REQUIRE(0 <= m);
         REQUIRE(m <= a);
