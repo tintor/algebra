@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/rational.h"
+#include "algebra/natural_func.h"
 
 namespace algebra {
 
@@ -47,7 +48,6 @@ constexpr real<Base>::real(const rational& s) {
             throw std::runtime_error("inexact conversion");
         exp = -s.den.num_trailing_zeros();
         auto z = num.num_trailing_zeros();
-        num >= z;
         exp += z;
     } else if constexpr (Base == 10) {
         // Check if s.den has any prime factors not in base

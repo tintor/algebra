@@ -1,7 +1,7 @@
 # Algebra for Modern C++
 
 ```
-#include "algebra/rational.h"
+#include "algebra/algebra.h"
 #include <print>
 using namespace algebra;
 using namespace algebra::literals;

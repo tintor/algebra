@@ -105,6 +105,8 @@ TEST_CASE("is_power_of_two") {
     REQUIRE(a.num_bits() == 101);
     REQUIRE(a.num_trailing_zeros() == 100);
     REQUIRE(is_power_of_two(a));
+
+    REQUIRE(is_power_of_two(1_n << 280));
 }
 
 TEST_CASE("power_of_two") {

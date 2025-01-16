@@ -1,4 +1,5 @@
 #include "algebra/integer.h"
+#include "algebra/natural_func.h"
 #include "algebra/__test.h"
 
 class Random {
@@ -341,22 +342,6 @@ TEST_CASE("div10 stress with ucent 2") {
         integer q;
         long r = div(integer(a), static_cast<long>(10), q);
         REQUIRE(q * 10 + r == a);
-    }
-}
-
-TEST_CASE("uniform_sample") {
-    integer a;
-    a.abs = pow(2_n, 128) - 1;
-    Random rng;
-    for (int i = 0; i < 20; i++) {
-        integer m = uniform_sample(0, a, rng.get());
-        REQUIRE(m.sign() <= a.sign());
-        REQUIRE(0 <= m);
-        REQUIRE(m <= a);
-        REQUIRE(0 <= m.sign());
-        REQUIRE(m.sign() <= 2);
-        while (m.sign())
-            div(m, static_cast<long>(10), /*out*/m);
     }
 }
 

@@ -25,10 +25,14 @@ TEST_CASE("pow") {
     REQUIRE(pow(2_q, -2) == 1/4_q);
 
     auto a = pow(2_q, 1/2_q, 8); // sqrt(2)
-    REQUIRE(round(pow(a, 2), 100) == 2);
+    auto aa = pow(a, 2);
+    REQUIRE(aa.num > 0);
+    REQUIRE(aa.den > 0);
+    REQUIRE(round(aa, 100) == 2);
 
     auto b = pow(2_q, 1/3_q, 9); // cbrt(2)
-    REQUIRE(round(pow(b, 3), 100) == 2);
+    auto bb = pow(b, 3);
+    REQUIRE(round(bb, 100) == 2);
 
     auto c = pow(2_q, 2/3_q, 9);
     REQUIRE(c == b * b);
