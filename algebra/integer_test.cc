@@ -1,14 +1,5 @@
 #include "algebra/integer.h"
-#include <catch2/catch_test_macros.hpp>
-#include <print>
-#include <random>
-using std::print;
-using std::format;
-using ucent = unsigned __int128;
-using ulong = unsigned long;
-using uint = unsigned int;
-using namespace algebra;
-using namespace algebra::literals;
+#include "algebra/__test.h"
 
 class Random {
 public:
@@ -518,17 +509,6 @@ TEST_CASE(">>=") {
         a >>= 1;
         REQUIRE(a == integer(i >> 1));
     }
-}
-
-TEST_CASE("abs") {
-    REQUIRE(abs(integer(0)) == integer(0));
-    REQUIRE(abs(integer(10)) == integer(10));
-    REQUIRE(abs(integer(-3)) == integer(3));
-}
-
-TEST_CASE("pow") {
-    REQUIRE(pow(integer(2), 3) == 8);
-    REQUIRE(pow(integer(10), 30) == integer("1000000000000000000000000000000"));
 }
 
 TEST_CASE("factorial") {

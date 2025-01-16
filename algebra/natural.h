@@ -1605,4 +1605,16 @@ constexpr natural::natural(std::string_view s, unsigned base) {
     words.normalize();
 }
 
+// returns (n k)
+constexpr void binominal(const natural& n, uint64_t k, natural& out) {
+    out = 1;
+    natural e;
+    for (uint64_t i = 0; i < k; i++) {
+        e = n;
+        e -= i;
+        out *= e;
+        out /= i + 1;
+    }
+}
+
 }

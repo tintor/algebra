@@ -632,4 +632,53 @@ constexpr integer pow(integer base, const natural& exp) {
 
 static_assert(sizeof(integer) == 16);
 
+// returns x such that (a * x) mod n == 1, (or false if such number doesn't exist)
+constexpr bool mod_inverse(const natural& a, const natural& n, natural& out) {
+    integer t = 0;
+    integer r = n;
+    integer new_t = 1;
+    integer new_r = a;
+    integer e, q;
+
+    while (new_r) {
+        div(r, new_r, /*out*/q, /*out*/e); // remainder is discarded
+
+        // (t, new_t) = (new_t, t − q * new_t)
+        e = t;
+        sub_product(e, q, new_t);
+        t.swap(new_t);
+        new_t.swap(e);
+
+        // (r, new_r) = (new_r, r − quotient * new_r)
+        e = r;
+        sub_product(r, q, new_r);
+        r.swap(new_r);
+        new_r.swap(e);
+    }
+    if (r > 1)
+        return false;
+    if (t < 0)
+        t += n;
+    out = t.abs;
+    return true;
+}
+
+// returns (n k) mod p
+constexpr void binominal_mod(const natural& n, uint64_t k, const natural& p, natural& out) {
+    out = 1;
+    natural e, inv;
+    for (uint64_t i = 0; i < k; i++) {
+        e = n;
+        e -= i;
+        out *= e;
+
+        e = i;
+        e += 1;
+        mod_inverse(e, p, inv);
+
+        out *= inv;
+        out %= p;
+    }
+}
+
 }

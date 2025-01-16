@@ -1,13 +1,5 @@
 #include "algebra/real.h"
-#include <catch2/catch_test_macros.hpp>
-using std::format;
-using namespace algebra;
-using namespace algebra::literals;
-using std::print;
-
-namespace std::__1 {
-bool __is_posix_terminal(__sFILE*) { return true; }
-}
+#include "algebra/__test.h"
 
 TEST_CASE("format") {
     REQUIRE(format("{}", real<2>(3, 0)) == "3");
