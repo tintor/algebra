@@ -13,6 +13,7 @@ library("rational_func", deps = [":rational", ":natural_func"])
 library("real",          deps = [":rational", ":natural_func"])
 library("real_func",     deps = [":real"])
 library("expr",          deps = [":rational_func"])
+library("geometry",      test_deps = [":rational_func"])
 
 cc_library(
     name = "algebra",
