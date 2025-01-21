@@ -95,8 +95,8 @@ public:
     }
 
     constexpr void operator=(const integer_backend& o) {
-        reset(o._size); // TODO unnecessary clearing inside reset()
-        for (size_type i = 0; i < abs(o._size); i++)
+        reset(o._size, /*initialize*/false);
+        for (size_type i = 0; i < size(); i++)
             operator[](i) = o.operator[](i);
     }
 
@@ -112,12 +112,12 @@ public:
         operator[](0) = 0;
     }
 
-    constexpr size_type size() const { return abs(_size); }
+    constexpr size_type size() const { return std::abs(_size); }
     constexpr bool allocated() const { return _capacity; }
     constexpr word operator[](size_type i) const { return _capacity ? _words[i] : _single_word; }
     constexpr word& operator[](size_type i) { return _capacity ? _words[i] : _single_word; }
-    constexpr word back() const { return operator[](abs(_size) - 1); }
-    constexpr word& back() { return operator[](abs(_size) - 1); }
+    constexpr word back() const { return operator[](size() - 1); }
+    constexpr word& back() { return operator[](size() - 1); }
 
     constexpr void swap(integer_backend& o) {
         std::swap(_words, o._words);
@@ -149,19 +149,20 @@ public:
 
     // not accessible to class natural
     constexpr void negate() { _size = -_size; }
-    constexpr void set_negative(bool a) { _size = a ? -abs(_size) : abs(_size); }
+    constexpr void set_negative(bool a) { _size = a ? -size() : size(); }
     constexpr size_type sign() const { return _size; }
 };
 
 constexpr void integer_backend::reset(size_type size, bool initialize) {
+    const size_type abs_size = std::abs(size);
     if (_capacity) {
         // heap
-        if (abs(size) > _capacity) {
+        if (abs_size > _capacity) {
             // heap -> heap x2
-            _capacity = std::max(_capacity * 2, abs(size));
+            _capacity = std::max(_capacity * 2, abs_size);
             delete[] _words;
             _words = new word[_capacity];
-        } else if (abs(size) <= 1) {
+        } else if (std::abs(size) <= 1) {
             // heap -> SBO
             delete[] _words;
             _single_word = 0;
@@ -169,24 +170,24 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
         }
     } else {
         // SBO
-        if (abs(size) <= 1) {
+        if (abs_size <= 1) {
             _single_word = 0;
         } else {
             // SBO -> heap
-            _capacity = abs(size);
+            _capacity = abs_size;
             _words = new word[_capacity];
         }
     }
     _size = size;
 
     if (initialize && _capacity)
-        for (size_type i = 0; i < abs(size); i++)
+        for (size_type i = 0; i < abs_size; i++)
             _words[i] = 0;
 }
 
 constexpr void integer_backend::operator+=(word a) {
     if (_capacity) {
-        if (abs(_size) == _capacity) {
+        if (size() == _capacity) {
             // heap -> heap x2
             word* w = new word[_capacity * 2];
             for (word i = 0; i < _capacity; i++)
@@ -224,7 +225,7 @@ constexpr void integer_backend::operator+=(word a) {
 
 constexpr void integer_backend::erase_first_n_words(int n) {
     if (n > 0) {
-        for (size_type i = n; i < abs(_size); i++)
+        for (size_type i = n; i < size(); i++)
             operator[](i - n) = operator[](i);
         _size += (_size >= 0) ? -n : n;
     }
@@ -235,7 +236,7 @@ constexpr void integer_backend::reserve(size_type capacity) {
         return;
     capacity = std::max(_capacity * 2, capacity);
     word* words = new word[capacity];
-    for (size_type i = 0; i < abs(_size); i++)
+    for (size_type i = 0; i < size(); i++)
         words[i] = operator[](i);
     if (_capacity)
         delete[] _words;
@@ -246,7 +247,7 @@ constexpr void integer_backend::reserve(size_type capacity) {
 constexpr void integer_backend::resize(size_type size) {
     reserve(size);
     if (_capacity)
-        for (size_type i = abs(_size); i < size; i++)
+        for (size_type i = this->size(); i < size; i++)
             _words[i] = 0;
     _size = (_size >= 0) ? size : -size;
 }
@@ -255,8 +256,8 @@ constexpr void integer_backend::insert_first_n_words(size_type n) {
     if (n == 0)
         return;
 
-    reserve(abs(_size) + n);
-    for (size_type i = abs(_size); i-- > 0; )
+    reserve(size() + n);
+    for (size_type i = size(); i-- > 0; )
         operator[](i + n) = operator[](i);
     for (size_type i = 0; i < n; i++)
         operator[](i) = 0;
@@ -264,8 +265,8 @@ constexpr void integer_backend::insert_first_n_words(size_type n) {
 }
 
 constexpr void integer_backend::insert_first_word(word a) {
-    reserve(abs(_size) + 1);
-    for (size_type i = abs(_size); i-- > 0; )
+    reserve(size() + 1);
+    for (size_type i = size(); i-- > 0; )
         operator[](i + 1) = operator[](i);
     operator[](0) = a;
     _size += (_size >= 0) ? 1 : -1;
