@@ -162,10 +162,13 @@ SWIZZLE2(z, y)
 
 SWIZZLE3(x, y, z)
 SWIZZLE3(x, y, w)
+SWIZZLE3(x, z, y)
 SWIZZLE3(x, z, w)
+SWIZZLE3(y, x, z)
 SWIZZLE3(y, z, x)
 SWIZZLE3(y, z, w)
 SWIZZLE3(z, x, y)
+SWIZZLE3(z, y, x)
 
 template<typename T> constexpr T cross(const Vec2<T>& a, const Vec2<T>& b) { return {a.x * b.y - a.y * b.x}; }
 template<typename T> constexpr Vec3<T> cross(const Vec3<T>& a, const Vec3<T>& b) { return {cross(yz(a), yz(b)), cross(xz(a), xz(b)), cross(xy(a), xy(b))}; }
