@@ -76,6 +76,25 @@ VEC_OP(-)
 VEC_OP(*)
 VEC_OP(/)
 
+#define VEC_AOP(OP) \
+template<int D, typename T> \
+constexpr algebra::Vec<D, T>& operator OP(algebra::Vec<D, T>& a, const algebra::Vec<D, T>& b) { \
+    for (int i = 0; i < D; i++) \
+        a[i] OP b[i]; \
+    return a; \
+} \
+template<int D, typename T> \
+constexpr algebra::Vec<D, T>& operator OP(algebra::Vec<D, T>& a, const T& b) { \
+    for (int i = 0; i < D; i++) \
+        a[i] OP b; \
+    return a; \
+}
+
+VEC_AOP(+=)
+VEC_AOP(-=)
+VEC_AOP(*=)
+VEC_AOP(/=)
+
 template<int D, typename T>
 constexpr bool operator==(const Vec<D, T>& a, const Vec<D, T>& b) {
     for (int i = 0; i < D; i++)
@@ -119,6 +138,15 @@ constexpr T dot(const Vec<D, T>& a, const Vec<D, T>& b) {
 
 template<typename T>
 constexpr auto dot2(const T& a) { return dot(a, a); }
+
+template<int D, typename T>
+constexpr Vec<D, T> lerp(const Vec<D, T>& a, const Vec<D, T>& b, const T& t) {
+    Vec<D, T> c = b;
+    c -= a;
+    c *= t;
+    c += a;
+    return c;
+}
 
 #define SWIZZLE2(A, B) template<int D, typename T> constexpr Vec<2, T> A ## B(const Vec<D, T>& v) { return {v.A, v.B}; }
 #define SWIZZLE3(A, B, C) template<int D, typename T> constexpr Vec<3, T> A ## B ## C(const Vec<D, T>& v) { return {v.A, v.B, v.C}; }
