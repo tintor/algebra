@@ -3,3 +3,4 @@ bazel-bin
 bazel-algebra
 bazel-out
 bazel-testlogs
+MODULE.bazel.lock
