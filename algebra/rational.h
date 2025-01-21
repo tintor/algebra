@@ -91,6 +91,7 @@ struct rational {
     constexpr bool is_odd() const { return is_integer() && num.is_odd(); }
 };
 
+constexpr void negate(rational& a) { a.negate(); }
 constexpr rational fract(const rational&);
 
 constexpr rational operator-(const rational& a) { return {-a.num, a.den}; }

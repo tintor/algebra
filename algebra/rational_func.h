@@ -152,6 +152,15 @@ constexpr rational abs(rational a) {
     return a;
 }
 
+// returns abs(a) > abs(b), minimizing memory allocation
+constexpr bool abs_greater(const rational& a, const rational& b) {
+    if (a.den == b.den)
+        return a.num.abs > b.num.abs;
+    if (a.den.abs == 1u)
+        return ((b.den.abs == 1u) ? a.num.abs : (a.num.abs * b.den.abs)) > b.num.abs;
+    return ((b.den.abs == 1u) ? a.num.abs : (a.num.abs * b.den.abs)) > b.num.abs * a.den.abs;
+}
+
 constexpr rational round(const rational& a, unsigned digits, unsigned base = 10) {
     const natural b = pow(natural(base), digits);
     return {(a.num * b) / a.den, b};
@@ -233,6 +242,35 @@ constexpr rational exp(rational x, unsigned n) {
         out += a;
     }
     return out;
+}
+
+// reduce vector's length, without changing vector's direction
+constexpr void simplify(rational& x, rational& y) {
+    natural num = gcd(x.num.abs, y.num.abs);
+    natural den = gcd(x.den.abs, y.den.abs);
+    if (num != 1) {
+        x.num.abs /= num;
+        y.num.abs /= num;
+    }
+    if (den != 1) {
+        x.den.abs /= den;
+        y.den.abs /= den;
+    }
+}
+
+constexpr void simplify(rational& x, rational& y, rational& z) {
+    natural num = gcd(gcd(x.num.abs, y.num.abs), z.num.abs);
+    natural den = gcd(gcd(x.den.abs, y.den.abs), z.den.abs);
+    if (num != 1) {
+        x.num.abs /= num;
+        y.num.abs /= num;
+        z.num.abs /= num;
+    }
+    if (den != 1) {
+        x.den.abs /= den;
+        y.den.abs /= den;
+        z.den.abs /= den;
+    }
 }
 
 }
