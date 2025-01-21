@@ -53,6 +53,31 @@ constexpr const T* dcast(const expr_ptr& a) { return dynamic_cast<const T*>(a.ge
 template<typename T>
 constexpr const T* dcast(const expr* a) { return dynamic_cast<const T*>(a); }
 
+struct expr_matrix : public expr {
+    int rows, cols;
+    std::vector<expr_ptr> data;
+
+    virtual constexpr int sign() const {
+        if (rows == 0 && cols == 0)
+            return data[0]->sign();
+        throw std::runtime_error("indeterminate sign");
+    }
+};
+
+struct expr_var : public expr {
+    std::string name;
+    virtual constexpr int sign() const { throw std::runtime_error("indeterminate sign"); }
+};
+
+struct expr_rel : public expr {
+    expr_ptr left;
+    bool less;
+    bool eq;
+    bool greater;
+    expr_ptr right;
+    virtual constexpr int sign() const { throw std::runtime_error("unimplemented"); }
+};
+
 struct expr_pi : public expr {
     virtual constexpr int sign() const { return 1; }
 };
