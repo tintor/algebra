@@ -1,4 +1,5 @@
 #pragma once
+#include <format>
 
 namespace algebra {
 
@@ -224,3 +225,19 @@ constexpr T div_colinear(const Vec<D, T>& a, const Vec<D, T>& b) {
 }
 
 }
+
+template <int D, typename T>
+struct std::formatter<algebra::Vec<D, T>, char> {
+    constexpr auto parse(auto& ctx) {
+        return ctx.begin();
+    }
+
+    constexpr auto format(const algebra::Vec<D, T>& a, auto& ctx) const {
+        for (int i = 0; i < D; i++) {
+            if (i > 0)
+                std::format_to(ctx.out(), " ");
+            std::format_to(ctx.out(), "{}", a[i]);
+        }
+        return ctx.out();
+    }
+};

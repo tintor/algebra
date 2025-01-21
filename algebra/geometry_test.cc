@@ -143,6 +143,10 @@ private:
 };
 
 void test_segment_segment_squared_distance(Vec3<rational> a, Vec3<rational> b, Vec3<rational> c, Vec3<rational> d) {
+    std::print("\na={}\n", a);
+    std::print("b={}\n", b);
+    std::print("c={}\n", c);
+    std::print("d={}\n", d);
     const auto e = segment_segment_squared_distance(a, b, c, d);
     REQUIRE(segment_segment_squared_distance(b, a, c, d) == e);
     REQUIRE(segment_segment_squared_distance(a, b, d, c) == e);
