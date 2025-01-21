@@ -55,13 +55,6 @@ constexpr bool abs_greater(const T& a, const T& b) {
     return abs(a) > abs(b);
 }
 
-// return k such that B*k = A (assuming B != 0)
-template<typename T>
-constexpr T div_colinear(const Vec2<T>& a, const Vec2<T>& b) {
-    const int i = argmax_abs(b);
-    return a[i] / b[i];
-}
-
 template<typename T>
 struct PointParams {
     T s, t;
@@ -237,23 +230,6 @@ int segment_vs_segment_intersects(const Vec2<T>& a, const Vec2<T>& b, const Vec2
 }
 
 template<typename T>
-std::variant<None, PointParams<T>, SegmentParams<T>> segment_vs_segment_intersection_params(
-        const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c, const Vec3<T>& d) {
-    throw std::runtime_error("not implemented");
-}
-
-template<typename T>
-std::variant<None, Vec3<T>, std::pair<Vec3<T>, Vec3<T>>> segment_vs_segment_intersection(
-        const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c, const Vec3<T>& d) {
-    throw std::runtime_error("not implemented");
-}
-
-template<typename T>
-int segment_vs_segment_intersects(const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c, const Vec3<T>& d) {
-    throw std::runtime_error("not implemented");
-}
-
-template<typename T>
 struct Line3 {
     Vec3<T> orig, dir;
 };
@@ -266,20 +242,6 @@ struct Plane3 {
     T d;
     T den; // n is not divided to avoid imprecise irrational numbers
 };
-
-template<typename T>
-constexpr bool same_sign(const T& a, const T& b) {
-    if (sign(a) > 0)
-        return sign(b) > 0;
-    if (sign(a) < 0)
-        return sign(b) < 0;
-    return sign(b) == 0;
-}
-
-template<typename T>
-constexpr bool same_sign(const Vec3<T>& a, const Vec3<T>& b) {
-    return same_sign(a.x, b.x) && same_sign(a.y, b.y) && same_sign(a.z, b.z);
-}
 
 template<typename T>
 constexpr Vec3<T> operator*(const Plane3<T>& a, const Plane3<T>& b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }

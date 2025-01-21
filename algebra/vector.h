@@ -38,28 +38,38 @@ template<typename T> using Vec2 = Vec<2, T>;
 template<typename T> using Vec3 = Vec<3, T>;
 template<typename T> using Vec4 = Vec<4, T>;
 
-#define VEC_OP(OP) \
-template<int D, typename T> \
-constexpr Vec<D, T> operator OP(const Vec<D, T>& a, const Vec<D, T>& b) { \
-    Vec<D, T> c; \
+#define __VEC_OP_vv(OP, TC, TA, TB) \
+constexpr auto operator OP(const algebra::Vec<D, TA>& a, const algebra::Vec<D, TB>& b) { \
+    algebra::Vec<D, TC> c; \
     for (int i = 0; i < D; i++) \
         c[i] = a[i] OP b[i]; \
     return c; \
-} \
-template<int D, typename T> \
-constexpr Vec<D, T> operator OP(const Vec<D, T>& a, const T& b) { \
-    Vec<D, T> c; \
+}
+
+#define __VEC_OP_vs(OP, TC, TA, TB) \
+constexpr auto operator OP(const algebra::Vec<D, TA>& a, const TB& b) { \
+    algebra::Vec<D, TC> c; \
     for (int i = 0; i < D; i++) \
         c[i] = a[i] OP b; \
     return c; \
-} \
-template<int D, typename T> \
-constexpr Vec<D, T> operator OP(const T& a, const Vec<D, T>& b) { \
-    Vec<D, T> c; \
+}
+
+#define __VEC_OP_sv(OP, TC, TA, TB) \
+constexpr auto operator OP(const TA& a, const algebra::Vec<D, TB>& b) { \
+    algebra::Vec<D, TC> c; \
     for (int i = 0; i < D; i++) \
         c[i] = a OP b[i]; \
     return c; \
 }
+
+#define VEC_OP(OP) \
+template<int D, typename T> __VEC_OP_vv(OP, T, T, T) \
+template<int D, typename T> __VEC_OP_vs(OP, T, T, T) \
+template<int D, typename T> __VEC_OP_sv(OP, T, T, T)
+
+#define VEC_OP_vs(OP, TC, TA, TB) template<int D> __VEC_OP_vs(OP, TC, TA, TB)
+#define VEC_OP_sv(OP, TC, TA, TB) template<int D> __VEC_OP_sv(OP, TC, TA, TB)
+#define VEC_OP_vs_sv(OP, TC, TA, TB) VEC_OP_vs(OP, TC, TA, TB) VEC_OP_sv(OP, TC, TB, TA)
 
 VEC_OP(+)
 VEC_OP(-)
@@ -159,6 +169,30 @@ constexpr bool strict_order(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c
 template<typename T>
 constexpr bool loose_order(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
     return loose_order(a.x, b.x, c.x) && loose_order(a.y, b.y, c.y);
+}
+
+template<typename T>
+constexpr bool same_sign(const T& a, const T& b) {
+    if (sign(a) > 0)
+        return sign(b) > 0;
+    if (sign(a) < 0)
+        return sign(b) < 0;
+    return sign(b) == 0;
+}
+
+template<int D, typename T>
+constexpr bool same_sign(const Vec<D, T>& a, const Vec<D, T>& b) {
+    for (int i = 0; i < D; i++)
+        if (!same_sign(a[i], b[i]))
+            return false;
+    return true;
+}
+
+// return k such that B*k = A (assuming k exists and is unique)
+template<int D, typename T>
+constexpr T div_colinear(const Vec<D, T>& a, const Vec<D, T>& b) {
+    const int i = argmax_abs(b);
+    return a[i] / b[i];
 }
 
 }
