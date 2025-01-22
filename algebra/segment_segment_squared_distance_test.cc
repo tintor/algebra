@@ -1,13 +1,8 @@
 #include "algebra/segment_segment_squared_distance.h"
-#include "algebra/rational_func.h"
+#include "algebra/rational_vector.h"
 #include "algebra/__test.h"
 using namespace algebra;
 using std::array;
-
-VEC_OP_vs_sv(+, rational, rational, std::integral auto)
-VEC_OP_vs_sv(-, rational, rational, std::integral auto)
-VEC_OP_vs_sv(*, rational, rational, std::integral auto)
-VEC_OP_vs_sv(/, rational, rational, std::integral auto)
 
 TEST_CASE("segment_segment_squared_distance - line vs line") {
     REQUIRE(segment_segment_squared_distance<rational>({0,0,0}, {5,0,0}, {3,3,8}, {3,-3,8}) == 64);

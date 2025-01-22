@@ -1,5 +1,5 @@
 #include "algebra/segment_segment_intersection.h"
-#include "algebra/rational_func.h"
+#include "algebra/rational_vector.h"
 #include "algebra/__test.h"
 using namespace algebra;
 
