@@ -55,11 +55,6 @@ constexpr T segment_segment_squared_distance(const Vec3<T>& pa, const Vec3<T>& p
     minimize(m, dot2(CmB));
     minimize(m, dot2(CpA - B));
 
-    minimize(m, point_segment_squared_distance(pa, qa, qb));
-    minimize(m, point_segment_squared_distance(pb, qa, qb));
-    minimize(m, point_segment_squared_distance(qa, pa, pb));
-    minimize(m, point_segment_squared_distance(qb, pa, pb));
-#if 0
     // line/vertex
     if (aa > 0 && 0 <= -ac && -ac <= aa)
         minimize(m, dot2(C - A * (ac / aa)));
@@ -69,7 +64,7 @@ constexpr T segment_segment_squared_distance(const Vec3<T>& pa, const Vec3<T>& p
         minimize(m, dot2(B * (bc / bb) - C));
     if (bb > 0 && 0 <= ab + bc && ab + bc <= bb)
         minimize(m, dot2(B * ((ab + bc) / bb) - CpA));
-#endif
+
     return m;
 }
 

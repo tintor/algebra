@@ -199,7 +199,7 @@ constexpr void integer_backend::operator+=(word a) {
             _capacity *= 2;
         }
 
-        if (_size < _capacity) {
+        if (_size >= 0) {
             _words[_size] = a;
             _size++;
         } else {

@@ -137,6 +137,14 @@ constexpr T dot(const Vec<D, T>& a, const Vec<D, T>& b) {
     return c;
 }
 
+template<int D, typename T>
+constexpr auto operator-(const Vec<D, T>& a) {
+    Vec<D, T> c;
+    for (int i = 0; i < D; i++)
+        c[i] = -a[i];
+    return c;
+}
+
 template<typename T>
 constexpr auto dot2(const T& a) { return dot(a, a); }
 

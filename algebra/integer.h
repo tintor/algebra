@@ -226,6 +226,7 @@ constexpr void add(const integer& a, const integer& b, integer& c) {
 constexpr void sub(const integer& a, const integer& b, integer& c) {
     if (a.is_negative() != b.is_negative()) {
         c.abs = a.abs + b.abs;
+        c.abs.words.set_negative(a.is_negative());
         return;
     }
     if (b.abs < a.abs) {

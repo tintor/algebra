@@ -162,23 +162,6 @@ private:
     std::mt19937_64 _rng;
 };
 
-TEST_CASE("failing1") {
-    Vec3<rational> a={2,0,0};
-    Vec3<rational> b={5,0,0};
-    Vec3<rational> c={6,1,0};
-    Vec3<rational> d={6,-1,0};
-
-    const auto e = segment_segment_squared_distance(a, b, c, d);
-    REQUIRE(segment_segment_squared_distance(b, a, c, d) == e);
-    REQUIRE(segment_segment_squared_distance(a, b, d, c) == e);
-    REQUIRE(segment_segment_squared_distance(b, a, d, c) == e);
-
-    REQUIRE(segment_segment_squared_distance(c, d, a, b) == e);
-    REQUIRE(segment_segment_squared_distance(c, d, b, a) == e);
-    REQUIRE(segment_segment_squared_distance(d, c, a, b) == e);
-    REQUIRE(segment_segment_squared_distance(d, c, b, a) == e);
-}
-
 TEST_CASE("failing") {
     Vec3<rational> a={-97, -68, 74};
     Vec3<rational> b={54, 73, -33};
@@ -189,11 +172,13 @@ TEST_CASE("failing") {
 }
 
 void test_segment_segment_squared_distance(Vec3<rational> a, Vec3<rational> b, Vec3<rational> c, Vec3<rational> d, rational e) {
+#if 0
     std::print("\na={}\n", a);
     std::print("b={}\n", b);
     std::print("c={}\n", c);
     std::print("d={}\n", d);
     std::print("e={}\n", e);
+#endif
     REQUIRE(segment_segment_squared_distance(a, b, c, d) == e);
     REQUIRE(segment_segment_squared_distance(b, a, c, d) == e);
     REQUIRE(segment_segment_squared_distance(a, b, d, c) == e);
@@ -230,7 +215,6 @@ void test_segment_segment_squared_distance2(Vec3<rational> a, Vec3<rational> b, 
     test_segment_segment_squared_distance(a + t, b + t, c + t, d + t, e);
 }
 
-#if 0
 TEST_CASE("segment_vs_segment_squared_distance - stress") {
     Random rng(0);
     for (int i = 0; i < 10000'000; i++) {
@@ -260,4 +244,3 @@ TEST_CASE("segment_vs_segment_squared_distance - stress") {
         test_segment_segment_squared_distance2(a, b, ab4, ab6, rng);
     }
 }
-#endif
