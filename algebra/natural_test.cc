@@ -7,30 +7,6 @@ TEST_CASE("div 10") {
     REQUIRE(div(a, b, a) == 0);
 }
 
-class Random {
-public:
-    Random() : _rng(std::random_device{}()) {}
-    Random(unsigned long seed) : _rng(seed) {}
-    operator std::mt19937_64&() { return _rng; }
-    std::mt19937_64& get() { return _rng; }
-
-    template<typename T>
-    T Uniform(T min, T max) {
-        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
-
-        if constexpr (std::is_integral_v<T>) {
-            std::uniform_int_distribution<T> dist(min, max);
-            return dist(_rng);
-        }
-        if constexpr (std::is_floating_point_v<T>) {
-            std::uniform_real_distribution<T> dist(min, max);
-            return dist(_rng);
-        }
-    }
-private:
-    std::mt19937_64 _rng;
-};
-
 natural rand_natural(int min_size, int max_size, Random& rng) {
     natural a;
     a.words.reset(rng.Uniform<int>(min_size, max_size));

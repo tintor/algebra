@@ -2,30 +2,6 @@
 #include "algebra/natural_func.h"
 #include "algebra/__test.h"
 
-class Random {
-public:
-    Random() : _rng(std::random_device{}()) {}
-    Random(unsigned long seed) : _rng(seed) {}
-    operator std::mt19937_64&() { return _rng; }
-    std::mt19937_64& get() { return _rng; }
-
-    template<typename T>
-    T Uniform(T min, T max) {
-        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
-
-        if constexpr (std::is_integral_v<T>) {
-            std::uniform_int_distribution<T> dist(min, max);
-            return dist(_rng);
-        }
-        if constexpr (std::is_floating_point_v<T>) {
-            std::uniform_real_distribution<T> dist(min, max);
-            return dist(_rng);
-        }
-    }
-private:
-    std::mt19937_64 _rng;
-};
-
 TEST_CASE("operator-") {
     integer a = 20;
     a = -a;

@@ -235,6 +235,12 @@ constexpr T div_colinear(const Vec<D, T>& a, const Vec<D, T>& b) {
     return a[i] / b[i];
 }
 
+template<typename T>
+constexpr T min(const T& a, const T& b) { return (a < b) ? a : b; }
+
+template<typename T>
+constexpr void minimize(T& a, const T& b) { if (b < a) a = b; }
+
 }
 
 template <int D, typename T>
