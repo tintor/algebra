@@ -11,6 +11,7 @@ struct real {
 
     constexpr real(std::integral auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
+    constexpr real(natural a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
 
     constexpr real(float a) : real(rational(a)) { }
     constexpr real(double a) : real(rational(a)) { }

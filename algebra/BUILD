@@ -37,3 +37,5 @@ cc_library(
     name = "algebra",
     deps = [":natural_func", ":integer_func", ":rational_func", ":real_func", ":expr", ":geometry", ":rational_vector"],
 )
+
+cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc"], deps = ["@catch2//:catch2_main", ":integer_func", ":rational_func", ":real_func"])
