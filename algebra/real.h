@@ -198,3 +198,13 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
 
 template <int B>
 constexpr std::ostream& operator<<(std::ostream& os, const algebra::real<B>& a) { return os << a.str(); }
+
+template <int B>
+struct std::hash<algebra::real<B>> {
+    constexpr size_t operator()(const algebra::real<B>& a) const {
+        uint64_t seed = 0;
+        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.num));
+        seed = algebra::integer_backend::hash_fn_64bit(seed ^ a.exp);
+        return seed;
+    }
+};

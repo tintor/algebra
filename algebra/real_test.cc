@@ -1,5 +1,6 @@
 #include "algebra/real.h"
 #include "algebra/__test.h"
+#include <unordered_map>
 
 TEST_CASE("format") {
     REQUIRE(format("{}", real<2>(3, 0)) == "3");
@@ -40,4 +41,9 @@ TEST_CASE("decimal literal") {
     REQUIRE((-0.0012_d).exp == -4);
     REQUIRE(std::format("{}", -0.0012_d) == "-0.0012");
     REQUIRE(std::format("{}", -1.234_d) == "-1.234");
+}
+
+TEST_CASE("hash") {
+    std::unordered_map<real<2>, int> m;
+    m[1.5_f] = 0;
 }
