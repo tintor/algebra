@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/vector.h"
+#include <variant>
 
 namespace algebra {
 
@@ -11,6 +12,21 @@ constexpr T determinant(const Vec2<T>& a, const Vec2<T>& b) {
 template<typename T>
 constexpr T determinant(const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c) {
     return a.x*b.y*c.z + b.x*c.y*a.z + c.x*a.y*b.z - c.x*b.y*a.z - b.x*a.y*c.z - a.x*c.y*b.z;
+}
+
+struct None {};
+struct Any {};
+
+// TODO: Is distinction of None and Any important? solve_linear below `returns false` in both cases
+// A + B*x = 0
+template<int D, typename T>
+constexpr std::variant<None, T, Any> solve_linear(const Vec<D, T> a, const Vec<D, T>& b) {
+    if (is_zero(a) && is_zero(b))
+        return Any();
+    for (int i = 0; i < D; i++)
+        if (b[i] != 0)
+            return -a[i] / b[i];
+    return None();
 }
 
 // A + sB + tC = 0

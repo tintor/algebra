@@ -31,9 +31,6 @@ struct SegmentParams {
     T s, t;
 };
 
-struct None {};
-struct Any {};
-
 // monospace: disjoint
 // PointParams: intersection is single point, returns M such that M = A + (B - A) * s = C + (D - C) * t
 // SegmentParams: intersection is line segment, returns (M, N) such that M = A + (B - A) * s and N = C + (D - C) * t
@@ -229,32 +226,6 @@ constexpr bool are_parallel(const Vec3<T>& a, const Vec3<T>& b) {
     return a.x * b.y == b.x * a.y && a.x * b.z == b.x * a.z && a.y * b.z == b.y * a.z;
 }
 
-// A + B*x = 0
-template<typename T>
-constexpr std::variant<None, T, Any> solve_linear(const Vec3<T> a, const Vec3<T>& b) {
-    if (is_zero(a) && is_zero(b))
-        return Any();
-    for (int i = 0; i < 3; i++)
-        if (b[i] != 0)
-            return -a[i] / b[i];
-    return None();
-}
-
-// A + B*x = 0
-template<typename T>
-constexpr std::variant<None, T, Any> solve_linear(const Vec2<T> a, const Vec2<T>& b) {
-    if (is_zero(a) && is_zero(b))
-        return Any();
-    for (int i = 0; i < 2; i++)
-        if (b[i] != 0)
-            return -a[i] / b[i];
-    return None();
-}
-
-template<typename T>
-constexpr void simplify(Vec3<T>& a) {
-}
-
 // result can be:
 // - empty
 // - line
@@ -266,7 +237,7 @@ std::variant<None, Line3<T>, Plane3<T>> plane_intersection(const Plane3<T>& a, c
 
     // result is a line
     Vec3<T> dir = cross(a.n, b.n);
-    simplify(dir.x, dir.y, dir.z);
+    simplify(dir.x, dir.y, dir.z); // TODO generalize this (for floats it would be normalization, for bigints division by gcd)
 
     const T ad = dot(a.n, dir);
     const T bd = dot(b.n, dir);

@@ -80,3 +80,9 @@ TEST_CASE("segment_vs_segment_intersection_single_point - overlap (contained)") 
 TEST_CASE("segment_vs_segment_intersection_single_point - overlap (side by side)") {
     REQUIRE(!segment_vs_segment_intersection_single_point<rational>({0,0}, {5,0}, {4,0}, {10,0}));
 }
+
+// TODO plane_intersection test (2 planes)
+//
+// TODO line_plane_intersection
+
+// TODO plane_intersection test (3 planes)
