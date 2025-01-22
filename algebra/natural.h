@@ -1184,3 +1184,10 @@ constexpr natural::natural(std::string_view s, unsigned base) {
 }
 
 }
+
+template<>
+struct std::hash<algebra::natural> {
+    constexpr size_t operator()(const algebra::natural& a) const {
+        return std::hash<algebra::integer_backend>()(a.words);
+    }
+};

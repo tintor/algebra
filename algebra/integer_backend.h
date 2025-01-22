@@ -151,6 +151,12 @@ public:
     constexpr void negate() { _size = -_size; }
     constexpr void set_negative(bool a) { _size = a ? -size() : size(); }
     constexpr size_type sign() const { return _size; }
+
+    static constexpr uint64_t hash_fn_64bit(uint64_t k) {
+        k ^= k >> 33;
+        k *= 0xff51afd7ed558ccdllu;
+        return k;
+    }
 };
 
 constexpr void integer_backend::reset(size_type size, bool initialize) {
@@ -273,3 +279,13 @@ constexpr void integer_backend::insert_first_word(word a) {
 }
 
 }
+
+template<>
+struct std::hash<algebra::integer_backend> {
+    constexpr size_t operator()(const algebra::integer_backend& a) const {
+        uint64_t seed = algebra::integer_backend::hash_fn_64bit(a.sign());
+        for (int i = 0; i < a.size(); i++)
+            seed = algebra::integer_backend::hash_fn_64bit(seed ^ a[i]);
+        return seed;
+    }
+};

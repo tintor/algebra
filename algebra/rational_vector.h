@@ -2,6 +2,8 @@
 #include "algebra/rational_func.h"
 #include "algebra/vector.h"
 
+namespace algebra {
+
 // Vec<rational> x integral
 VEC_OP_vs_sv(+, rational, rational, std::integral auto)
 VEC_OP_vs_sv(-, rational, rational, std::integral auto)
@@ -25,3 +27,9 @@ VEC_OP_vs_sv(+, rational, rational, natural)
 VEC_OP_vs_sv(-, rational, rational, natural)
 VEC_OP_vs_sv(*, rational, rational, natural)
 VEC_OP_vs_sv(/, rational, rational, natural)
+
+using qvec2 = Vec2<rational>;
+using qvec3 = Vec3<rational>;
+using qvec4 = Vec4<rational>;
+
+}

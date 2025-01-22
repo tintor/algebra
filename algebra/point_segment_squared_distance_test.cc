@@ -1,7 +1,6 @@
 #include "algebra/point_segment_squared_distance.h"
 #include "algebra/rational_func.h"
 #include "algebra/__test.h"
-using namespace algebra;
 
 TEST_CASE("point_segment_squared_distance") {
     // degenerate

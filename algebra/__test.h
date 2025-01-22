@@ -44,9 +44,6 @@ public:
         }
     }
 
-    rational SampleQ() { return rational{Uniform<int>(-1000, 1000), Uniform<int>(1, 1000)}; }
-    Vec3<rational> SampleVec3Q() { return {SampleQ(), SampleQ(), SampleQ()}; }
-
 private:
     std::mt19937_64 _rng;
 };

@@ -241,6 +241,12 @@ constexpr T min(const T& a, const T& b) { return (a < b) ? a : b; }
 template<typename T>
 constexpr void minimize(T& a, const T& b) { if (b < a) a = b; }
 
+constexpr uint64_t hash_fn_64bit(uint64_t k) {
+    k ^= k >> 33;
+    k *= 0xff51afd7ed558ccdllu;
+    return k;
+}
+
 }
 
 template <int D, typename T>
@@ -256,5 +262,15 @@ struct std::formatter<algebra::Vec<D, T>, char> {
             std::format_to(ctx.out(), "{}", a[i]);
         }
         return ctx.out();
+    }
+};
+
+template<int D, typename T>
+struct std::hash<algebra::Vec<D, T>> {
+    constexpr size_t operator()(const algebra::Vec<D, T>& a) const {
+        uint64_t seed = 0;
+        for (int i = 0; i < D; i++)
+            seed = algebra::hash_fn_64bit(seed ^ std::hash<T>()(a[i]));
+        return seed;
     }
 };

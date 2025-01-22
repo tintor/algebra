@@ -1,7 +1,6 @@
 #include "algebra/segment_segment_intersection.h"
 #include "algebra/rational_vector.h"
 #include "algebra/__test.h"
-using namespace algebra;
 
 TEST_CASE("ccw - colinear") {
     Vec2<rational> a(4, 1), b(5, 2), c(7, 4);

@@ -572,3 +572,10 @@ struct std::formatter<algebra::neg_integer, char> {
 #endif
 
 constexpr std::ostream& operator<<(std::ostream& os, const algebra::integer& a) { return os << a.str(); }
+
+template<>
+struct std::hash<algebra::integer> {
+    constexpr size_t operator()(const algebra::integer& a) const {
+        return std::hash<algebra::natural>()(a.abs);
+    }
+};
