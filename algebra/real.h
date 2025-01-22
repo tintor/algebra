@@ -4,6 +4,16 @@
 
 namespace algebra {
 
+// assuming exp >= 0
+template<int B>
+constexpr integer shift(const integer& a, std::integral auto exp) {
+    if (exp == 0)
+        return a;
+    if constexpr (B == 2)
+        return a << exp;
+    return pow(integer(B), exp, a);
+}
+
 template<int Base = 2>
 struct real {
     integer num;
@@ -16,7 +26,7 @@ struct real {
     constexpr real(float a) : real(rational(a)) { }
     constexpr real(double a) : real(rational(a)) { }
     constexpr real(const rational& a); // exact conversion
-    static constexpr real round(const rational& a, unsigned digits);
+    static constexpr real round(const rational& a, int digits);
 
     constexpr void normalize() {
         if constexpr (Base == 2) {
@@ -83,10 +93,9 @@ constexpr real<Base>::real(const rational& s) {
     normalize();
 }
 
-template<int Base>
-constexpr real<Base> real<Base>::round(const rational& a, unsigned digits) {
-    const natural b = pow(natural(Base), digits);
-    return real<Base>((a.num * b) / a.den, -digits);
+template<int B>
+constexpr real<B> real<B>::round(const rational& a, int digits) {
+    return {shift<B>(a.num, digits) / a.den, -digits};
 }
 
 template<int B>
@@ -94,63 +103,109 @@ constexpr real<B> operator-(const real<B>& a) { return {-a.num, a.exp}; }
 
 template<int B>
 constexpr real<B> operator+(const real<B>& a, const real<B>& b) {
-    if (a.exp > b.exp) return {a.num * pow(integer(B), a.exp - b.exp) + b.num, b.exp};
-    if (b.exp > a.exp) return {a.num + b.num * pow(integer(B), b.exp - a.exp), a.exp};
+    if (a.exp > b.exp) return {shift<B>(a.num, a.exp - b.exp) + b.num, b.exp};
+    if (b.exp > a.exp) return {a.num + shift<B>(b.num, b.exp - a.exp), a.exp};
     return {a.num + b.num, a.exp};
 }
 
 template<int B>
-constexpr real<B> operator-(const real<B>& a, const real<B>& b) {
-    if (a.exp > b.exp) return {a.num * pow(integer(B), a.exp - b.exp) + b.num, b.exp};
-    if (b.exp > a.exp) return {a.num + b.num * pow(integer(B), b.exp - a.exp), a.exp};
-    return {a.num + b.num, a.exp};
+constexpr real<B> operator+(const real<B>& a, const Integral auto& b) {
+    if (a.exp > 0) return {shift<B>(a.num, a.exp) + b};
+    if (0 > a.exp) return {a.num + shift<B>(b, -a.exp), a.exp};
+    return {a.num + b};
 }
+
+template<int B> constexpr real<B> operator+(const Integral auto& a, const real<B>& b) { return b + a; }
+
+template<int B>
+constexpr real<B> operator-(const real<B>& a, const real<B>& b) {
+    if (a.exp > b.exp) return {shift<B>(a.num, a.exp - b.exp) - b.num, b.exp};
+    if (b.exp > a.exp) return {a.num - shift<B>(b.num, b.exp - a.exp), a.exp};
+    return {a.num - b.num, a.exp};
+}
+
+template<int B>
+constexpr real<B> operator-(const real<B>& a, const Integral auto& b) {
+    if (a.exp > 0) return {shift<B>(a.num, a.exp) - b};
+    if (0 > a.exp) return {a.num - shift<B>(b, -a.exp), a.exp};
+    return {a.num - b};
+}
+
+template<int B>
+constexpr real<B> operator-(const Integral auto& a, const real<B>& b) {
+   auto c = b - a;
+   c.num.negate();
+   return c;
+};
 
 template<int B>
 constexpr real<B> operator*(const real<B>& a, const real<B>& b) {
     return {a.num * b.num, a.exp + b.exp};
 }
 
+template<int B> constexpr real<B> operator*(const real<B>& a, const Integral auto& b) { return {a.num * b, a.exp}; }
+template<int B> constexpr real<B> operator*(const Integral auto& a, const real<B>& b) { return {a * b.num, b.exp}; }
+
 template<int B>
 constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
     if (b.num == 0)
         throw std::runtime_error("division by zero");
     int scale = 100;
-    real<B> result(a.num * pow(integer(B), scale) / b.num, a.exp - b.exp - scale);
-    result.normalize();
-    return result;
+    return {shift<B>(a.num, scale) / b.num, a.exp - b.exp - scale};
+}
+
+template<int B>
+constexpr real<B> operator/(const real<B>& a, const Integral auto& b) {
+    if (b == 0)
+        throw std::runtime_error("division by zero");
+    int scale = 100;
+    return {shift<B>(a.num, scale) / b, a.exp - scale};
 }
 
 template<int B>
 constexpr bool operator==(const real<B>& a, const real<B>& b) {
-    if constexpr (B == 2) {
-        if (a.exp > b.exp) return a.num == (b.num << (a.exp - b.exp));
-        if (a.exp < b.exp) return (a.num << (b.exp - a.exp)) == b.num;
-    } else {
-        if (a.exp > b.exp) return a.num == b.num * pow(integer(B), a.exp - b.exp);
-        if (a.exp < b.exp) return a.num * pow(integer(B), b.exp - a.exp) == b.num;
-    }
+    if (a.exp > b.exp) return a.num == shift<B>(b.num, a.exp - b.exp);
+    if (a.exp < b.exp) return shift<B>(a.num, b.exp - a.exp) == b.num;
     return a.num == b.num;
 }
 
 template<int B>
+constexpr bool operator==(const real<B>& a, const Integral auto& b) {
+    if (a.exp > 0) return a.num == shift<B>(b, a.exp);
+    if (a.exp < 0) return shift<B>(a.num, -a.exp) == b;
+    return a.num == b;
+}
+
+template<int B>
+constexpr bool operator==(const Integral auto& a, const real<B>& b) { return b == a; }
+
+template<int B>
 constexpr bool operator<(const real<B>& a, const real<B>& b) {
-    if constexpr (B == 2) {
-        if (a.exp > b.exp) return a.num < (b.num << (a.exp - b.exp));
-        if (a.exp < b.exp) return (a.num << (b.exp - a.exp)) < b.num;
-    } else {
-        if (a.exp > b.exp) return a.num < b.num * pow(integer(B), a.exp - b.exp);
-        if (a.exp < b.exp) return a.num * pow(integer(B), b.exp - a.exp) < b.num;
-    }
+    if (a.exp > b.exp) return a.num < (b.num << (a.exp - b.exp));
+    if (a.exp < b.exp) return (a.num << (b.exp - a.exp)) < b.num;
     return a.num < b.num;
+}
+
+template<int B>
+constexpr bool operator<(const real<B>& a, const Integral auto& b) {
+    if (a.exp > 0) return a.num < shift<B>(b, a.exp);
+    if (a.exp < 0) return shift<B>(a.num, -a.exp) < b;
+    return a.num < b;
+}
+
+template<int B>
+constexpr bool operator<(const Integral auto& a, const real<B>& b) {
+    if (0 > b.exp) return a < shift<B>(b.num, -b.exp);
+    if (0 < b.exp) return shift<B>(a, b.exp) < b.num;
+    return a < b.num;
 }
 
 template <int B>
 constexpr rational to_rational(const real<B>& a) {
     if (a.exp > 0)
-        return {a.num * pow(integer(B), a.exp)};
+        return {shift<B>(a.num, a.exp)};
     if (a.exp < 0)
-        return {a.num, pow(integer(B), -a.exp)};
+        return {a.num, shift<B>(integer(1), -a.exp)};
     return {a.num};
 }
 

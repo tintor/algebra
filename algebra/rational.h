@@ -138,7 +138,7 @@ constexpr bool operator<(const rational& a, const rational& b) { return (a.den =
 constexpr bool operator>(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num >  b.num) : (a.num * b.den >  b.num * a.den); }
 
 template<typename T>
-concept Integral = std::integral<T> || std::same_as<T, integer>;
+concept Integral = std::integral<T> || std::same_as<T, integer> || std::same_as<T, natural>;
 
 constexpr bool operator<(Integral auto a, const rational& b) { return b.den.is_one() ? (a <  b.num) : (a * b.den <  b.num); }
 constexpr bool operator<(const rational& a, Integral auto b) { return a.den.is_one() ? (a.num <  b) : (a.num <  b * a.den); }

@@ -86,6 +86,8 @@ public:
     }
 
     constexpr void operator=(integer_backend&& o) {
+        if (this == &o)
+            return;
         _words = o._words;
         _size = o._size;
         _capacity = o._capacity;
@@ -95,6 +97,8 @@ public:
     }
 
     constexpr void operator=(const integer_backend& o) {
+        if (this == &o)
+            return;
         reset(o._size, /*initialize*/false);
         for (size_type i = 0; i < size(); i++)
             operator[](i) = o.operator[](i);

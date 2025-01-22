@@ -307,9 +307,9 @@ constexpr void mul(const integer& a, const integer& b, integer& c) {
 }
 
 constexpr void mul(integer& a, const integer& b) {
+    const bool negative = a.is_negative() != b.is_negative();
     a.abs *= b.abs;
-    if (b.is_negative())
-        a.negate();
+    a.abs.words.set_negative(negative);
 }
 
 constexpr integer operator*(const integer& a, const integer& b) {
