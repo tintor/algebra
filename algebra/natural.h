@@ -847,9 +847,9 @@ template<typename T> constexpr T operator>>(T a, int64_t b) { a <<= -b; return a
 template<typename T> constexpr T operator<<(T a, int64_t b) { a <<= b; return a; }
 
 template<typename T> constexpr T& operator<<=(T& a, std::integral auto b) { a <<= (int64_t)b; return a; }
-template<typename T> constexpr T& operator>>=(T& a, std::integral auto b) { a <<= (int64_t)b; return a; }
+template<typename T> constexpr T& operator>>=(T& a, std::integral auto b) { a >>= (int64_t)b; return a; }
 template<typename T> constexpr T operator<<(const T& a, std::integral auto b) { return a << (int64_t)b; }
-template<typename T> constexpr T operator>>(const T& a, std::integral auto b) { return a << (int64_t)b; }
+template<typename T> constexpr T operator>>(const T& a, std::integral auto b) { return a >> (int64_t)b; }
 
 constexpr natural operator~(natural a) {
     for (size_t i = 0; i < a.words.size(); i++)
