@@ -802,6 +802,8 @@ constexpr natural& operator%=(natural& a, const natural& b) { natural rem; mod(a
 constexpr natural& operator<<=(natural& a, int64_t b) {
     auto bits_per_word = sizeof(natural::word) * 8;
     if (b > 0) {
+        if (a.words.size() == 0)
+            return a;
         auto word_shift = b / bits_per_word;
         auto bit_shift = b % bits_per_word;
 
