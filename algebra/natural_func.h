@@ -8,8 +8,8 @@ constexpr natural pow(natural base, std::integral auto exp) {
         throw std::runtime_error("negative exponent in pow(natural, ...)");
     if (base == 2) {
         natural out;
-        out.words.reset((exp + 64) / 64);
-        out.words.back() = natural::word(1) << (exp % 64);
+        out.words.reset((exp + natural::bits_per_word) / natural::bits_per_word);
+        out.words.back() = natural::word(1) << (exp % natural::bits_per_word);
         return out;
     }
 
@@ -47,13 +47,13 @@ constexpr natural pow(natural base, const natural& _exp) {
 
 // uniformly sample from [0, (2**n)-1]
 constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
-    static_assert(sizeof(rng()) == 8);
-    auto w = (n + 63) / 64;
+    static_assert(sizeof(rng()) == sizeof(natural::word));
+    auto w = (n + natural::bits_per_word - 1) / natural::bits_per_word;
     out.words.reset(w, /*initialize*/false);
     while (w--)
         out.words[w] = rng();
-    if ((n % 64) != 0)
-        out.words.back() &= (natural::word(1) << (n % 64)) - 1;
+    if ((n % natural::bits_per_word) != 0)
+        out.words.back() &= (natural::word(1) << (n % natural::bits_per_word)) - 1;
     out.words.normalize();
 }
 
@@ -82,20 +82,20 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
         return;
     }
 
-    const natural::size_type n = (b + 63) / 64;
+    const natural::size_type n = (b + natural::bits_per_word - 1) / natural::bits_per_word;
     if (b == 64 * n) {
         // Note: power of two case is handled above!
         // mq = pow(2_n, 64 * n) / count
         // assert mq == 1
         while (true) {
-            uniform_sample_bits(n * 64, rng, /*out*/out);
+            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/out);
             if (out < count)
                 return;
         }
     }
     // TODO avoid this division in mq == 2 case
     natural temp;
-    natural mq = pow(natural(2), n * 64);
+    natural mq = pow(natural(2), n * natural::bits_per_word);
     mq /= count;
     if (mq == 2) {
         temp = count;
@@ -104,14 +104,14 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
     while (true) {
         if (mq == 2) {
             // optimization: avoid expensive div() for small mq
-            uniform_sample_bits(n * 64, rng, /*out*/out);
+            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/out);
             if (out < temp) {
                 if (out >= count)
                     out -= count;
                 return;
             }
         } else {
-            uniform_sample_bits(n * 64, rng, /*out*/temp);
+            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/temp);
             div(temp, count, /*out*/temp, /*out*/out);
             if (temp < mq)
                 return;
@@ -152,10 +152,10 @@ constexpr T gcd(T a, T b) {
         return b;
     if (b == 0)
         return a;
-    auto az = num_trailing_zeros(a);
+    auto az = std::countr_zero(a);
     if (az == 0)
         return __gcd_inner(a, b);
-    auto common = std::min(az, num_trailing_zeros(b));
+    auto common = std::min(az, std::countr_zero(b));
     return __gcd_inner(a >> az, b >> common) << common;
 }
 
@@ -164,10 +164,10 @@ constexpr uint64_t gcd(uint64_t a, uint64_t b) {
         return b;
     if (b == 0)
         return a;
-    auto common = __builtin_ctzl(a | b);
-    a >>= __builtin_ctzl(a);
+    auto common = std::countr_zero(a | b);
+    a >>= std::countr_zero(a);
     do {
-        b >>= __builtin_ctzl(b);
+        b >>= std::countr_zero(b);
         if (a > b)
             std::swap(a, b);
         b -= a;
@@ -213,24 +213,93 @@ constexpr natural lcm(const natural& a, const natural& b) {
     return m;
 }
 
-constexpr natural isqrt(const natural& x) {
+constexpr natural __slow_and_correct_isqrt(const natural& x) {
     if (x == 0 || x == 1)
         return x;
 
     const auto b = x.num_bits();
     auto e = b + (b & 1);
-    natural q, a;
+    natural q, a, a2, xe;
     while (true) {
         q <<= 1;
         a = q;
         a |= 1;
-        if (a * a <= (x >> e))
-            q = a;
+        mul(a, a, a2);
+        xe = x;
+        xe >>= e;
+        if (a2 <= xe)
+            q |= 1;
         if (e < 2)
             break;
         e -= 2;
     }
     return q;
+}
+
+natural isqrt(const natural& x) {
+    using u128 = unsigned __int128;
+    using u64 = uint64_t;
+
+    if (x.words.size() == 0)
+        return 0;
+
+    const int bits = x.num_bits();
+    const int exponent = bits - 53;
+    if (exponent > 1023)
+        return __slow_and_correct_isqrt(x); // too large for double
+
+    // convert x to double
+    const double xd = (exponent <= 0) ? x.words[0] : std::ldexp(static_cast<double>(extract_64bits(x, exponent)), exponent);
+
+    // initial guess using hardware double (max error of 1 for up to 107 bits)
+    u64 iq = static_cast<u64>(std::sqrt(xd));
+
+    if (bits <= 64) {
+        u128 cx = x.words[0];
+        if (static_cast<u128>(iq) * iq > cx)
+            iq -= 1;
+        return iq;
+    }
+
+    if (bits <= 77) {
+        u128 cx = (static_cast<u128>(x.words[1]) << 64) | x.words[0];
+        iq += 1;
+        if (static_cast<u128>(iq) * iq > cx)
+            iq -= 1;
+        if (static_cast<u128>(iq) * iq > cx)
+            iq -= 1;
+        return iq;
+    }
+
+    /*if (bits <= 107) {
+        q = iq + 1;
+        mul(q, q, e);
+        if (e > x)
+            q -= 1;
+        mul(q, q, e);
+        if (e > x)
+            q -= 1;
+        return q;
+    }*/
+
+    if (bits <= 126) {
+        u128 cx = (static_cast<u128>(x.words[1]) << 64) | x.words[0];
+        return (iq + static_cast<u64>(cx / iq)) / 2;
+    }
+
+    natural q, e;
+    // this doesn't work for 129 bits!
+    /*natural rem;
+    div(x, q, e, rem);
+    q += e;
+    q >>= 1;
+
+    div(x, q, e, rem);
+    q += e;
+    q >>= 1;
+    return q;*/
+
+    return __slow_and_correct_isqrt(x);
 }
 
 constexpr bool is_prime(const uint64_t a) {
@@ -341,7 +410,7 @@ constexpr bool is_likely_prime(const uint64_t n, int rounds, auto& rng) {
     if (n % 2 == 0)
         return false;
 
-    const auto s = num_trailing_zeros(n - 1);
+    const auto s = std::countr_zero(n - 1);
     const uint64_t d = (n - 1) >> s;
 
     for (int i = 0; i < rounds; i++) {
@@ -405,7 +474,7 @@ constexpr std::vector<std::pair<uint64_t, int>> factorize(uint64_t a) {
         return {};
 
     std::vector<std::pair<uint64_t, int>> out;
-    auto z = num_trailing_zeros(a);
+    auto z = std::countr_zero(a);
     if (z) {
         out.emplace_back(2, z);
         a >>= z;

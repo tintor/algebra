@@ -1,5 +1,153 @@
 #include "algebra/natural_func.h"
 #include "algebra/__test.h"
+#include <catch2/benchmark/catch_benchmark.hpp>
+
+ulong doubleToLongBits(double a) {
+    return *reinterpret_cast<const ulong*>(&a);
+}
+
+// UNTESTED
+natural double_to_natural(double a) {
+    ulong bits = doubleToLongBits(a);
+    ulong e = ulong(1) << 52;
+    natural b = (bits & e - 1) | e;
+    b <<= ((bits >> 52) & 0x7ff) - 1075;
+    return b;
+}
+
+// UNTESTED
+natural fast_isqrt(const natural& x) {
+    if (x == 0)
+        return 0;
+    double xd = static_cast<double>(x);
+    natural val, q, s;
+    if (xd < 2.1267e37) { // 2.12e37 largest here since sqrt(long.max*long.max) > long.max
+        ulong vInt = (ulong)sqrt(xd);
+        natural nInt = vInt;
+        val = natural((vInt + static_cast<ulong>(x / nInt)) >> 1);
+    } else if (xd < 4.3322e127) {
+        val = double_to_natural(sqrt(xd));
+
+        div(x, val, q, s);
+        q += val;
+        q >>= 1;
+        std::swap(q, val); // val = ((x / val) + val) >> 1;
+
+        if (xd > 2e63) {
+            /// val = ((x / val) + val) >> 1;
+            div(x, val, q, s);
+            q += val;
+            q >>= 1;
+            val = q; // val = ((x / val) + val) >> 1;
+        }
+    } else { // handle large numbers over 4.3322e127
+        uint xLen = x.num_bits();
+        uint wantedPrecision = ((xLen + 1) / 2);
+        uint xLenMod = xLen + (xLen & 1) + 1;
+
+        //////// Do the first Sqrt on Hardware ////////
+        ulong valLong = doubleToLongBits(std::sqrt(static_cast<ulong>(x >> (xLenMod - 63)))) & 0x1fffffffffffffL;
+        if (valLong == 0)
+            valLong = 1L << 53;
+
+        //////// Classic Newton Iterations ////////
+        val = valLong;
+        val <<= 52;
+        q = x >> (xLenMod - (3 * 53));
+        q /= valLong;
+        val += q;
+
+        uint size = 106;
+        for (; size < 256; size <<= 1) {
+            q = x;
+            q >>= xLenMod - (3 * size);
+            div(q, val, q, s);
+            val <<= size - 1;
+            val += q;
+        }
+
+        if (xd > 4e254) { // 4e254 = 1<<845.77
+            uint numOfNewtonSteps = 32 - std::countl_zero(wantedPrecision / size);
+
+            ////// Apply Starting Size ////////
+            uint wantedSize = (wantedPrecision >> numOfNewtonSteps) + 2;
+            uint needToShiftBy = size - wantedSize;
+            val >>= needToShiftBy;
+
+            size = wantedSize;
+            do {
+                //////// Newton Plus Iteration ////////
+                uint shiftX = xLenMod - (3 * size);
+                mul(val, val, s);
+                s <<= size - 1; // s = (val * val) << (size - 1);
+
+                q = x;
+                q >>= shiftX;
+                q -= s; // q = (x >> shiftX) - s
+                div(q, val, q, s);
+
+                val <<= size;
+                val += q;
+                size *= 2;
+            } while (size < wantedPrecision);
+        }
+        val >>= size - wantedPrecision;
+    }
+
+    // Detect a round ups. This function can be further optimized - see article.
+    // For a ~7% speed bump the following line can be removed but round-ups will occur.
+    mul(val, val, q);
+    if (q > x)
+        val -= 1;
+    return val;
+}
+
+natural diff(const natural& a, const natural& b) {
+    return (a > b) ? a - b : (b - a);
+}
+
+TEST_CASE("isqrt benchmark") {
+    natural a;
+
+#define BENCH_DIGITS(N) \
+    a = pow(10_n, N); \
+    print("1e" #N " bits {}\n", a.num_bits()); \
+    BENCHMARK("isqrt() " #N) { return isqrt(a); }; \
+    BENCHMARK("fast_isqrt() " #N) { return fast_isqrt(a); }; \
+    BENCHMARK("std::sqrt() " #N) { return sqrt(static_cast<double>(a)); };
+
+    BENCH_DIGITS(10);
+    BENCH_DIGITS(20);
+    BENCH_DIGITS(30);
+    BENCH_DIGITS(38);
+    BENCH_DIGITS(40);
+    BENCH_DIGITS(50);
+    BENCH_DIGITS(75);
+    BENCH_DIGITS(100);
+    BENCH_DIGITS(125);
+    BENCH_DIGITS(150);
+    BENCH_DIGITS(300);
+}
+
+TEST_CASE("isqrt stress") {
+    long i = 0;
+    std::mt19937_64 rng(0);
+    int bits_max = 126;
+    while (true) {
+        int bits = std::uniform_int_distribution<int>(1, bits_max)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        bits = x.num_bits();
+        natural q = isqrt(x);
+        if (q * q > x || (q + 1) * (q + 1) <= x) {
+            natural qe = __slow_and_correct_isqrt(x);
+            std::print("failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
+            bits_max = bits - 1;
+        }
+        i += 1;
+        if (i % 1'000'000 == 0)
+            print("{} mil, bits_max {}\n", i / 1'000'000, bits_max);
+    }
+}
 
 TEST_CASE("uniform_sample") {
     natural a = (1_n << 128) - 1;
@@ -15,10 +163,6 @@ TEST_CASE("uniform_sample") {
             div(m, 10ull, /*out*/m);
         }
     }
-}
-
-natural diff(const natural& a, const natural& b) {
-    return (a >= b) ? (a - b) : (b - a);
 }
 
 TEST_CASE("uniform_sample2") {
@@ -49,11 +193,11 @@ TEST_CASE("pow") {
 }
 
 TEST_CASE("gcd") {
-    REQUIRE(num_trailing_zeros(0u) == 0);
-    REQUIRE(num_trailing_zeros(1u) == 0);
-    REQUIRE(num_trailing_zeros(2u) == 1);
-    REQUIRE(num_trailing_zeros(8u) == 3);
-    REQUIRE(num_trailing_zeros(24u) == 3);
+    REQUIRE(std::countr_zero(0u) == 0);
+    REQUIRE(std::countr_zero(1u) == 0);
+    REQUIRE(std::countr_zero(2u) == 1);
+    REQUIRE(std::countr_zero(8u) == 3);
+    REQUIRE(std::countr_zero(24u) == 3);
 
     REQUIRE(gcd(5u, 5u) == 5u);
     REQUIRE(gcd(6u, 15u) == 3u);
