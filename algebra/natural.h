@@ -844,14 +844,17 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
     return a;
 }
 
-template<typename T> constexpr T& operator>>=(T& a, int64_t b) { a <<= -b; return a; }
-template<typename T> constexpr T operator>>(T a, int64_t b) { a <<= -b; return a; }
-template<typename T> constexpr T operator<<(T a, int64_t b) { a <<= b; return a; }
+#define ALGEBRA_SHIFT_OP(CLASS) \
+constexpr CLASS& operator>>=(CLASS& a, int64_t b) { a <<= -b; return a; } \
+constexpr CLASS operator>>(CLASS a, int64_t b) { a <<= -b; return a; } \
+constexpr CLASS operator<<(CLASS a, int64_t b) { a <<= b; return a; } \
+template<typename T> requires (std::integral<T> && !std::same_as<T, int64_t>) \
+constexpr CLASS& operator<<=(CLASS& a, T b) { a <<= (int64_t)b; return a; } \
+constexpr CLASS& operator>>=(CLASS& a, std::integral auto b) { a >>= (int64_t)b; return a; } \
+constexpr CLASS operator<<(const CLASS& a, std::integral auto b) { return a << (int64_t)b; } \
+constexpr CLASS operator>>(const CLASS& a, std::integral auto b) { return a >> (int64_t)b; }
 
-template<typename T> constexpr T& operator<<=(T& a, std::integral auto b) { a <<= (int64_t)b; return a; }
-template<typename T> constexpr T& operator>>=(T& a, std::integral auto b) { a >>= (int64_t)b; return a; }
-template<typename T> constexpr T operator<<(const T& a, std::integral auto b) { return a << (int64_t)b; }
-template<typename T> constexpr T operator>>(const T& a, std::integral auto b) { return a >> (int64_t)b; }
+ALGEBRA_SHIFT_OP(natural)
 
 constexpr natural operator~(natural a) {
     for (size_t i = 0; i < a.words.size(); i++)

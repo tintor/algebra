@@ -369,8 +369,8 @@ TEST_CASE("%") {
     REQUIRE(integer(7) % integer(8) == integer(7));
 
     REQUIRE(integer(-7) % integer(3) == integer(-1));
-    REQUIRE(integer(-7) % integer(-3) == integer(1));
-    REQUIRE(integer(7) % integer(-3) == integer(-1));
+    REQUIRE(integer(-7) % integer(-3) == integer(-1));
+    REQUIRE(integer(7) % integer(-3) == integer(1));
 }
 
 TEST_CASE("mod") {

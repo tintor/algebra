@@ -510,6 +510,8 @@ constexpr void operator<<=(integer& a, int64_t i) {
     a.abs.words.set_negative(negative);
 }
 
+ALGEBRA_SHIFT_OP(integer)
+
 static_assert(sizeof(integer) == 16);
 
 }

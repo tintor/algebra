@@ -189,6 +189,9 @@ constexpr real<B>& operator<<=(real<B>& a, int64_t b) {
     return a;
 }
 
+ALGEBRA_SHIFT_OP(real<2>)
+ALGEBRA_SHIFT_OP(real<10>)
+
 template<int B>
 constexpr bool operator==(const real<B>& a, const real<B>& b) {
     if (a.exp > b.exp) return shift<B>(a.num, a.exp - b.exp) == b.num;

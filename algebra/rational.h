@@ -451,6 +451,8 @@ constexpr rational& operator<<=(rational& a, int64_t b) {
     return a;
 }
 
+ALGEBRA_SHIFT_OP(rational)
+
 }
 
 template <>
