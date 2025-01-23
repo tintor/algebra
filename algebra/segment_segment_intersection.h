@@ -30,7 +30,7 @@ struct SegmentParams {
 // PointParams: intersection is single point, returns M such that M = A + (B - A) * s = C + (D - C) * t
 // SegmentParams: intersection is line segment, returns (M, N) such that M = A + (B - A) * s and N = C + (D - C) * t
 template<typename T>
-std::variant<None, PointParams<T>, SegmentParams<T>> segment_vs_segment_intersection_param(
+std::variant<None, PointParams<T>, SegmentParams<T>> segment_segment_intersection_param(
         const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
     T s, t, det;
     // if not parallel AND not degenerate
@@ -98,7 +98,7 @@ std::variant<None, PointParams<T>, SegmentParams<T>> segment_vs_segment_intersec
 }
 
 template<typename T>
-std::variant<None, Vec2<T>, std::pair<Vec2<T>, Vec2<T>>> segment_vs_segment_intersection(
+std::variant<None, Vec2<T>, std::pair<Vec2<T>, Vec2<T>>> segment_segment_intersection(
         const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
     T s, t, det;
     // if not parallel AND not degenerate
@@ -168,8 +168,8 @@ std::variant<None, Vec2<T>, std::pair<Vec2<T>, Vec2<T>>> segment_vs_segment_inte
 // returns (s, t), such that intersection point M = A + (B - A) * s, and M = C + (D - C) * t, or false if no unique solution
 // Note: returns false in case of full or partial overlap
 template<typename T>
-constexpr bool segment_vs_segment_intersection_single_point(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d, T* s = nullptr, T* t = nullptr) {
-    const auto res = segment_vs_segment_intersection_param(a, b, c, d);
+constexpr bool segment_segment_intersection_single_point(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d, T* s = nullptr, T* t = nullptr) {
+    const auto res = segment_segment_intersection_param(a, b, c, d);
     if (!std::holds_alternative<PointParams<T>>(res))
         return false;
     if (s)
@@ -184,7 +184,7 @@ constexpr bool segment_vs_segment_intersection_single_point(const Vec2<T>& a, co
 // 2 - intersection is non-degenerate line segment
 template<typename T>
 int segment_vs_segment_intersects(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
-    return segment_vs_segment_intersection(a, b, c, d).index();
+    return segment_segment_intersection(a, b, c, d).index();
 }
 
 }

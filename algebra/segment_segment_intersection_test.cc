@@ -54,7 +54,7 @@ TEST_CASE("segment_vs_segment_intersection_single_point - touch (collinear)") {
 
 TEST_CASE("segment_vs_segment_intersection_single_point - touch (T)") {
     rational m, n;
-    REQUIRE(segment_vs_segment_intersection_single_point<rational>({0,0}, {3,0}, {1,0}, {7,7}, &m, &n));
+    REQUIRE(segment_segment_intersection_single_point<rational>({0,0}, {3,0}, {1,0}, {7,7}, &m, &n));
     REQUIRE(m == 1/3_q);
     REQUIRE(n == 0);
 }
