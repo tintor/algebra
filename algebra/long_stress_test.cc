@@ -353,8 +353,8 @@ TEST_CASE("main") {
         try {
             integer_test(seed);
             rational_test(seed);
-            //real_test<2>(seed);
-            //real_test<10>(seed);
+            real_test<2>(seed);
+            real_test<10>(seed);
             // TODO expr
         } catch (...) {
             print("exception seed {}\n", seed);

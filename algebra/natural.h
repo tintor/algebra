@@ -799,50 +799,57 @@ constexpr natural& operator/=(natural& a, std::integral auto b) {
 constexpr natural operator%(const natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); return rem; }
 constexpr natural& operator%=(natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); a = rem; return a; }
 
-constexpr natural& operator>>=(natural& a, size_t i) {
-    size_t bits_per_word = sizeof(natural::word) * 8;
-    size_t word_shift = i / bits_per_word;
-    size_t bit_shift = i % bits_per_word;
+constexpr natural& operator<<=(natural& a, int64_t b) {
+    auto bits_per_word = sizeof(natural::word) * 8;
+    if (b > 0) {
+        auto word_shift = b / bits_per_word;
+        auto bit_shift = b % bits_per_word;
 
-    if (word_shift >= a.words.size()) {
-        a.words.reset(0);
+        if (bit_shift) {
+            natural::word carry = 0;
+            for (natural::size_type i = 0; i < a.words.size(); ++i) {
+                auto current = a.words[i];
+                a.words[i] = (current << bit_shift) | carry;
+                carry = current >> (bits_per_word - bit_shift);
+            }
+            if (carry)
+                a.words += carry;
+        }
+        a.words.insert_first_n_words(word_shift);
         return a;
     }
+    if (b < 0) {
+        b = -b;
+        auto word_shift = b / bits_per_word;
+        auto bit_shift = b % bits_per_word;
 
-    a.words.erase_first_n_words(word_shift);
-    if (bit_shift != 0) {
-        natural::word carry = 0;
-        for (auto idx = a.words.size(); idx-- > 0;) {
-            auto current = a.words[idx];
-            a.words[idx] = (current >> bit_shift) | carry;
-            carry = (current << (bits_per_word - bit_shift));
+        if (word_shift >= a.words.size()) {
+            a.words.set_zero();
+            return a;
         }
+
+        a.words.erase_first_n_words(word_shift);
+        if (bit_shift != 0) {
+            natural::word carry = 0;
+            for (auto idx = a.words.size(); idx-- > 0;) {
+                auto current = a.words[idx];
+                a.words[idx] = (current >> bit_shift) | carry;
+                carry = (current << (bits_per_word - bit_shift));
+            }
+        }
+        a.words.normalize();
     }
-    a.words.normalize();
     return a;
 }
 
-constexpr natural& operator<<=(natural& a, size_t i) {
-    size_t bits_per_word = sizeof(natural::word) * 8;
-    size_t word_shift = i / bits_per_word;
-    size_t bit_shift = i % bits_per_word;
+template<typename T> constexpr T& operator>>=(T& a, int64_t b) { a <<= -b; return a; }
+template<typename T> constexpr T operator>>(T a, int64_t b) { a <<= -b; return a; }
+template<typename T> constexpr T operator<<(T a, int64_t b) { a <<= b; return a; }
 
-    if (bit_shift) {
-        natural::word carry = 0;
-        for (natural::size_type i = 0; i < a.words.size(); ++i) {
-            auto current = a.words[i];
-            a.words[i] = (current << bit_shift) | carry;
-            carry = current >> (bits_per_word - bit_shift);
-        }
-        if (carry)
-            a.words += carry;
-    }
-    a.words.insert_first_n_words(word_shift);
-    return a;
-}
-
-constexpr natural operator>>(natural a, std::integral auto i) { a >>= i; return a; }
-constexpr natural operator<<(natural a, std::integral auto i) { a <<= i; return a; }
+template<typename T> constexpr T& operator<<=(T& a, std::integral auto b) { a <<= (int64_t)b; return a; }
+template<typename T> constexpr T& operator>>=(T& a, std::integral auto b) { a <<= (int64_t)b; return a; }
+template<typename T> constexpr T operator<<(const T& a, std::integral auto b) { return a << (int64_t)b; }
+template<typename T> constexpr T operator>>(const T& a, std::integral auto b) { return a << (int64_t)b; }
 
 constexpr natural operator~(natural a) {
     for (size_t i = 0; i < a.words.size(); i++)

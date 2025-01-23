@@ -206,9 +206,6 @@ constexpr neg_integer operator-(const integer& a) { return {&a}; }
 constexpr integer operator-(integer a) { a.negate(); return a; }
 #endif
 
-constexpr integer operator>>(integer a, std::integral auto i) { a >>= i; return a; }
-constexpr integer operator<<(integer a, std::integral auto i) { a <<= i; return a; }
-
 constexpr void add(const integer& a, const integer& b, integer& c) {
     if (a.is_negative() == b.is_negative()) {
         c.abs = a.abs + b.abs;
@@ -506,16 +503,10 @@ namespace literals {
 constexpr auto operator""_i(const char* s) { return integer(s); }
 }
 
-constexpr void operator<<=(integer& a, size_t i) {
-    bool negative = a.is_negative();
+constexpr void operator<<=(integer& a, int64_t i) {
+    const bool negative = a.is_negative();
     a.abs <<= i;
-    a.abs.words.set_negative(a.is_negative());
-}
-
-constexpr void operator>>=(integer& a, size_t i) {
-    bool negative = a.is_negative();
-    a.abs >>= i;
-    a.abs.words.set_negative(a.is_negative());
+    a.abs.words.set_negative(negative);
 }
 
 static_assert(sizeof(integer) == 16);

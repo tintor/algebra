@@ -22,6 +22,7 @@ struct real {
     constexpr real(std::integral auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
     constexpr real(natural a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
+    constexpr real(integer a, int exp, int dummy) : num(std::move(a)), exp(exp) { }
 
     constexpr real(float a) : real(rational(a)) { }
     constexpr real(double a) : real(rational(a)) { }
@@ -138,13 +139,13 @@ constexpr real<B> operator-(const Integral auto& a, const real<B>& b) {
    return c;
 };
 
-template<int B>
-constexpr real<B> operator*(const real<B>& a, const real<B>& b) {
-    return {a.num * b.num, a.exp + b.exp};
-}
-
+template<int B> constexpr real<B> operator*(const real<B>& a, const real<B>& b) { return {a.num * b.num, a.exp + b.exp}; }
 template<int B> constexpr real<B> operator*(const real<B>& a, const Integral auto& b) { return {a.num * b, a.exp}; }
 template<int B> constexpr real<B> operator*(const Integral auto& a, const real<B>& b) { return {a * b.num, b.exp}; }
+
+template<int B, typename T> constexpr real<B>& operator+=(real<B>& a, const T& b) { a = a + b; return a; }
+template<int B, typename T> constexpr real<B>& operator-=(real<B>& a, const T& b) { a = a - b; return a; }
+template<int B, typename T> constexpr real<B>& operator*=(real<B>& a, const T& b) { a = a * b; return a; }
 
 template<int B>
 constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
@@ -153,9 +154,36 @@ constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr real<B> operator/(const real<B>& a, const Integral auto& b) {
+constexpr real<B>& operator/=(real<B>& a, const Integral auto& b) {
     int scale = 100;
-    return {shift<B>(a.num, scale) / b, a.exp - scale};
+    if constexpr (B == 2) {
+        a.num <<= scale;
+    } else {
+        a.num = pow(integer(B), scale, a.num);
+    }
+    a.num /= b;
+    a.exp -= scale;
+    a.normalize();
+    return a;
+}
+
+template<int B> constexpr real<B> operator/(real<B> a, const Integral auto& b) { a /= b; return a; }
+template<int B> constexpr real<B> operator/(const Integral auto& a, real<B> b) { return real<B>(a) / b; }
+
+template<int B>
+constexpr real<B>& operator<<=(real<B>& a, int64_t b) {
+    if constexpr (B == 2) {
+        a.exp += b;
+        return a;
+    }
+    if (b > 0) {
+        a.num <<= b;
+        if constexpr (B % 2 == 0)
+            a.normalize();
+    }
+    if (b < 0)
+        a /= pow2(-b);
+    return a;
 }
 
 template<int B>

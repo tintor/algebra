@@ -18,6 +18,8 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
 }
 
 constexpr integer pow2(std::integral auto exp) {
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow2(...)");
     integer out;
     out.abs.words.reset((exp + 64) / 64);
     out.abs.words.back() = integer::word(1) << (exp % 64);
@@ -25,10 +27,10 @@ constexpr integer pow2(std::integral auto exp) {
 }
 
 constexpr integer pow(integer base, std::integral auto exp, integer result = 1) {
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(integer, ...)");
     if (base == 2)
         return pow2(exp);
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
     if (exp == 0)
         return 1;
     if (exp == 1)
@@ -53,6 +55,8 @@ constexpr integer pow(integer base, std::integral auto exp, integer result = 1) 
 constexpr integer pow(integer base, const natural& exp, integer result = 1) {
     if (exp.is_uint64())
         return pow(base, static_cast<uint64_t>(exp), std::move(result));
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
 
     if (exp.is_odd())
         result *= base;

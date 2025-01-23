@@ -425,7 +425,7 @@ constexpr rational& operator%=(rational& a, const integer& b) {
     return a;
 }
 
-constexpr rational& operator<<=(rational& a, int b) {
+constexpr rational& operator<<=(rational& a, int64_t b) {
     if (b > 0) {
         auto z = a.den.num_trailing_zeros();
         if (b > z) {
@@ -450,10 +450,6 @@ constexpr rational& operator<<=(rational& a, int b) {
     }
     return a;
 }
-
-constexpr rational operator<<(const rational& a, int b) { rational c = a; return c <<= b; }
-constexpr rational operator>>(const rational& a, const int b) { return a << -b; }
-constexpr rational& operator>>=(rational& a, int b) { return a <<= -b; }
 
 }
 
