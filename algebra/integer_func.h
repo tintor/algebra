@@ -26,7 +26,7 @@ constexpr integer pow2(std::integral auto exp) {
     return out;
 }
 
-constexpr integer pow(integer base, std::integral auto exp, integer result = 1) {
+constexpr integer pow(integer base, std::integral auto exp) {
     if (base == 2)
         return pow2(exp);
     if (exp < 0)
@@ -40,6 +40,33 @@ constexpr integer pow(integer base, std::integral auto exp, integer result = 1) 
     if (base == 8 && exp <= std::numeric_limits<decltype(exp)>::max() / 3)
         return pow2(exp * 3);
 
+    integer result = 1;
+    if (exp & 1)
+        result = base;
+    exp >>= 1;
+    while (exp) {
+        base *= base;
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+    }
+    return result;
+}
+
+constexpr integer pow(integer base, std::integral auto exp, integer result) {
+    if (base == 2)
+        return result << exp;
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
+    if (exp == 0)
+        return 1;
+    if (exp == 1)
+        return result * base;
+    if (base == 4 && exp <= std::numeric_limits<decltype(exp)>::max() / 2)
+        return result << (exp * 2);
+    if (base == 8 && exp <= std::numeric_limits<decltype(exp)>::max() / 3)
+        return result << (exp * 3);
+
     if (exp & 1)
         result *= base;
     exp >>= 1;
@@ -52,14 +79,15 @@ constexpr integer pow(integer base, std::integral auto exp, integer result = 1) 
     return result;
 }
 
-constexpr integer pow(integer base, const natural& exp, integer result = 1) {
+constexpr integer pow(integer base, const natural& exp) {
     if (exp.is_uint64())
-        return pow(base, static_cast<uint64_t>(exp), std::move(result));
+        return pow(base, static_cast<uint64_t>(exp));
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(integer, ...)");
 
+    integer result = 1;
     if (exp.is_odd())
-        result *= base;
+        result = base;
     for (int i = 1; i < exp.num_bits(); i++) {
         base *= base;
         if (exp.bit(i))

@@ -47,3 +47,9 @@ TEST_CASE("hash") {
     std::unordered_map<real<2>, int> m;
     m[1.5_f] = 0;
 }
+
+TEST_CASE("+") {
+    REQUIRE(1000_d + 0 == 1000_d);
+    REQUIRE(1_d + 0 == 1_d);
+    REQUIRE(0.0001_d + 0 == 0.0001_d);
+}

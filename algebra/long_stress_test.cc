@@ -371,7 +371,6 @@ void real_test(uint64_t seed) {
 TEST_CASE("main") {
     std::random_device rd;
     uint64_t seed = (uint64_t(rd()) << 32) + rd();
-    seed = 0;
 
     while (true) {
         if (seed % 1000 == 0)
@@ -379,8 +378,8 @@ TEST_CASE("main") {
         try {
             integer_test(seed);
             rational_test(seed);
-            //real_test<2>(seed);
-            //real_test<10>(seed);
+            real_test<2>(seed);
+            real_test<10>(seed);
             // TODO expr
         } catch (...) {
             print("exception seed {}\n", seed);

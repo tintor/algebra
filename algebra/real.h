@@ -1,6 +1,7 @@
 #pragma once
 #include "algebra/rational.h"
 #include "algebra/natural_func.h"
+#include "algebra/integer_func.h"
 
 namespace algebra {
 
@@ -48,6 +49,8 @@ struct real {
         if (num.is_zero())
             exp = 0;
     }
+
+    std::string str() const;
 };
 using decimal = real<10>;
 
@@ -297,3 +300,12 @@ struct std::hash<algebra::real<B>> {
         return seed;
     }
 };
+
+namespace algebra {
+
+template<int B>
+std::string real<B>::str() const {
+    return std::format("{}", *this);
+}
+
+}
