@@ -360,10 +360,11 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
         rem = 0;
         return;
     }
+    const bool a_negative = a.is_negative();
     const bool negative = a.is_negative() != b.is_negative();
     div(a.abs, b.abs, quot.abs, rem.abs);
     quot.abs.words.set_negative(negative);
-    rem.abs.words.set_negative(negative);
+    rem.abs.words.set_negative(a_negative);
 }
 
 constexpr integer operator/(const integer& a, const integer& b) {
