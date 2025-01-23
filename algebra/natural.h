@@ -30,24 +30,6 @@ constexpr uint64_t pow(uint64_t base, unsigned exp) {
     return result;
 }
 
-constexpr auto num_trailing_zeros(std::unsigned_integral auto a) {
-    if constexpr (sizeof(a) <= 4)
-        return a ? __builtin_ctz(static_cast<uint32_t>(a)) : 0;
-    else if constexpr (sizeof(a) == 8)
-        return a ? __builtin_ctzl(a) : 0;
-    else if constexpr (sizeof(a) == 16) {
-        const uint64_t low = a;
-        if (low)
-            return __builtin_ctzl(low);
-        const uint64_t high = a >> 64;
-        if (high)
-            return __builtin_ctzl(high) + 64;
-        return 0;
-    } else {
-        static_assert(false);
-    }
-}
-
 constexpr unsigned long abs_ulong(std::signed_integral auto a) { return (a >= 0) ? a : (~static_cast<unsigned long>(a) + 1); }
 
 // TODO test cases for operator float()
@@ -56,6 +38,7 @@ struct natural {
     using size_type = integer_backend::size_type;
     using word = integer_backend::word;
     using dword = integer_backend::dword;
+    static constexpr size_t bits_per_word = sizeof(word) * 8;
 
     integer_backend words;
 
@@ -115,7 +98,7 @@ struct natural {
             throw std::runtime_error("cast overflow");
         dword a = words[0];
         if (words.size() >= 2)
-            a |= dword(words[1]) << 64;
+            a |= dword(words[1]) << bits_per_word;
         return a;
     }
 
@@ -123,8 +106,8 @@ struct natural {
         size_t a = 0;
         for (size_type i = 0; i < words.size(); i++) {
             if (words[i])
-                return a + __builtin_ctzl(words[i]);
-            a += 64;
+                return a + std::countr_zero(words[i]);
+            a += bits_per_word;
         }
         return a;
     }
@@ -133,7 +116,7 @@ struct natural {
         for (size_type i = 0; b && i < words.size(); ++i) {
             dword acc = (dword)words[i] + b;
             words[i] = acc;
-            b = acc >> 64;
+            b = acc >> bits_per_word;
         }
         if (b)
             words += b;
@@ -153,7 +136,7 @@ struct natural {
             if (i < b.words.size())
                 acc += b.words[i];
             words[i] = acc;
-            acc >>= 64;
+            acc >>= bits_per_word;
         }
         if (acc)
             words += acc;
@@ -288,9 +271,8 @@ struct natural {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr size_t num_bits() const { return words.size() ? words.size() * 64 - __builtin_clzl(words.back()) : 0; }
+    constexpr size_t num_bits() const { return words.size() ? words.size() * bits_per_word - std::countl_zero(words.back()) : 0; }
     constexpr bool bit(size_t i) const {
-        size_t bits_per_word = sizeof(word) * 8;
         size_t w = i / bits_per_word;
         size_t b = i % bits_per_word;
         return w < words.size() && (words[w] & (word(1) << b));
@@ -317,7 +299,7 @@ struct natural {
     constexpr operator double() const;
 };
 
-constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - __builtin_clzl(a); }
+constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - std::countl_zero(a); }
 
 constexpr natural operator+(const natural& a, const natural& b) { natural c = a; c += b; return c; }
 constexpr natural operator+(natural a, const std::integral auto b) {
@@ -366,13 +348,16 @@ constexpr bool operator<(const natural& a, const unsigned __int128 b) {
     if (a.words.size() > 2)
         return false;
     natural::word bw0 = b;
-    natural::word bw1 = b >> 64;
+    natural::word bw1 = b >> natural::bits_per_word;
     return a.words[1] < bw1 || (a.words[1] == bw1 && a.words[0] < bw0);
 }
 
-constexpr bool operator>(const auto& a, const auto& b) { return b < a; }
-constexpr bool operator>=(const auto& a, const auto& b) { return !(a < b); }
-constexpr bool operator<=(const auto& a, const auto& b) { return !(a > b); }
+template<typename T>
+concept std_integral_or_natural = std::integral<T> || std::same_as<T, natural>;
+
+constexpr bool operator>(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return b < a; }
+constexpr bool operator>=(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return !(a < b); }
+constexpr bool operator<=(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return !(a > b); }
 
 constexpr bool operator==(const natural& a, const natural& b) {
     if (a.words.size() != b.words.size())
@@ -607,7 +592,7 @@ constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quoti
         quotient.words.reset(dividend.words.size());
     natural::dword acc = 0;
     for (auto i = dividend.words.size(); i-- > 0;) {
-        acc <<= 64;
+        acc <<= natural::bits_per_word;
         acc |= dividend.words[i];
         quotient.words[i] = acc / divisor;
         acc %= divisor;
@@ -1038,8 +1023,8 @@ constexpr std::ostream& operator<<(std::ostream& os, const algebra::natural& a) 
 
 namespace algebra {
 
-constexpr bool natural::is_uint8() const { return is_uint32() && *this <= 255u; }
-constexpr bool natural::is_uint16() const { return is_uint32() && *this <= 65535u; }
+constexpr bool natural::is_uint8() const { return is_uint32() && words[0] <= 255; }
+constexpr bool natural::is_uint16() const { return is_uint32() && words[0] <= 65535; }
 
 constexpr int natural::str_size_upper_bound(unsigned base) const {
     if (words.size() == 0)
