@@ -346,6 +346,47 @@ constexpr rational operator*(const integer& a, const rational& b) {
     return {a * b.num, b.den};
 }
 
+constexpr rational& operator/=(rational& a, const rational& b) {
+#if 0
+    integer e;
+
+    auto z = a.den.num_trailing_zeros();
+    if (z >= 64)
+        z = std::min(z, b.den.num_trailing_zeros());
+        if (z >= 64) {
+            e = b.den;
+            e >>= z;
+            a.num *= e;
+            a.den >>= z;
+
+            // since z > 0, q must be 0
+            a.den *= b.num;
+            a.simplify();
+            return a;
+        }
+    }
+
+    auto q = a.num.num_trailing_zeros();
+    if (q >= 64) {
+        q = std::min(q, b.num.num_trailing_zeros()));
+        if (q >= 64) {
+            a.num >>= q;
+            a.num *= b.den;
+            e = b.num;
+            e >>= q;
+            a.den *= e;
+            a.simplify();
+            return a;
+        }
+    }
+#endif
+
+    a.num *= b.den;
+    a.den *= b.num;
+    a.simplify();
+    return a;
+}
+
 constexpr rational& operator/=(rational& a, const integer& b) {
     a.den *= b;
     a.simplify();
@@ -383,6 +424,36 @@ constexpr rational& operator%=(rational& a, const integer& b) {
     a -= a.num / (a.den * b) * b;
     return a;
 }
+
+constexpr rational& operator<<=(rational& a, int b) {
+    if (b > 0) {
+        auto z = a.den.num_trailing_zeros();
+        if (b > z) {
+            a.num <<= b - z;
+            a.den >>= z;
+        } else {
+            a.den >>= b;
+        }
+        return a;
+    }
+    if (b < 0) {
+        b = -b;
+        auto z = a.num.num_trailing_zeros();
+        if (b > z) {
+            a.num >>= z;
+            a.den <<= b - z;
+        } else {
+            a.num >>= b;
+        }
+        if (a.num == 0)
+            a.den = 1;
+    }
+    return a;
+}
+
+constexpr rational operator<<(const rational& a, int b) { rational c = a; return c <<= b; }
+constexpr rational operator>>(const rational& a, const int b) { return a << -b; }
+constexpr rational& operator>>=(rational& a, int b) { return a <<= -b; }
 
 }
 

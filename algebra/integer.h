@@ -363,11 +363,10 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
         rem = 0;
         return;
     }
+    const bool negative = a.is_negative() != b.is_negative();
     div(a.abs, b.abs, quot.abs, rem.abs);
-    if (quot.abs)
-        quot.abs.words.set_negative(a.is_negative() != b.is_negative());
-    if (rem.abs)
-        rem.abs.words.set_negative(a.is_negative() != b.is_negative());
+    quot.abs.words.set_negative(negative);
+    rem.abs.words.set_negative(negative);
 }
 
 constexpr integer operator/(const integer& a, const integer& b) {
@@ -485,7 +484,7 @@ constexpr integer& operator%=(integer& a, std::integral auto b) { a = a % intege
 
 constexpr bool operator<(const integer& a, const integer& b) {
     if (a.is_negative())
-        return !b.is_negative() || a.abs >= b.abs;
+        return !b.is_negative() || a.abs > b.abs;
     return !b.is_negative() && a.abs < b.abs;
 }
 // TODO issue temporary memory allocation for cent / ucent
@@ -507,8 +506,17 @@ namespace literals {
 constexpr auto operator""_i(const char* s) { return integer(s); }
 }
 
-constexpr void operator<<=(integer& a, size_t i) { a.abs <<= i; }
-constexpr void operator>>=(integer& a, size_t i) { a.abs >>= i; }
+constexpr void operator<<=(integer& a, size_t i) {
+    bool negative = a.is_negative();
+    a.abs <<= i;
+    a.abs.words.set_negative(a.is_negative());
+}
+
+constexpr void operator>>=(integer& a, size_t i) {
+    bool negative = a.is_negative();
+    a.abs >>= i;
+    a.abs.words.set_negative(a.is_negative());
+}
 
 static_assert(sizeof(integer) == 16);
 

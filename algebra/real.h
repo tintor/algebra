@@ -148,31 +148,27 @@ template<int B> constexpr real<B> operator*(const Integral auto& a, const real<B
 
 template<int B>
 constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
-    if (b.num == 0)
-        throw std::runtime_error("division by zero");
     int scale = 100;
     return {shift<B>(a.num, scale) / b.num, a.exp - b.exp - scale};
 }
 
 template<int B>
 constexpr real<B> operator/(const real<B>& a, const Integral auto& b) {
-    if (b == 0)
-        throw std::runtime_error("division by zero");
     int scale = 100;
     return {shift<B>(a.num, scale) / b, a.exp - scale};
 }
 
 template<int B>
 constexpr bool operator==(const real<B>& a, const real<B>& b) {
-    if (a.exp > b.exp) return a.num == shift<B>(b.num, a.exp - b.exp);
-    if (a.exp < b.exp) return shift<B>(a.num, b.exp - a.exp) == b.num;
+    if (a.exp > b.exp) return shift<B>(a.num, a.exp - b.exp) == b.num;
+    if (a.exp < b.exp) return a.num == shift<B>(b.num, b.exp - a.exp);
     return a.num == b.num;
 }
 
 template<int B>
 constexpr bool operator==(const real<B>& a, const Integral auto& b) {
-    if (a.exp > 0) return a.num == shift<B>(b, a.exp);
-    if (a.exp < 0) return shift<B>(a.num, -a.exp) == b;
+    if (a.exp > 0) return shift<B>(a.num, a.exp) == b;
+    if (a.exp < 0) return a.num == shift<B>(b, -a.exp);
     return a.num == b;
 }
 
@@ -181,22 +177,22 @@ constexpr bool operator==(const Integral auto& a, const real<B>& b) { return b =
 
 template<int B>
 constexpr bool operator<(const real<B>& a, const real<B>& b) {
-    if (a.exp > b.exp) return a.num < (b.num << (a.exp - b.exp));
-    if (a.exp < b.exp) return (a.num << (b.exp - a.exp)) < b.num;
+    if (a.exp > b.exp) return shift<B>(a.num, a.exp - b.exp) < b.num;
+    if (a.exp < b.exp) return a.num < shift<B>(b.num, b.exp - a.exp);
     return a.num < b.num;
 }
 
 template<int B>
 constexpr bool operator<(const real<B>& a, const Integral auto& b) {
-    if (a.exp > 0) return a.num < shift<B>(b, a.exp);
-    if (a.exp < 0) return shift<B>(a.num, -a.exp) < b;
+    if (a.exp > 0) return shift<B>(a.num, a.exp) < b;
+    if (a.exp < 0) return a.num < shift<B>(b, -a.exp);
     return a.num < b;
 }
 
 template<int B>
 constexpr bool operator<(const Integral auto& a, const real<B>& b) {
-    if (0 > b.exp) return a < shift<B>(b.num, -b.exp);
-    if (0 < b.exp) return shift<B>(a, b.exp) < b.num;
+    if (0 > b.exp) return shift<B>(a, -b.exp) < b.num;
+    if (0 < b.exp) return a < shift<B>(b.num, b.exp);
     return a < b.num;
 }
 
@@ -216,6 +212,8 @@ constexpr decimal operator""_d(const char* s) { return rational(s); }
 }
 
 }
+
+std::optional<int> REAL_FRACT_DIGITS;
 
 template <int B>
 struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational, char> {
@@ -248,7 +246,14 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
             }
             return it;
         }
-        return std::formatter<algebra::rational, char>::format(to_rational(a), ctx);
+
+        if (frac_digits != std::nullopt || REAL_FRACT_DIGITS == std::nullopt)
+            return std::formatter<algebra::rational, char>::format(to_rational(a), ctx);
+
+        std::formatter<algebra::rational, char> f;
+        f.frac_digits = REAL_FRACT_DIGITS.value();
+        f.format(to_rational(a), ctx);
+        return ctx.out();
     }
 };
 

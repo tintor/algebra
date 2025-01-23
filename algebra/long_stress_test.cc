@@ -153,6 +153,13 @@ struct M1 {
 template<typename A>
 M1<A> operator<=>(const M& m, const A& a) { return {m, a}; }
 
+void operator<=>(const M& m, const bool value) {
+    if (!value) {
+        m.print_failure();
+        exit(0);
+    }
+}
+
 #define M_OP(OP) \
 template<typename A, typename B> \
 void operator OP (const M1<A>& m1, const B& b) { \
@@ -194,7 +201,68 @@ M_OP(>=)
     TEST(a / 1 == a); \
     TEST(a / -1 == -a); \
     if (a != 0) TEST(a / a == 1); \
-    if (a != 0) TEST(a / -a == -1);
+    if (a != 0) TEST(a / -a == -1); \
+    TEST(a + a == a * 2); \
+    TEST(a + a == a << 1); \
+    TEST(a / 2 == a >> 1); \
+    TEST(a << 8 == a * 256); \
+    TEST(a >> 8 == a / 256); \
+    TEST(pow(a, 0) == 1); \
+    TEST(pow(a, 1) == a); \
+    TEST(pow(a, 2) == a * a); \
+    TEST(pow(a, 3) == a * a * a); \
+    TEST(!(a < a)); \
+    TEST(!(a > a)); \
+    TEST(a <= a); \
+    TEST(a >= a); \
+    TEST(abs(a) >= 0); \
+    TEST(a * a >= 0);
+
+#define duo_identities(a, b) \
+    TEST(a + b == b + a); \
+    TEST(a - b == -(b - a)); \
+    TEST(a * b == b * a); \
+    TEST(pow(a + b, 2) == a*a + 2*a*b + b*b); \
+    { auto q = a; q += b; TEST(q == a + b); } \
+    { auto q = a; q -= b; TEST(q == a - b); } \
+    { auto q = a; q *= b; TEST(q == a * b); } \
+    TEST((a < b || a == b || a > b)); \
+    if (a < b) { \
+        TEST(-a > -b); \
+        TEST(a != b); \
+        TEST(a <= b); \
+        TEST(!(a > b)); \
+        TEST(!(a >= b)); \
+    } \
+    if (a > b) { \
+        TEST(-a < -b); \
+        TEST(a != b); \
+        TEST(a >= b); \
+        TEST(!(a < b)); \
+        TEST(!(a <= b)); \
+    }
+
+#define trio_identities(a, b, c) \
+    TEST(a + b + c == a + c + b); \
+    TEST(a - b - c == a - c - b); \
+    TEST(a - (b + c) == a - b - c); \
+    TEST(a * b * c == a * (b * c)); \
+    TEST(a * (b + c) == a * b + a * c); \
+    TEST(a * (b - c) == a * b - a * c); \
+    if (a < b) \
+        TEST(a + c < b + c); \
+    if (a > b) \
+        TEST(a + c > b + c); \
+    if (c != 0) { \
+        if (a < b) { \
+            TEST(a * abs(c) < b * abs(c)); \
+            TEST(a * -abs(c) > b * -abs(c)); \
+        } \
+        if (a > b) { \
+            TEST(a * abs(c) > b * abs(c)); \
+            TEST(a * -abs(c) < b * -abs(c)); \
+        } \
+    }
 
 void integer_test(uint64_t seed) {
     std::mt19937_64 rng(seed);
@@ -204,42 +272,27 @@ void integer_test(uint64_t seed) {
     mono_identities(a);
 
     const integer b = sample_integer(rng);
-    TEST(a + b == b + a);
-    TEST(a - b == -(b - a));
-    TEST(a * b == b * a);
+    duo_identities(a, b);
+
     if (a != 0) {
         TEST(a * b / a == b);
         TEST(a * b % a == 0);
     }
     if (b != 0) {
-        integer q, r;
-        div(a, b, q, r);
-        //TEST(a == b * q + r);
         TEST(a * b / b == a);
         TEST(a * b % b == 0);
-    }
-    if (a < b)
-        TEST(-a > -b);
-    if (a > b)
-        TEST(-a < -b);
+        integer q, r;
+        if (a > 0 && b > 0) { // TODO for other signs
+            div(a, b, q, r);
+            TEST(a == b * q + r);
+        }
 
-    q = a;
-    q += b;
-    TEST(q == a + b);
-    q = a;
-    q -= b;
-    TEST(q == a - b);
-    q = a;
-    q *= b;
-    TEST2(q == a * b, format("a {}\nb {}", a, b));
-    if (b != 0) {
-        q = a;
-        q /= b;
-        TEST2(q == a / b, format("a {}\nb {}\nq {} | {} {}", a, b, q, q.abs.words[0], q.abs.words.size()));
-        q = a;
-        q %= b;
-        TEST(q == a % b);
+        q = a; q /= b; TEST(q == a / b);
+        q = a; q %= b; TEST(q == a % b);
     }
+
+    const integer c = sample_integer(rng);
+    trio_identities(a, b, c);
 
     uint64_t m = rng();
     while (m == 0)
@@ -247,21 +300,6 @@ void integer_test(uint64_t seed) {
     //TEST(mod(mod(a, m) + mod(b, m), m) == mod(a + b, m));
     //TEST(mod(mod(a, m) * mod(b, m), m) == mod(a * b, m));
 
-    const integer c = sample_integer(rng);
-    TEST(a - (b + c) == a - b - c);
-    TEST(a * b * c == a * (b * c));
-    TEST(a * (b + c) == a * b + a * c);
-    TEST(a * (b - c) == a * b - a * c);
-
-    const natural k = sample_positive_natural(rng);
-    if (a < b) {
-        TEST(a + k < b + k);
-        TEST(a * k < b * k);
-    }
-    if (a > b) {
-        TEST(a + k > b + k);
-        TEST(a * k > b * k);
-    }
 }
 
 void rational_test(uint64_t seed) {
@@ -269,31 +307,25 @@ void rational_test(uint64_t seed) {
 
     const rational a = sample_rational(rng);
     mono_identities(a);
+    if (a != 0) {
+        TEST(pow(a, -1) == 1 / a);
+        TEST(pow(a, -2) == 1 / (a * a));
+    }
 
     const rational b = sample_rational(rng);
-    TEST(a + b == b + a);
-    TEST(a - b == -(b - a));
-    TEST(a * b == b * a);
-    if (a < b)
-        TEST(-a > -b);
-    if (a > b)
-        TEST(-a < -b);
+    duo_identities(a, b);
+    if (b != 0)
+        { auto q = a; q /= b; TEST(q == a / b); }
 
     const rational c = sample_rational(rng);
-    TEST(a - (b + c) == a - b - c);
-    TEST(a * b * c == a * (b * c));
-    TEST(a * (b + c) == a * b + a * c);
-    TEST(a * (b - c) == a * b - a * c);
-
-    const natural k = sample_positive_natural(rng);
-    if (a < b) {
-        TEST(a + k < b + k);
-        TEST(a * k < b * k);
+    trio_identities(a, b, c);
+    if (b != 0 && c != 0) {
+        TEST(a / b / c == a / (b * c));
+        TEST(a / b / c == a / c / b);
+        TEST(a * b / c == a / c * b);
     }
-    if (a > b) {
-        TEST(a + k > b + k);
-        TEST(a * k > b * k);
-    }
+    if (a != 0 && b != 0)
+        TEST(a / b == 1 / (b / a));
 }
 
 template<int B>
@@ -304,35 +336,16 @@ void real_test(uint64_t seed) {
     mono_identities(a);
 
     const auto b = sample_real<B>(rng);
-    TEST(a + b == b + a);
-    TEST(a - b == -(b - a));
-    TEST(a * b == b * a);
-    if (a < b)
-        TEST(-a > -b);
-    if (a > b)
-        TEST(-a < -b);
+    duo_identities(a, b);
 
     const auto c = sample_real<B>(rng);
-    TEST(a - (b + c) == a - b - c);
-    TEST(a * b * c == a * (b * c));
-    TEST(a * (b + c) == a * b + a * c);
-    TEST(a * (b - c) == a * b - a * c);
-
-    const auto k = sample_positive_natural(rng);
-    if (a < b) {
-        TEST2(a + k < b + k, format("a={}\nb={}\nk={}", a, b, k));
-        TEST(a * k < b * k);
-    }
-    if (a > b) {
-        TEST2(a + k > b + k, format("a={}\nb={}\nk={}", a, b, k));
-        TEST(a * k > b * k);
-    }
+    trio_identities(a, b, c);
 }
 
 TEST_CASE("main") {
     std::random_device rd;
-    //uint64_t seed = (uint64_t(rd()) << 32) + rd();
-    uint64_t seed = 0;
+    uint64_t seed = (uint64_t(rd()) << 32) + rd();
+    seed = 0;
 
     while (true) {
         if (seed % 1000 == 0)
@@ -342,6 +355,7 @@ TEST_CASE("main") {
             rational_test(seed);
             //real_test<2>(seed);
             //real_test<10>(seed);
+            // TODO expr
         } catch (...) {
             print("exception seed {}\n", seed);
             throw;
