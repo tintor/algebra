@@ -17,9 +17,9 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     return integer(uniform_sample(max_min.abs, rng)) + min;
 }
 
-constexpr integer pow2(std::integral auto exp) {
+constexpr integer exp2(std::integral auto exp) {
     if (exp < 0)
-        throw std::runtime_error("negative exponent in pow2(...)");
+        throw std::runtime_error("negative exponent in exp2(...)");
     integer out;
     out.abs.words.reset((exp + 64) / 64);
     out.abs.words.back() = integer::word(1) << (exp % 64);
@@ -28,17 +28,21 @@ constexpr integer pow2(std::integral auto exp) {
 
 constexpr integer pow(integer base, std::integral auto exp) {
     if (base == 2)
-        return pow2(exp);
+        return exp2(exp);
+    if (base == 4)
+        return exp2(static_cast<uint64_t>(exp) * 2);
+    if (base == 8)
+        return exp2(static_cast<uint64_t>(exp) * 3);
+    if (base.sign() > 0 && base.is_power_of_two())
+        return exp2(static_cast<uint64_t>(exp) * base.num_trailing_zeros());
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(integer, ...)");
     if (exp == 0)
         return 1;
     if (exp == 1)
         return base;
-    if (base == 4 && exp <= std::numeric_limits<decltype(exp)>::max() / 2)
-        return pow2(exp * 2);
-    if (base == 8 && exp <= std::numeric_limits<decltype(exp)>::max() / 3)
-        return pow2(exp * 3);
+    if (exp == 2)
+        return base * base;
 
     integer result = 1;
     if (exp & 1)
@@ -62,10 +66,8 @@ constexpr integer pow(integer base, std::integral auto exp, integer result) {
         return 1;
     if (exp == 1)
         return result * base;
-    if (base == 4 && exp <= std::numeric_limits<decltype(exp)>::max() / 2)
-        return result << (exp * 2);
-    if (base == 8 && exp <= std::numeric_limits<decltype(exp)>::max() / 3)
-        return result << (exp * 3);
+    if (base.sign() > 0 && base.is_power_of_two())
+        return result << (static_cast<uint64_t>(exp) * base.num_trailing_zeros());
 
     if (exp & 1)
         result *= base;
