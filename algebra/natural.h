@@ -33,7 +33,6 @@ constexpr uint64_t pow(uint64_t base, unsigned exp) {
 constexpr unsigned long abs_ulong(std::integral auto a) { static_assert(sizeof(a) <= 8); return (a >= 0) ? a : (~static_cast<unsigned long>(a) + 1); }
 
 // TODO test cases for operator float()
-// TODO add support for long double
 struct natural {
     using size_type = integer_backend::size_type;
     using word = integer_backend::word;
@@ -295,8 +294,8 @@ struct natural {
     constexpr natural operator++(int) { natural a = *this; operator++(); return a; }
     constexpr natural operator--(int) { natural a = *this; operator--(); return a; }
 
-    constexpr operator float() const;
-    constexpr operator double() const;
+    template<std::floating_point T>
+    constexpr operator T() const;
 };
 
 constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - std::countl_zero(a); }
@@ -1149,29 +1148,15 @@ constexpr int natural::str_size_upper_bound(unsigned base) const {
     return words.size() * m;
 }
 
-constexpr natural::operator float() const {
-    if (words.size() == 0)
-        return 0.0f;
-
-    const int exponent = static_cast<int>(num_bits()) - 24;
-    if (exponent > 127) return std::numeric_limits<float>::infinity();
-    if (exponent <= 0) return words[0];
-
+template<std::floating_point T>
+constexpr natural::operator T() const {
+    const int exponent = static_cast<int>(num_bits()) - std::numeric_limits<T>::digits;
+    if (exponent >= std::numeric_limits<T>::max_exponent)
+        throw std::runtime_error("natural is too large for float");
+    if (exponent <= 0)
+        return words[0];
     const auto m = extract_64bits(*this, exponent);
-    return std::ldexp(static_cast<float>(m), exponent);
-}
-
-// TODO operator long double
-constexpr natural::operator double() const {
-    if (words.size() == 0)
-        return 0.0;
-
-    const int exponent = static_cast<int>(num_bits()) - 53;
-    if (exponent > 1023) return std::numeric_limits<double>::infinity();
-    if (exponent <= 0) return words[0];
-
-    const auto m = extract_64bits(*this, exponent);
-    return std::ldexp(static_cast<double>(m), exponent);
+    return std::ldexp(static_cast<T>(m), exponent);
 }
 
 static_assert(sizeof(natural) == 16);

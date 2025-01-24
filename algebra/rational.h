@@ -46,8 +46,8 @@ public:
             num.negate();
     }
 
-    constexpr rational(float x);
-    constexpr rational(double x);
+    template<std::floating_point T>
+    constexpr rational(T x);
 
     constexpr rational(std::string_view s) {
         static std::regex pattern(R"(([-]?\d+)([./]\d+)?(e[-+]?(\d+))?)");
@@ -124,8 +124,8 @@ constexpr rational operator-(const rational& a) { return {-a.num, a.den}; }
 
 constexpr rational& operator+=(rational& a, const rational& b);
 constexpr rational operator+(const rational& a, const rational& b);
-constexpr rational operator+(const rational& a, const integer& b);
-constexpr rational operator+(const integer& a, const rational& b);
+constexpr rational operator+(const rational& a, const integral auto& b);
+constexpr rational operator+(const integral auto& a, const rational& b);
 
 constexpr rational operator+(std::integral auto a, const rational& b) { return integer(a) + b; }
 constexpr rational operator+(const rational& a, std::integral auto b) { return a + integer(b); }
@@ -133,28 +133,28 @@ constexpr void operator+=(rational& a, std::integral auto b) { a += integer(b); 
 
 constexpr rational& operator-=(rational& a, const rational& b);
 constexpr rational operator-(const rational& a, const rational& b);
-constexpr rational operator-(const rational& a, const integer& b);
-constexpr rational operator-(const integer& a, const rational& b);
+constexpr rational operator-(const rational& a, const integral auto& b);
+constexpr rational operator-(const integral auto& a, const rational& b);
 
 constexpr rational operator-(std::integral auto a, const rational& b) { return integer(a) - b; }
 constexpr rational operator-(const rational& a, std::integral auto b) { return a - integer(b); }
 constexpr void operator-=(rational& a, std::integral auto b) { a -= integer(b); }
 
 constexpr rational operator*(const rational& a, const rational& b);
-constexpr rational operator*(const rational& a, const integer& b);
-constexpr rational operator*(const integer& a, const rational& b);
+constexpr rational operator*(const rational& a, const integral auto& b);
+constexpr rational operator*(const integral auto& a, const rational& b);
 
 constexpr rational operator*(std::integral auto a, const rational& b) { return integer(a) * b; }
 constexpr rational operator*(const rational& a, std::integral auto b) { return a * integer(b); }
 
 constexpr rational& operator*=(rational& a, const rational& b);
-constexpr rational& operator*=(rational& a, const integer& b);
+constexpr rational& operator*=(rational& a, const integral auto& b);
 constexpr void operator*=(rational& a, std::integral auto b) { a *= integer(b); }
 
 constexpr rational& operator/=(rational&, const integer&);
 constexpr rational operator/(const rational&, const rational&);
-constexpr rational operator/(const rational&, const integer&);
-constexpr rational operator/(const integer&, const rational&);
+constexpr rational operator/(const rational&, const integral auto&);
+constexpr rational operator/(const integral auto&, const rational&);
 
 constexpr rational operator/(std::integral auto a, const rational& b) { return (a == 1) ? rational{b.den, b.num} : (integer(a) / b); }
 constexpr rational operator/(const rational& a, std::integral auto b) { return a / integer(b); }
@@ -177,60 +177,36 @@ namespace literals {
 constexpr auto operator""_q(const char* s) { return rational(s); }
 }
 
-constexpr rational::rational(float x) {
+template<std::floating_point T>
+constexpr rational::rational(T x) {
     if (std::isnan(x))
         throw std::runtime_error("can't convert nan to rational");
     if (std::isinf(x))
         throw std::runtime_error("can't convert infinite to rational");
-    if (x == 0.0f) {
+    if (x == 0) {
         num = 0;
         den = 1;
         return;
     }
 
     int exponent;
-    float mantissa = std::frexp(x, &exponent);
+    T mantissa = std::frexp(x, &exponent);
 
     // Convert mantissa to an exact integer representation
-    const int mantissa_bits = 24;
-    float scaled_mantissa = std::ldexp(mantissa, mantissa_bits); // mantissa * 2^24
+    const int mantissa_bits = std::numeric_limits<T>::digits;
+    T scaled_mantissa = std::ldexp(mantissa, mantissa_bits);
     num = static_cast<long>(scaled_mantissa);
     exponent -= mantissa_bits;
 
     den = 1;
-    if (exponent > 0) num <<= exponent;
-    if (exponent < 0) den <<= -exponent;
-    if (x < 0.0) num = -num;
-
-    simplify();
-}
-
-constexpr rational::rational(double x) {
-    if (std::isnan(x))
-        throw std::runtime_error("can't convert nan to rational");
-    if (std::isinf(x))
-        throw std::runtime_error("can't convert infinite to rational");
-    if (x == 0.0) {
-        num = 0;
-        den = 1;
-        return;
+    if (exponent > 0)
+        num <<= exponent;
+    if (exponent < 0) {
+        den <<= -exponent;
+        simplify();
     }
-
-    int exponent;
-    double mantissa = std::frexp(x, &exponent);
-
-    // Convert mantissa to an exact integer representation
-    const int mantissa_bits = 53;
-    double scaled_mantissa = std::ldexp(mantissa, mantissa_bits); // mantissa * 2^53
-    num = static_cast<long>(scaled_mantissa);
-    exponent -= mantissa_bits;
-
-    den = 1;
-    if (exponent > 0) num <<= exponent;
-    if (exponent < 0) den <<= -exponent;
-    if (x < 0.0) num = -num;
-
-    simplify();
+    if (x < 0)
+        num = -num;
 }
 
 constexpr void rational::simplify() {
@@ -309,13 +285,8 @@ constexpr rational operator+(const rational& a, const rational& b) {
     return rational{std::move(p), a.den * b.den};
 }
 
-constexpr rational operator+(const rational& a, const integer& b) {
-    return {a.num + b * a.den, a.den};
-}
-
-constexpr rational operator+(const integer& a, const rational& b) {
-    return {a * b.den + b.num, b.den};
-}
+constexpr rational operator+(const rational& a, const integral auto& b) { return {a.num + b * a.den, a.den}; }
+constexpr rational operator+(const integral auto& a, const rational& b) { return b + a; }
 
 constexpr rational& operator-=(rational& a, const rational& b) {
     if (a.den == b.den) {
@@ -338,13 +309,8 @@ constexpr rational operator-(const rational& a, const rational& b) {
     return rational{std::move(p), a.den * b.den};
 }
 
-constexpr rational operator-(const rational& a, const integer& b) {
-    return {a.num - b * a.den, a.den};
-}
-
-constexpr rational operator-(const integer& a, const rational& b) {
-    return {a * b.den - b.num, b.den};
-}
+constexpr rational operator-(const rational& a, const integral auto& b) { return {a.num - b * a.den, a.den}; }
+constexpr rational operator-(const integral auto& a, const rational& b) { return {a * b.den - b.num, b.den}; }
 
 constexpr rational& operator*=(rational& a, const rational& b) {
     a.num *= b.num;
@@ -361,8 +327,8 @@ constexpr rational& operator*=(rational& a, const integer& b) {
 }
 
 constexpr rational operator*(const rational& a, const rational& b) { return {a.num * b.num, a.den * b.den}; }
-constexpr rational operator*(const rational& a, const integer& b) { return {a.num * b, a.den}; }
-constexpr rational operator*(const integer& a, const rational& b) { return {a * b.num, b.den}; }
+constexpr rational operator*(const rational& a, const integral auto& b) { return {a.num * b, a.den}; }
+constexpr rational operator*(const integral auto& a, const rational& b) { return {a * b.num, b.den}; }
 
 constexpr rational& operator/=(rational& a, const rational& b) {
 #if 0
@@ -411,37 +377,17 @@ constexpr rational& operator/=(rational& a, const integer& b) {
     return a;
 }
 
-constexpr rational operator/(const rational& a, const rational& b) {
-    return {a.num * b.den, a.den * b.num};
-}
-
-constexpr rational operator/(const rational& a, const integer& b) {
-    return {a.num, a.den * b};
-}
-
-constexpr rational operator/(const integer& a, const rational& b) {
-    return {a * b.den, b.num};
-}
+constexpr rational operator/(const rational& a, const rational& b) { return {a.num * b.den, a.den * b.num}; }
+constexpr rational operator/(const rational& a, const integral auto& b) { return {a.num, a.den * b}; }
+constexpr rational operator/(const integral auto& a, const rational& b) { return {a * b.den, b.num}; }
 
 static_assert(sizeof(rational) == 32);
 
-constexpr rational operator%(const rational& a, const rational& b) {
-    return a - (a.num * b.den) / (a.den * b.num) * b;
-}
+constexpr rational operator%(const rational& a, const rational& b) { return a - (a.num * b.den) / (a.den * b.num) * b; }
+constexpr rational operator%(const rational& a, const integral auto& b) { return a - a.num / (a.den * b) * b; }
 
-constexpr rational operator%(const rational& a, const integer& b) {
-    return a - a.num / (a.den * b) * b;
-}
-
-constexpr rational& operator%=(rational& a, const rational& b) {
-    a -= (a.num * b.den) / (a.den * b.num) * b;
-    return a;
-}
-
-constexpr rational& operator%=(rational& a, const integer& b) {
-    a -= a.num / (a.den * b) * b;
-    return a;
-}
+constexpr rational& operator%=(rational& a, const rational& b) { a -= (a.num * b.den) / (a.den * b.num) * b; return a; }
+constexpr rational& operator%=(rational& a, const integral auto& b) { a -= a.num / (a.den * b) * b; return a; }
 
 constexpr rational& operator<<=(rational& a, int64_t b) {
     if (b > 0) {
@@ -559,96 +505,6 @@ struct std::hash<algebra::rational> {
 
 namespace algebra {
 
-constexpr bool is_possible_square(const natural& a) {
-    auto w = a.words[0] % 128;
-    if (w > 57)
-        return false;
-    if (w < 25)
-        return w == 0 || w == 1 || w == 4 || w == 9 || w == 16 || w == 17;
-    return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
-}
-
-// assumes that whole and root are already initialized
-constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
-    if (a <= 1)
-        return;
-
-    // factorize a
-    auto z = a.num_trailing_zeros();
-    if (z) {
-        if (z > 1)
-            whole <<= z / 2;
-        if (z & 1) {
-            if (root.is_even()) {
-                root >>= 1;
-                whole <<= 1;
-            } else
-                root <<= 1;
-        }
-        a >>= z;
-    }
-
-    std::optional<natural> a_sqrt;
-    if (is_possible_square(a)) {
-        natural s = isqrt(a);
-        if (s * s == a) {
-            whole *= s;
-            return;
-        }
-        a_sqrt = std::move(s);
-    }
-
-    std::optional<std::mt19937_64> rng;
-    uint64_t p = 3;
-    while (a > 1) {
-        if (p > 256) {
-            if (a_sqrt == std::nullopt) {
-                natural s = isqrt(a);
-                if (s * s == a) {
-                    whole *= s;
-                    return;
-                }
-                a_sqrt = std::move(s);
-
-                if (rng == std::nullopt)
-                    rng = std::mt19937_64(0);
-                if (is_likely_prime(a, 40, *rng))
-                    break;
-            }
-            if (p > *a_sqrt)
-                break;
-        } else
-            if (p >= a)
-                break;
-
-        int count = 0;
-        while (a % p == 0) {
-            a /= p;
-            count += 1;
-        }
-        if (count) {
-            if (count >= 2)
-                whole *= pow(natural(p), count / 2);
-            if (count & 1) {
-                if (root % p == 0) {
-                    root /= p;
-                    whole *= p;
-                } else
-                    root *= p;
-            }
-            a_sqrt = std::nullopt;
-        }
-        p += 2;
-    }
-    if (a > 1) {
-        if (root % a == 0) {
-            root /= a;
-            whole *= a;
-        } else
-            root *= a;
-    }
-}
-
 // represents number of form: rational * sqrt(root)
 // it is closed under: multiplication and division
 // squaring always produces rational
@@ -668,15 +524,18 @@ struct xrational {
     xrational& operator=(std::integral auto a) {
         base = a;
         root = 1;
+        return *this;
     }
     xrational& operator=(integer a) {
         base.num = std::move(a);
         base.den = 1;
         root = 1;
+        return *this;
     }
     xrational& operator=(rational a) {
         base = std::move(a);
         root = 1;
+        return *this;
     }
 
     void simplify() {

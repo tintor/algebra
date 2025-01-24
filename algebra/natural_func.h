@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/natural.h"
+#include <random>
 
 namespace algebra {
 
@@ -531,6 +532,96 @@ constexpr void binominal(const natural& n, uint64_t k, natural& out) {
         e -= i;
         out *= e;
         out /= i + 1;
+    }
+}
+
+constexpr bool is_possible_square(const natural& a) {
+    auto w = a.words[0] % 128;
+    if (w > 57)
+        return false;
+    if (w < 25)
+        return w == 0 || w == 1 || w == 4 || w == 9 || w == 16 || w == 17;
+    return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
+}
+
+// assumes that whole and root are already initialized
+constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
+    if (a <= 1)
+        return;
+
+    // factorize a
+    auto z = a.num_trailing_zeros();
+    if (z) {
+        if (z > 1)
+            whole <<= z / 2;
+        if (z & 1) {
+            if (root.is_even()) {
+                root >>= 1;
+                whole <<= 1;
+            } else
+                root <<= 1;
+        }
+        a >>= z;
+    }
+
+    std::optional<natural> a_sqrt;
+    if (is_possible_square(a)) {
+        natural s = isqrt(a);
+        if (s * s == a) {
+            whole *= s;
+            return;
+        }
+        a_sqrt = std::move(s);
+    }
+
+    std::optional<std::mt19937_64> rng;
+    uint64_t p = 3;
+    while (a > 1) {
+        if (p > 256) {
+            if (a_sqrt == std::nullopt) {
+                natural s = isqrt(a);
+                if (s * s == a) {
+                    whole *= s;
+                    return;
+                }
+                a_sqrt = std::move(s);
+
+                if (rng == std::nullopt)
+                    rng = std::mt19937_64(0);
+                if (is_likely_prime(a, 40, *rng))
+                    break;
+            }
+            if (p > *a_sqrt)
+                break;
+        } else
+            if (p >= a)
+                break;
+
+        int count = 0;
+        while (a % p == 0) {
+            a /= p;
+            count += 1;
+        }
+        if (count) {
+            if (count >= 2)
+                whole *= pow(natural(p), count / 2);
+            if (count & 1) {
+                if (root % p == 0) {
+                    root /= p;
+                    whole *= p;
+                } else
+                    root *= p;
+            }
+            a_sqrt = std::nullopt;
+        }
+        p += 2;
+    }
+    if (a > 1) {
+        if (root % a == 0) {
+            root /= a;
+            whole *= a;
+        } else
+            root *= a;
     }
 }
 
