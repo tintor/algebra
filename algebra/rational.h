@@ -817,6 +817,17 @@ constexpr xrational sqrt(const xrational& a) {
     return {rational{whole, a.base.den}, root};
 }
 
+constexpr xrational& operator<<=(xrational& a, std::integral auto b) {
+    a.base *= b;
+    return a;
+}
+
+ALGEBRA_SHIFT_OP(xrational)
+
+namespace literals {
+constexpr auto operator""_x(const char* s) { return xrational(rational(s)); }
+}
+
 }
 
 template <>
@@ -844,3 +855,14 @@ struct std::formatter<algebra::xrational, char> {
 };
 
 constexpr std::ostream& operator<<(std::ostream& os, const algebra::xrational& a) { return os << std::format("{}", a); }
+
+template<>
+struct std::hash<algebra::xrational> {
+    constexpr size_t operator()(const algebra::xrational& a) const {
+        uint64_t seed = 0;
+        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.num));
+        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.den));
+        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::natural>()(a.root));
+        return seed;
+    }
+};
