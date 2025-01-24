@@ -162,7 +162,7 @@ constexpr bool abs_greater(const rational& a, const rational& b) {
 }
 
 constexpr rational round(const rational& a, unsigned digits, unsigned base = 10) {
-    const natural b = pow(natural(base), digits);
+    const integer b = pow(integer(base), digits);
     return {(a.num * b) / a.den, b};
 }
 

@@ -160,15 +160,18 @@ constexpr rational operator/(std::integral auto a, const rational& b) { return (
 constexpr rational operator/(const rational& a, std::integral auto b) { return a / integer(b); }
 constexpr void operator/=(rational& a, std::integral auto b) { a /= integer(b); }
 
-constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num <  b.num) : (a.num * b.den <  b.num * a.den); }
-constexpr bool operator>(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num >  b.num) : (a.num * b.den >  b.num * a.den); }
-
-constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a <  b.num) : (a * b.den <  b.num); }
-constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_one() ? (a.num <  b) : (a.num <  b * a.den); }
+constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num < b.num) : (a.num * b.den <  b.num * a.den); }
+constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a < b.num) : (a * b.den < b.num); }
+constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_one() ? (a.num < b) : (a.num < b * a.den); }
 
 constexpr bool operator==(const rational& a, const rational& b) { return a.num == b.num && a.den == b.den; }
 constexpr bool operator==(const rational& a, const integral auto b) { return a.num == b && a.den.is_one(); }
 constexpr bool operator==(const integral auto a, const rational& b) { return a == b.num && b.den.is_one(); }
+
+template<typename T> concept rational_like = integral<T> || std::same_as<T, rational>;
+constexpr bool operator>(const rational_like auto& a, const rational_like auto& b) { return a < b; }
+constexpr bool operator>=(const rational_like auto& a, const rational_like auto& b) { return !(a < b); }
+constexpr bool operator<=(const rational_like auto& a, const rational_like auto& b) { return b >= a; }
 
 namespace literals {
 constexpr auto operator""_q(const char* s) { return rational(s); }
@@ -771,6 +774,9 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     return p == q;
 }
 
+constexpr bool operator==(const xrational& a, const rational_like auto& b) { return a.root == 1 && a.base == b; }
+constexpr bool operator==(const rational_like auto& a, const xrational& b) { return b.root == 1 && a == b.base; }
+
 constexpr bool operator<(const xrational& a, const xrational& b) {
     if (signum(a.base.num) != signum(b.base.num))
         return signum(a.base.num) < signum(b.base.num);
@@ -790,6 +796,15 @@ constexpr bool operator<(const xrational& a, const xrational& b) {
     q *= a.base.den.abs;
     return p < q;
 }
+
+constexpr bool operator<(const xrational& a, const rational_like auto& b) { return a < xrational(b); }
+constexpr bool operator<(const rational_like auto& a, const xrational& b) { return xrational(a) < b; }
+
+template<typename T> concept xrational_like = rational_like<T> || std::same_as<T, xrational>;
+constexpr bool operator>(const xrational_like auto& a, const xrational_like auto& b) { return a < b; }
+constexpr bool operator>=(const xrational_like auto& a, const xrational_like auto& b) { return !(a < b); }
+constexpr bool operator<=(const xrational_like auto& a, const xrational_like auto& b) { return b >= a; }
+constexpr bool operator!=(const xrational_like auto& a, const xrational_like auto& b) { return !(a == b); }
 
 constexpr xrational sqrt(const xrational& a) {
     if (a.base.sign() < 0)

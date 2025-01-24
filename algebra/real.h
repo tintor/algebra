@@ -113,13 +113,13 @@ constexpr real<B> operator+(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr real<B> operator+(const real<B>& a, const Integral auto& b) {
+constexpr real<B> operator+(const real<B>& a, const integral auto& b) {
     if (a.exp > 0) return {shift<B>(a.num, a.exp) + b};
     if (0 > a.exp) return {a.num + shift<B>(b, -a.exp), a.exp};
     return {a.num + b};
 }
 
-template<int B> constexpr real<B> operator+(const Integral auto& a, const real<B>& b) { return b + a; }
+template<int B> constexpr real<B> operator+(const integral auto& a, const real<B>& b) { return b + a; }
 
 template<int B>
 constexpr real<B> operator-(const real<B>& a, const real<B>& b) {
@@ -129,22 +129,22 @@ constexpr real<B> operator-(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr real<B> operator-(const real<B>& a, const Integral auto& b) {
+constexpr real<B> operator-(const real<B>& a, const integral auto& b) {
     if (a.exp > 0) return {shift<B>(a.num, a.exp) - b};
     if (0 > a.exp) return {a.num - shift<B>(b, -a.exp), a.exp};
     return {a.num - b};
 }
 
 template<int B>
-constexpr real<B> operator-(const Integral auto& a, const real<B>& b) {
+constexpr real<B> operator-(const integral auto& a, const real<B>& b) {
    auto c = b - a;
    c.num.negate();
    return c;
 };
 
 template<int B> constexpr real<B> operator*(const real<B>& a, const real<B>& b) { return {a.num * b.num, a.exp + b.exp}; }
-template<int B> constexpr real<B> operator*(const real<B>& a, const Integral auto& b) { return {a.num * b, a.exp}; }
-template<int B> constexpr real<B> operator*(const Integral auto& a, const real<B>& b) { return {a * b.num, b.exp}; }
+template<int B> constexpr real<B> operator*(const real<B>& a, const integral auto& b) { return {a.num * b, a.exp}; }
+template<int B> constexpr real<B> operator*(const integral auto& a, const real<B>& b) { return {a * b.num, b.exp}; }
 
 template<int B, typename T> constexpr real<B>& operator+=(real<B>& a, const T& b) { a = a + b; return a; }
 template<int B, typename T> constexpr real<B>& operator-=(real<B>& a, const T& b) { a = a - b; return a; }
@@ -157,7 +157,7 @@ constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr real<B>& operator/=(real<B>& a, const Integral auto& b) {
+constexpr real<B>& operator/=(real<B>& a, const integral auto& b) {
     int scale = 100;
     if constexpr (B == 2) {
         a.num <<= scale;
@@ -170,8 +170,8 @@ constexpr real<B>& operator/=(real<B>& a, const Integral auto& b) {
     return a;
 }
 
-template<int B> constexpr real<B> operator/(real<B> a, const Integral auto& b) { a /= b; return a; }
-template<int B> constexpr real<B> operator/(const Integral auto& a, real<B> b) { return real<B>(a) / b; }
+template<int B> constexpr real<B> operator/(real<B> a, const integral auto& b) { a /= b; return a; }
+template<int B> constexpr real<B> operator/(const integral auto& a, real<B> b) { return real<B>(a) / b; }
 
 template<int B>
 constexpr real<B>& operator<<=(real<B>& a, int64_t b) {
@@ -185,7 +185,7 @@ constexpr real<B>& operator<<=(real<B>& a, int64_t b) {
             a.normalize();
     }
     if (b < 0)
-        a /= pow2(-b);
+        a /= exp2(-b);
     return a;
 }
 
@@ -200,14 +200,14 @@ constexpr bool operator==(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr bool operator==(const real<B>& a, const Integral auto& b) {
+constexpr bool operator==(const real<B>& a, const integral auto& b) {
     if (a.exp > 0) return shift<B>(a.num, a.exp) == b;
     if (a.exp < 0) return a.num == shift<B>(b, -a.exp);
     return a.num == b;
 }
 
 template<int B>
-constexpr bool operator==(const Integral auto& a, const real<B>& b) { return b == a; }
+constexpr bool operator==(const integral auto& a, const real<B>& b) { return b == a; }
 
 template<int B>
 constexpr bool operator<(const real<B>& a, const real<B>& b) {
@@ -217,14 +217,14 @@ constexpr bool operator<(const real<B>& a, const real<B>& b) {
 }
 
 template<int B>
-constexpr bool operator<(const real<B>& a, const Integral auto& b) {
+constexpr bool operator<(const real<B>& a, const integral auto& b) {
     if (a.exp > 0) return shift<B>(a.num, a.exp) < b;
     if (a.exp < 0) return a.num < shift<B>(b, -a.exp);
     return a.num < b;
 }
 
 template<int B>
-constexpr bool operator<(const Integral auto& a, const real<B>& b) {
+constexpr bool operator<(const integral auto& a, const real<B>& b) {
     if (0 > b.exp) return shift<B>(a, -b.exp) < b.num;
     if (0 < b.exp) return a < shift<B>(b.num, b.exp);
     return a < b.num;

@@ -4,32 +4,24 @@
 
 namespace algebra {
 
-// Vec<rational> x integral
-VEC_OP_vs_sv(+, rational, rational, std::integral auto)
-VEC_OP_vs_sv(-, rational, rational, std::integral auto)
-VEC_OP_vs_sv(*, rational, rational, std::integral auto)
-VEC_OP_vs_sv(/, rational, rational, std::integral auto)
-
-// Vec<rational> x rational
-VEC_OP_vs_sv(+, rational, rational, rational)
-VEC_OP_vs_sv(-, rational, rational, rational)
-VEC_OP_vs_sv(*, rational, rational, rational)
-VEC_OP_vs_sv(/, rational, rational, rational)
-
-// Vec<rational> x integer
-VEC_OP_vs_sv(+, rational, rational, integer)
-VEC_OP_vs_sv(-, rational, rational, integer)
-VEC_OP_vs_sv(*, rational, rational, integer)
-VEC_OP_vs_sv(/, rational, rational, integer)
-
-// Vec<rational> x natural
-VEC_OP_vs_sv(+, rational, rational, natural)
-VEC_OP_vs_sv(-, rational, rational, natural)
-VEC_OP_vs_sv(*, rational, rational, natural)
-VEC_OP_vs_sv(/, rational, rational, natural)
+// Vec<rational> x rational_like
+VEC_OP_vs_sv(+, rational, rational, rational_like auto)
+VEC_OP_vs_sv(-, rational, rational, rational_like auto)
+VEC_OP_vs_sv(*, rational, rational, rational_like auto)
+VEC_OP_vs_sv(/, rational, rational, rational_like auto)
 
 using qvec2 = Vec2<rational>;
 using qvec3 = Vec3<rational>;
 using qvec4 = Vec4<rational>;
+
+// Vec<xrational> x xrational_like
+VEC_OP_vs_sv(+, xrational, xrational, xrational_like auto)
+VEC_OP_vs_sv(-, xrational, xrational, xrational_like auto)
+VEC_OP_vs_sv(*, xrational, xrational, xrational_like auto)
+VEC_OP_vs_sv(/, xrational, xrational, xrational_like auto)
+
+using xvec2 = Vec2<xrational>;
+using xvec3 = Vec3<xrational>;
+using xvec4 = Vec4<xrational>;
 
 }
