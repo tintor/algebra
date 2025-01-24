@@ -1,6 +1,20 @@
 #include "algebra/rational.h"
 #include "algebra/__test.h"
 
+TEST_CASE("xrational") {
+    REQUIRE(format("{}", xrational(2) / xrational(3)) == "2/3");
+    REQUIRE(format("{}", sqrt(xrational(1))) == "1");
+    REQUIRE(format("{}", sqrt(xrational(2))) == "sqrt(2)");
+    REQUIRE(format("{}", sqrt(xrational(4))) == "2");
+    REQUIRE(format("{}", sqrt(xrational(8))) == "2*sqrt(2)");
+    REQUIRE(format("{}", sqrt(xrational(4/9_q))) == "2/3");
+    REQUIRE(format("{}", sqrt(xrational(8)) / xrational(3)) == "2/3*sqrt(2)");
+    REQUIRE(format("{}", xrational(1) / sqrt(xrational(2))) == "sqrt(2)/2");
+    REQUIRE(format("{}", sqr(xrational(1) / sqrt(xrational(2)))) == "1/2");
+    REQUIRE(xrational(1) < sqrt(xrational(2)));
+    REQUIRE(sqrt(xrational(2)) < xrational(2));
+}
+
 TEST_CASE("simplify") {
     REQUIRE(rational(3, -4).num == -3);
     REQUIRE(rational(3, -4).den == 4);

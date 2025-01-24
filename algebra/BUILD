@@ -6,7 +6,7 @@ cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"
 library("natural",       hdrs = ["integer_backend.h"])
 library("natural_func",  deps = [":natural"])
 library("integer",       deps = [":natural"], test_deps = [":natural_func"])
-library("integer_func",  deps = [":integer"], test_deps = [":natural_func"])
+library("integer_func",  deps = [":integer", ":natural_func"])
 library("rational",      deps = [":integer_func"])
 library("rational_func", deps = [":rational", ":natural_func"])
 library("real",          deps = [":rational", ":natural_func"])

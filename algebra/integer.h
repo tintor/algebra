@@ -489,8 +489,15 @@ constexpr bool operator<(const integer& a, const integer& b) {
 constexpr bool operator<(const integer& a, std::integral auto b) { return a < integer(b); }
 constexpr bool operator<(std::integral auto a, const integer& b) { return integer(a) < b; }
 
+template<typename T>
+concept integral = std::integral<T> || std::same_as<T, natural> || std::same_as<T, integer>;
+constexpr bool operator>(const integral auto& a, const integral auto& b) { return b < a; }
+constexpr bool operator>=(const integral auto& a, const integral auto& b) { return !(a < b); }
+constexpr bool operator<=(const integral auto& a, const integral auto& b) { return !(a > b); }
+
+
 constexpr integer operator~(integer a) {
-    if (a >= 0) {
+    if (a.sign() >= 0) {
         a += 1;
         a.negate();
         return a;

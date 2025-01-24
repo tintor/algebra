@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/integer.h"
+#include "algebra/natural_func.h"
 
 namespace algebra {
 
@@ -33,7 +34,7 @@ constexpr integer pow(integer base, std::integral auto exp) {
         return exp2(static_cast<uint64_t>(exp) * 2);
     if (base == 8)
         return exp2(static_cast<uint64_t>(exp) * 3);
-    if (base.sign() > 0 && base.is_power_of_two())
+    if (base.sign() > 0 && is_power_of_two(base.abs))
         return exp2(static_cast<uint64_t>(exp) * base.num_trailing_zeros());
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(integer, ...)");
@@ -66,7 +67,7 @@ constexpr integer pow(integer base, std::integral auto exp, integer result) {
         return 1;
     if (exp == 1)
         return result * base;
-    if (base.sign() > 0 && base.is_power_of_two())
+    if (base.sign() > 0 && is_power_of_two(base.abs))
         return result << (static_cast<uint64_t>(exp) * base.num_trailing_zeros());
 
     if (exp & 1)
@@ -123,7 +124,7 @@ constexpr bool mod_inverse(const natural& a, const natural& n, natural& out) {
     }
     if (r > 1)
         return false;
-    if (t < 0)
+    if (t.sign() < 0)
         t += n;
     out = t.abs;
     return true;

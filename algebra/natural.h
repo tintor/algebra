@@ -30,7 +30,7 @@ constexpr uint64_t pow(uint64_t base, unsigned exp) {
     return result;
 }
 
-constexpr unsigned long abs_ulong(std::signed_integral auto a) { return (a >= 0) ? a : (~static_cast<unsigned long>(a) + 1); }
+constexpr unsigned long abs_ulong(std::integral auto a) { static_assert(sizeof(a) <= 8); return (a >= 0) ? a : (~static_cast<unsigned long>(a) + 1); }
 
 // TODO test cases for operator float()
 // TODO add support for long double

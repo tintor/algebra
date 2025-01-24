@@ -1,8 +1,11 @@
 #pragma once
 #include "algebra/integer.h"
 #include "algebra/integer_func.h"
+#include "algebra/natural_func.h"
 #include <regex>
 #include <charconv>
+#include <random>
+#include <print>
 
 namespace algebra {
 using namespace algebra;
@@ -11,6 +14,7 @@ struct rational {
     integer num, den;
 
     constexpr rational() : den(1) { }
+    constexpr rational(natural a) : num(std::move(a)), den(1) { }
     constexpr rational(integer a) : num(std::move(a)), den(1) { }
     constexpr rational(integer a, integer b) : num(std::move(a)), den(std::move(b)) { simplify(); }
 private:
@@ -19,24 +23,27 @@ public:
     constexpr static rational normalized(integer num, integer den) { return {std::move(num), std::move(den), /*dummy*/0}; }
 
     constexpr rational(std::integral auto a) : num(a), den(1) { }
-    // TODO simplify in small integers first, before converting to integer class!
-    constexpr rational(std::integral auto n, std::integral auto d) {
-        if (d < 0) {
-            d = -d;
-            n = -d;
-        }
-        if (n == 0) {
-            num = uint64_t(1);
-            den = uint64_t(0);
-        } else {
-            auto z = num_trailing_zeros(n | d);
-            n >>= z;
-            d >>= z;
-            auto e = gcd(n, d);
 
-            num = n / e;
-            den = d / e;
+    template<std::integral N, std::integral D>
+    constexpr rational(N _n, D _d) {
+        const bool negative = (_n < 0) != (_d < 0);
+        std::make_unsigned_t<larger_type<N, D>> n = (_n < 0) ? -_n : _n;
+        std::make_unsigned_t<larger_type<N, D>> d = (_d < 0) ? -_d : _d;
+
+        if (n == 0) {
+            num = uint64_t(0);
+            den = uint64_t(1);
+            return;
         }
+
+        auto z = std::countr_zero(n | d);
+        n >>= z;
+        d >>= z;
+        auto e = gcd(n, d);
+        num = n / e;
+        den = d / e;
+        if (negative)
+            num.negate();
     }
 
     constexpr rational(float x);
@@ -156,15 +163,12 @@ constexpr void operator/=(rational& a, std::integral auto b) { a /= integer(b); 
 constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num <  b.num) : (a.num * b.den <  b.num * a.den); }
 constexpr bool operator>(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num >  b.num) : (a.num * b.den >  b.num * a.den); }
 
-template<typename T>
-concept Integral = std::integral<T> || std::same_as<T, integer> || std::same_as<T, natural>;
-
-constexpr bool operator<(Integral auto a, const rational& b) { return b.den.is_one() ? (a <  b.num) : (a * b.den <  b.num); }
-constexpr bool operator<(const rational& a, Integral auto b) { return a.den.is_one() ? (a.num <  b) : (a.num <  b * a.den); }
+constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a <  b.num) : (a * b.den <  b.num); }
+constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_one() ? (a.num <  b) : (a.num <  b * a.den); }
 
 constexpr bool operator==(const rational& a, const rational& b) { return a.num == b.num && a.den == b.den; }
-constexpr bool operator==(const rational& a, const Integral auto b) { return a.num == b && a.den.is_one(); }
-constexpr bool operator==(const Integral auto a, const rational& b) { return a == b.num && b.den.is_one(); }
+constexpr bool operator==(const rational& a, const integral auto b) { return a.num == b && a.den.is_one(); }
+constexpr bool operator==(const integral auto a, const rational& b) { return a == b.num && b.den.is_one(); }
 
 namespace literals {
 constexpr auto operator""_q(const char* s) { return rational(s); }
@@ -353,17 +357,9 @@ constexpr rational& operator*=(rational& a, const integer& b) {
     return a;
 }
 
-constexpr rational operator*(const rational& a, const rational& b) {
-    return {a.num * b.num, a.den * b.den};
-}
-
-constexpr rational operator*(const rational& a, const integer& b) {
-    return {a.num * b, a.den};
-}
-
-constexpr rational operator*(const integer& a, const rational& b) {
-    return {a * b.num, b.den};
-}
+constexpr rational operator*(const rational& a, const rational& b) { return {a.num * b.num, a.den * b.den}; }
+constexpr rational operator*(const rational& a, const integer& b) { return {a.num * b, a.den}; }
+constexpr rational operator*(const integer& a, const rational& b) { return {a * b.num, b.den}; }
 
 constexpr rational& operator/=(rational& a, const rational& b) {
 #if 0
@@ -569,65 +565,123 @@ constexpr bool is_possible_square(const natural& a) {
     return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
 }
 
+// assumes that whole and root are already initialized
+constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
+    if (a <= 1)
+        return;
+
+    // factorize a
+    auto z = a.num_trailing_zeros();
+    if (z) {
+        if (z > 1)
+            whole <<= z / 2;
+        if (z & 1) {
+            if (root.is_even()) {
+                root >>= 1;
+                whole <<= 1;
+            } else
+                root <<= 1;
+        }
+        a >>= z;
+    }
+
+    std::optional<natural> a_sqrt;
+    if (is_possible_square(a)) {
+        natural s = isqrt(a);
+        if (s * s == a) {
+            whole *= s;
+            return;
+        }
+        a_sqrt = std::move(s);
+    }
+
+    std::optional<std::mt19937_64> rng;
+    uint64_t p = 3;
+    while (a > 1) {
+        if (p > 256) {
+            if (a_sqrt == std::nullopt) {
+                natural s = isqrt(a);
+                if (s * s == a) {
+                    whole *= s;
+                    return;
+                }
+                a_sqrt = std::move(s);
+
+                if (rng == std::nullopt)
+                    rng = std::mt19937_64(0);
+                if (is_likely_prime(a, 40, *rng))
+                    break;
+            }
+            if (p > *a_sqrt)
+                break;
+        } else
+            if (p >= a)
+                break;
+
+        int count = 0;
+        while (a % p == 0) {
+            a /= p;
+            count += 1;
+        }
+        if (count) {
+            if (count >= 2)
+                whole *= pow(natural(p), count / 2);
+            if (count & 1) {
+                if (root % p == 0) {
+                    root /= p;
+                    whole *= p;
+                } else
+                    root *= p;
+            }
+            a_sqrt = std::nullopt;
+        }
+        p += 2;
+    }
+    if (a > 1) {
+        if (root % a == 0) {
+            root /= a;
+            whole *= a;
+        } else
+            root *= a;
+    }
+}
+
 // represents number of form: rational * sqrt(root)
 // it is closed under: multiplication and division
 // squaring always produces rational
 //
 struct xrational {
     rational base;
-    natural root; // can't be zero
+    natural root; // must be positive!
 
-    xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
-        if (root == 0)
-            throw std::runtime_error("zero for root is not allowed");
-        simplfy();
+    xrational(rational base, natural root = 1) : base(std::move(base)), root(std::move(root)) {
+        if (this->root == 0)
+            throw std::runtime_error("root must be positive");
+        simplify();
+    }
+    xrational(std::integral auto a) : base(a), root(1) { }
+    xrational(integer a) : base(std::move(a)), root(1) { }
+
+    xrational& operator=(std::integral auto a) {
+        base = a;
+        root = 1;
+    }
+    xrational& operator=(integer a) {
+        base.num = std::move(a);
+        base.den = 1;
+        root = 1;
+    }
+    xrational& operator=(rational a) {
+        base = std::move(a);
+        root = 1;
     }
 
     void simplify() {
-        bool modified = false;
-
-        auto z = root.num_trailing_zeros();
-        if (z > 0 && (z & 1) == 0) {
-            root >>= z;
-            base.num <<= z / 2;
-            modified = true;
-        }
-
-        natural q;
-        using word = natural::word;
-        while (root >= word(9)) {
-            if (div(root, word(9), q))
-                break;
-            std::swap(root, q);
-            base.num *= word(3);
-            modified = true;
-        }
-        while (root >= word(25)) {
-            if (div(root, word(25), q))
-                break;
-            std::swap(root, q);
-            base.num *= word(5);
-            modified = true;
-        }
-        while (root >= word(49)) {
-            if (div(root, word(49), q))
-                break;
-            std::swap(root, q);
-            base.num *= word(7);
-            modified = true;
-        }
-
-        if (root > 1 && is_possible_square(root)) {
-            q = isqrt(root);
-            if (q * q == root) {
-                base.num *= q;
-                root = 1;
-                modified = true;
-            }
-        }
-
-        if (modified)
-            base.simplify();
+        natural w = 1, r = 1;
+        exact_sqrt(root, w, r);
+        if (w != 1)
+            base *= integer(w);
+        root = std::move(r);
     }
 };
 
@@ -645,47 +699,75 @@ constexpr xrational operator-(const xrational& a, const xrational& b) {
     throw std::runtime_error("subtracting xratinals with different roots is not allowed");
 }
 
+constexpr xrational sqr(const xrational& a) {
+    natural num, den;
+    mul(a.base.num.abs, a.base.num.abs, num);
+    mul(a.base.den.abs, a.base.den.abs, den);
+    mul(num, a.root);
+    return {rational{num, den}};
+}
+
 constexpr xrational operator*(const xrational& a, const xrational& b) {
-    if (&a == &b) {
-        natural e = a.base;
-        e *= a.base;
-        e *= a.root;
-        return {std::move(e), 1};
-    }
-    return {a.base * b.base, a.root * b.root};
+    if (&a == &b || (a.base == b.base && a.root == b.root))
+        return sqr(a);
+    if (a.root == b.root)
+        return {a.base * b.base * integer(a.root)};
+
+    // TODO maybe use gcd(a.root, b.root) to avoid difficult factorization
+    natural whole = a.base.num.abs * b.base.num.abs;
+    natural root = 1;
+    exact_sqrt(a.root, whole, root);
+    exact_sqrt(b.root, whole, root);
+    integer w = whole;
+    if ((a.base.sign() < 0) != (b.base.sign() < 0))
+        w.negate();
+    return {rational{std::move(w), a.base.den.abs * b.base.den.abs}, std::move(root)};
 }
 
 constexpr xrational operator/(const xrational& a, const xrational& b) {
+    if (&a == &b || (a.base == b.base && a.root == b.root))
+        return xrational{rational{1}};
+    if (a.root == b.root)
+        return xrational{a.base / b.base};
+
     rational e = a.base;
     e /= b.base;
-    e /= b.root;
+    e /= integer(b.root);
     return {std::move(e), a.root * b.root};
 }
 
-constexpr xrational pow2(const xrational& a) {
-    natural num, den;
-    mul(a.base.num, a.base.num, num);
-    mul(a.base.den, a.base.den, den);
-    mul(num, a.root);
-    return {rational{num, den}, 1};
+constexpr int signum(const integer& a) {
+    return (a.sign() > 0) - (a.sign() < 0);
 }
 
-constexpr xrational sqrt(const xrational& a) {
-    if (a.root != 1)
-        throw std::runtime_error("sqrt() of irrational");
-    if (a.base.sign() < 0)
-        throw std::runtime_error("sqrt() of negative");
-    return {rational{1, a.base.den}, a.base.num * a.base.den};
+struct bit_range {
+    uint64_t min, max;
+    constexpr bit_range(uint64_t min, uint64_t max) : min(min), max(max) { }
+    constexpr bit_range(const natural& a) { min = max = a.num_bits(); }
+};
+
+constexpr bit_range operator*(bit_range a, bit_range b) {
+    return {a.min + b.min - 1, a.max + b.max};
+}
+
+constexpr bit_range operator+(bit_range a, bit_range b) {
+    return {std::min(a.min, b.min), std::max(a.max, b.max) + 1};
 }
 
 constexpr bool operator==(const xrational& a, const xrational& b) {
+    if (signum(a.base.num) != signum(b.base.num))
+        return false;
     if (a.root == b.root)
         return a.base == b.base;
-    if (!same_sign(a.base.num, b.base.num))
-        return false;
 
-    natural p = a.base.num.abs * a.base.num.abs * a.root * b.base.den.abs * b.base.den.abs;
-    natural q = b.base.num.abs * b.base.num.abs * b.root * a.base.den.abs * a.base.den.abs;
+    natural p = a.base.num.abs * a.base.num.abs;
+    p *= a.root;
+    p *= b.base.den.abs;
+    p *= b.base.den.abs;
+    natural q = b.base.num.abs * b.base.num.abs;
+    q *= b.root;
+    q *= a.base.den.abs;
+    q *= a.base.den.abs;
     return p == q;
 }
 
@@ -698,27 +780,52 @@ constexpr bool operator<(const xrational& a, const xrational& b) {
         return a.root < b.root;
 
     // TODO could use interval arithmetic with doubles first to find bounds for p and q
-    natural p = a.base.num.abs * a.base.num.abs * a.root * b.base.den.abs * b.base.den.abs;
-    natural q = b.base.num.abs * b.base.num.abs * b.root * a.base.den.abs * a.base.den.abs;
+    natural p = a.base.num.abs * a.base.num.abs;
+    p *= a.root;
+    p *= b.base.den.abs;
+    p *= b.base.den.abs;
+    natural q = b.base.num.abs * b.base.num.abs;
+    q *= b.root;
+    q *= a.base.den.abs;
+    q *= a.base.den.abs;
     return p < q;
 }
 
-constexpr bool sqrt(const natural& a, natural& out) {
-    if (a == 0 || a == 1) {
-        out = a;
-        return true;
-    }
-    if (!is_possible_square(a))
-        return false;
-    out = isqrt();
-}
-
 constexpr xrational sqrt(const xrational& a) {
-    if (a.root != 1) {
-        if (!is_possible_square(a.root))
-            throw std::runtime_error();
-        // TODO try to normalize it
-    }
+    if (a.base.sign() < 0)
+        throw std::runtime_error("sqrt() of negative");
+    if (a.root != 1)
+        throw std::runtime_error("sqrt of xrational with root");
+    natural whole = 1, root = 1;
+    exact_sqrt(a.base.num.abs, whole, root);
+    exact_sqrt(a.base.den.abs, whole, root);
+    return {rational{whole, a.base.den}, root};
 }
 
 }
+
+template <>
+struct std::formatter<algebra::xrational, char> {
+    constexpr auto parse(auto& ctx) { return ctx.begin(); }
+
+    constexpr auto format(const algebra::xrational& a, auto& ctx) const {
+        if (a.base == 1 && a.root != 1) {
+            std::format_to(ctx.out(), "sqrt({})", a.root);
+            return ctx.out();
+        }
+        if (a.base.num == 1 && a.base.den != 1 && a.root != 1) {
+            std::format_to(ctx.out(), "sqrt({})/{}", a.root, a.base.den);
+            return ctx.out();
+        }
+        if (a.base.num == -1 && a.base.den != 1 && a.root != 1) {
+            std::format_to(ctx.out(), "-sqrt({})/{}", a.root, a.base.den);
+            return ctx.out();
+        }
+        std::format_to(ctx.out(), "{}", a.base);
+        if (a.root != 1)
+            std::format_to(ctx.out(), "*sqrt({})", a.root);
+        return ctx.out();
+    }
+};
+
+constexpr std::ostream& operator<<(std::ostream& os, const algebra::xrational& a) { return os << std::format("{}", a); }

@@ -146,8 +146,13 @@ constexpr T __gcd_inner(T a, T b) {
     return a;
 }
 
-template<std::unsigned_integral T>
-constexpr T gcd(T a, T b) {
+template <typename A, typename B>
+using larger_type = std::conditional_t<(sizeof(A) >= sizeof(B)), A, B>;
+
+template<std::integral A, std::integral B>
+constexpr auto gcd(A _a, B _b) {
+    std::make_unsigned_t<larger_type<A, B>> a = (_a < 0) ? -_a : _a;
+    std::make_unsigned_t<larger_type<A, B>> b = (_b < 0) ? -_b : _b;
     if (a == 0)
         return b;
     if (b == 0)
@@ -157,22 +162,6 @@ constexpr T gcd(T a, T b) {
         return __gcd_inner(a, b);
     auto common = std::min(az, std::countr_zero(b));
     return __gcd_inner(a >> az, b >> common) << common;
-}
-
-constexpr uint64_t gcd(uint64_t a, uint64_t b) {
-    if (a == 0)
-        return b;
-    if (b == 0)
-        return a;
-    auto common = std::countr_zero(a | b);
-    a >>= std::countr_zero(a);
-    do {
-        b >>= std::countr_zero(b);
-        if (a > b)
-            std::swap(a, b);
-        b -= a;
-    } while (b);
-    return a << common;
 }
 
 constexpr natural gcd(natural a, natural b) {
