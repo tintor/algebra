@@ -127,14 +127,10 @@ constexpr rational operator+(const rational& a, const rational& b);
 constexpr rational operator+(const rational& a, const integral auto& b);
 constexpr rational operator+(const integral auto& a, const rational& b);
 
-constexpr void operator+=(rational& a, std::integral auto b) { a += integer(b); }
-
 constexpr rational& operator-=(rational& a, const rational& b);
 constexpr rational operator-(const rational& a, const rational& b);
 constexpr rational operator-(const rational& a, const integral auto& b);
 constexpr rational operator-(const integral auto& a, const rational& b);
-
-constexpr void operator-=(rational& a, std::integral auto b) { a -= integer(b); }
 
 constexpr rational operator*(const rational& a, const rational& b);
 constexpr rational operator*(const rational& a, const integral auto& b);
@@ -142,14 +138,11 @@ constexpr rational operator*(const integral auto& a, const rational& b);
 
 constexpr rational& operator*=(rational& a, const rational& b);
 constexpr rational& operator*=(rational& a, const integral auto& b);
-constexpr void operator*=(rational& a, std::integral auto b) { a *= integer(b); }
 
 constexpr rational& operator/=(rational&, const integer&);
 constexpr rational operator/(const rational&, const rational&);
 constexpr rational operator/(const rational&, const integral auto&);
 constexpr rational operator/(const integral auto&, const rational&);
-
-constexpr void operator/=(rational& a, std::integral auto b) { a /= integer(b); }
 
 constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num < b.num) : (a.num * b.den <  b.num * a.den); }
 constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a < b.num) : (a * b.den < b.num); }
@@ -311,7 +304,7 @@ constexpr rational& operator*=(rational& a, const rational& b) {
     return a;
 }
 
-constexpr rational& operator*=(rational& a, const integer& b) {
+constexpr rational& operator*=(rational& a, const integral auto& b) {
     a.num *= b;
     a.simplify();
     return a;
@@ -362,7 +355,7 @@ constexpr rational& operator/=(rational& a, const rational& b) {
     return a;
 }
 
-constexpr rational& operator/=(rational& a, const integer& b) {
+constexpr rational& operator/=(rational& a, const integral auto& b) {
     a.den *= b;
     a.simplify();
     return a;

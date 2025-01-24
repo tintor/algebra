@@ -315,20 +315,30 @@ constexpr integer operator*(const integer& a, const integer& b) {
     return c;
 }
 
+constexpr integer operator*(const integer& a, const natural& b) {
+    integer c;
+    c.abs = a.abs * b;
+    c.abs.words.set_negative(a.is_negative());
+    return c;
+}
+constexpr integer operator*(const natural& a, const integer& b) { return b * a; }
+
 constexpr integer operator*(const integer& a, std::integral auto b) {
     integer c;
     mul(a, integer(b), c);
     return c;
 }
-
-constexpr integer operator*(std::integral auto a, const integer& b) {
-    integer c;
-    mul(integer(a), b, c);
-    return c;
-}
+constexpr integer operator*(std::integral auto a, const integer& b) { return b * a; }
 
 constexpr integer& operator*=(integer& a, const integer& b) {
     mul(a, b);
+    return a;
+}
+
+constexpr integer& operator*=(integer& a, const natural& b) {
+    const bool negative = a.is_negative();
+    a.abs *= b;
+    a.abs.words.set_negative(negative);
     return a;
 }
 

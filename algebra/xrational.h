@@ -45,18 +45,42 @@ struct xrational {
             base *= integer(w);
         root = std::move(r);
     }
+
+    void negate() { base.negate(); }
+
+    void invert() {
+        base.invert();
+        if (root != 1)
+            base /= root;
+    }
 };
 
+constexpr xrational operator-(const xrational& a) { return {-a.base, a.root}; }
+
 constexpr xrational operator+(const xrational& a, const xrational& b) {
-    if (a.root == b.root)
-        return {a.base + b.base, a.root};
-    throw std::runtime_error("adding xrationals with different roots");
+    if (a.root != b.root)
+        throw std::runtime_error("adding xrationals with different roots");
+    return {a.base + b.base, a.root};
+}
+
+constexpr xrational& operator+=(xrational& a, const xrational& b) {
+    if (a.root != b.root)
+        throw std::runtime_error("adding xrationals with different roots");
+    a.base += b.base;
+    return a;
 }
 
 constexpr xrational operator-(const xrational& a, const xrational& b) {
-    if (a.root == b.root)
-        return {a.base - b.base, a.root};
-    throw std::runtime_error("subtracting xrationals with different roots");
+    if (a.root != b.root)
+        throw std::runtime_error("adding xrationals with different roots");
+    return {a.base - b.base, a.root};
+}
+
+constexpr xrational& operator-=(xrational& a, const xrational& b) {
+    if (a.root != b.root)
+        throw std::runtime_error("adding xrationals with different roots");
+    a.base -= b.base;
+    return a;
 }
 
 constexpr xrational sqr(const xrational& a) {
