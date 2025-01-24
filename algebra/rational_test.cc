@@ -11,6 +11,8 @@ TEST_CASE("xrational") {
     REQUIRE(format("{}", sqrt(xrational(8)) / xrational(3)) == "2/3*sqrt(2)");
     REQUIRE(format("{}", xrational(1) / sqrt(xrational(2))) == "sqrt(2)/2");
     REQUIRE(format("{}", sqr(xrational(1) / sqrt(xrational(2)))) == "1/2");
+    REQUIRE(format("{}", sqrt(xrational(2)) + sqrt(xrational(8))) == "3*sqrt(2)");
+    REQUIRE(format("{}", sqrt(xrational(6)) * sqrt(xrational(10))) == "2*sqrt(15)");
     REQUIRE(xrational(1) < sqrt(xrational(2)));
     REQUIRE(sqrt(xrational(2)) < xrational(2));
 }
