@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/rational_func.h"
+#include "algebra/xrational.h"
 #include "algebra/vector.h"
 
 namespace algebra {

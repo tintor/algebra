@@ -8,6 +8,7 @@ library("natural_func",  deps = [":natural"])
 library("integer",       deps = [":natural"], test_deps = [":natural_func"])
 library("integer_func",  deps = [":integer", ":natural_func"])
 library("rational",      deps = [":integer_func"])
+library("xrational",     deps = [":rational"])
 library("rational_func", deps = [":rational", ":natural_func"])
 library("real",          deps = [":rational", ":natural_func"])
 library("real_func",     deps = [":real"])
@@ -15,7 +16,7 @@ library("expr",          deps = [":rational_func"])
 
 library("vector",          has_test = False)
 library("solve_linear",    has_test = False, deps = [":vector"])
-library("rational_vector", deps = [":vector", ":rational_func"])
+library("rational_vector", deps = [":vector", ":rational_func", ":xrational"])
 
 library("point_segment_squared_distance",
     deps = [":vector"],

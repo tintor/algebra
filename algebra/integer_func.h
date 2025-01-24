@@ -148,4 +148,8 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& p, nat
     }
 }
 
+constexpr int signum(const integer& a) {
+    return (a.sign() > 0) - (a.sign() < 0);
+}
+
 }
