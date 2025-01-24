@@ -170,11 +170,7 @@ constexpr xrational sqrt(const xrational& a) {
     return {rational{whole, a.base.den}, root};
 }
 
-constexpr xrational& operator<<=(xrational& a, std::integral auto b) {
-    a.base *= b;
-    return a;
-}
-
+constexpr xrational& operator<<=(xrational& a, std::integral auto b) { a.base <<= b; return a; }
 ALGEBRA_SHIFT_OP(xrational)
 
 namespace literals {
@@ -188,21 +184,23 @@ struct std::formatter<algebra::xrational, char> {
     constexpr auto parse(auto& ctx) { return ctx.begin(); }
 
     constexpr auto format(const algebra::xrational& a, auto& ctx) const {
-        if (a.base == 1 && a.root != 1) {
-            std::format_to(ctx.out(), "sqrt({})", a.root);
-            return ctx.out();
-        }
-        if (a.base.num == 1 && a.base.den != 1 && a.root != 1) {
-            std::format_to(ctx.out(), "sqrt({})/{}", a.root, a.base.den);
-            return ctx.out();
-        }
-        if (a.base.num == -1 && a.base.den != 1 && a.root != 1) {
-            std::format_to(ctx.out(), "-sqrt({})/{}", a.root, a.base.den);
+        if (a.root != 1) {
+            if (a.base == 1) {
+                std::format_to(ctx.out(), "sqrt({})", a.root);
+                return ctx.out();
+            }
+            if (a.base.num == 1 && a.base.den != 1) {
+                std::format_to(ctx.out(), "sqrt({})/{}", a.root, a.base.den);
+                return ctx.out();
+            }
+            if (a.base.num == -1 && a.base.den != 1) {
+                std::format_to(ctx.out(), "-sqrt({})/{}", a.root, a.base.den);
+                return ctx.out();
+            }
+            std::format_to(ctx.out(), "{}*sqrt({})", a.base, a.root);
             return ctx.out();
         }
         std::format_to(ctx.out(), "{}", a.base);
-        if (a.root != 1)
-            std::format_to(ctx.out(), "*sqrt({})", a.root);
         return ctx.out();
     }
 };

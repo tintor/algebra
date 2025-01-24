@@ -127,8 +127,6 @@ constexpr rational operator+(const rational& a, const rational& b);
 constexpr rational operator+(const rational& a, const integral auto& b);
 constexpr rational operator+(const integral auto& a, const rational& b);
 
-constexpr rational operator+(std::integral auto a, const rational& b) { return integer(a) + b; }
-constexpr rational operator+(const rational& a, std::integral auto b) { return a + integer(b); }
 constexpr void operator+=(rational& a, std::integral auto b) { a += integer(b); }
 
 constexpr rational& operator-=(rational& a, const rational& b);
@@ -136,16 +134,11 @@ constexpr rational operator-(const rational& a, const rational& b);
 constexpr rational operator-(const rational& a, const integral auto& b);
 constexpr rational operator-(const integral auto& a, const rational& b);
 
-constexpr rational operator-(std::integral auto a, const rational& b) { return integer(a) - b; }
-constexpr rational operator-(const rational& a, std::integral auto b) { return a - integer(b); }
 constexpr void operator-=(rational& a, std::integral auto b) { a -= integer(b); }
 
 constexpr rational operator*(const rational& a, const rational& b);
 constexpr rational operator*(const rational& a, const integral auto& b);
 constexpr rational operator*(const integral auto& a, const rational& b);
-
-constexpr rational operator*(std::integral auto a, const rational& b) { return integer(a) * b; }
-constexpr rational operator*(const rational& a, std::integral auto b) { return a * integer(b); }
 
 constexpr rational& operator*=(rational& a, const rational& b);
 constexpr rational& operator*=(rational& a, const integral auto& b);
@@ -156,8 +149,6 @@ constexpr rational operator/(const rational&, const rational&);
 constexpr rational operator/(const rational&, const integral auto&);
 constexpr rational operator/(const integral auto&, const rational&);
 
-constexpr rational operator/(std::integral auto a, const rational& b) { return (a == 1) ? rational{b.den, b.num} : (integer(a) / b); }
-constexpr rational operator/(const rational& a, std::integral auto b) { return a / integer(b); }
 constexpr void operator/=(rational& a, std::integral auto b) { a /= integer(b); }
 
 constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num < b.num) : (a.num * b.den <  b.num * a.den); }
