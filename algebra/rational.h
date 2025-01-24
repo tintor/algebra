@@ -13,12 +13,31 @@ struct rational {
     constexpr rational() : den(1) { }
     constexpr rational(integer a) : num(std::move(a)), den(1) { }
     constexpr rational(integer a, integer b) : num(std::move(a)), den(std::move(b)) { simplify(); }
-    // no simplification
+private:
     constexpr rational(integer a, integer b, int) : num(std::move(a)), den(std::move(b)) { }
+public:
+    constexpr static rational normalized(integer num, integer den) { return {std::move(num), std::move(den), /*dummy*/0}; }
 
     constexpr rational(std::integral auto a) : num(a), den(1) { }
     // TODO simplify in small integers first, before converting to integer class!
-    constexpr rational(std::integral auto a, std::integral auto b) : num(a), den(b) { simplify(); }
+    constexpr rational(std::integral auto n, std::integral auto d) {
+        if (d < 0) {
+            d = -d;
+            n = -d;
+        }
+        if (n == 0) {
+            num = uint64_t(1);
+            den = uint64_t(0);
+        } else {
+            auto z = num_trailing_zeros(n | d);
+            n >>= z;
+            d >>= z;
+            auto e = gcd(n, d);
+
+            num = n / e;
+            den = d / e;
+        }
+    }
 
     constexpr rational(float x);
     constexpr rational(double x);
@@ -538,3 +557,168 @@ struct std::hash<algebra::rational> {
         return seed;
     }
 };
+
+namespace algebra {
+
+constexpr bool is_possible_square(const natural& a) {
+    auto w = a.words[0] % 128;
+    if (w > 57)
+        return false;
+    if (w < 25)
+        return w == 0 || w == 1 || w == 4 || w == 9 || w == 16 || w == 17;
+    return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
+}
+
+// represents number of form: rational * sqrt(root)
+// it is closed under: multiplication and division
+// squaring always produces rational
+//
+struct xrational {
+    rational base;
+    natural root; // can't be zero
+
+    xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
+        if (root == 0)
+            throw std::runtime_error("zero for root is not allowed");
+        simplfy();
+    }
+
+    void simplify() {
+        bool modified = false;
+
+        auto z = root.num_trailing_zeros();
+        if (z > 0 && (z & 1) == 0) {
+            root >>= z;
+            base.num <<= z / 2;
+            modified = true;
+        }
+
+        natural q;
+        using word = natural::word;
+        while (root >= word(9)) {
+            if (div(root, word(9), q))
+                break;
+            std::swap(root, q);
+            base.num *= word(3);
+            modified = true;
+        }
+        while (root >= word(25)) {
+            if (div(root, word(25), q))
+                break;
+            std::swap(root, q);
+            base.num *= word(5);
+            modified = true;
+        }
+        while (root >= word(49)) {
+            if (div(root, word(49), q))
+                break;
+            std::swap(root, q);
+            base.num *= word(7);
+            modified = true;
+        }
+
+        if (root > 1 && is_possible_square(root)) {
+            q = isqrt(root);
+            if (q * q == root) {
+                base.num *= q;
+                root = 1;
+                modified = true;
+            }
+        }
+
+        if (modified)
+            base.simplify();
+    }
+};
+
+constexpr xrational operator+(const xrational& a, const xrational& b) {
+    if (a.root == b.root)
+        return {a.base + b.base, a.root};
+    // TODO try to reduce roots
+    throw std::runtime_error("adding xratinals with different roots is not allowed");
+}
+
+constexpr xrational operator-(const xrational& a, const xrational& b) {
+    if (a.root == b.root)
+        return {a.base - b.base, a.root};
+    // TODO try to reduce roots
+    throw std::runtime_error("subtracting xratinals with different roots is not allowed");
+}
+
+constexpr xrational operator*(const xrational& a, const xrational& b) {
+    if (&a == &b) {
+        natural e = a.base;
+        e *= a.base;
+        e *= a.root;
+        return {std::move(e), 1};
+    }
+    return {a.base * b.base, a.root * b.root};
+}
+
+constexpr xrational operator/(const xrational& a, const xrational& b) {
+    rational e = a.base;
+    e /= b.base;
+    e /= b.root;
+    return {std::move(e), a.root * b.root};
+}
+
+constexpr xrational pow2(const xrational& a) {
+    natural num, den;
+    mul(a.base.num, a.base.num, num);
+    mul(a.base.den, a.base.den, den);
+    mul(num, a.root);
+    return {rational{num, den}, 1};
+}
+
+constexpr xrational sqrt(const xrational& a) {
+    if (a.root != 1)
+        throw std::runtime_error("sqrt() of irrational");
+    if (a.base.sign() < 0)
+        throw std::runtime_error("sqrt() of negative");
+    return {rational{1, a.base.den}, a.base.num * a.base.den};
+}
+
+constexpr bool operator==(const xrational& a, const xrational& b) {
+    if (a.root == b.root)
+        return a.base == b.base;
+    if (!same_sign(a.base.num, b.base.num))
+        return false;
+
+    natural p = a.base.num.abs * a.base.num.abs * a.root * b.base.den.abs * b.base.den.abs;
+    natural q = b.base.num.abs * b.base.num.abs * b.root * a.base.den.abs * a.base.den.abs;
+    return p == q;
+}
+
+constexpr bool operator<(const xrational& a, const xrational& b) {
+    if (signum(a.base.num) != signum(b.base.num))
+        return signum(a.base.num) < signum(b.base.num);
+    if (a.root == b.root)
+        return a.base < b.base;
+    if (a.base == b.base)
+        return a.root < b.root;
+
+    // TODO could use interval arithmetic with doubles first to find bounds for p and q
+    natural p = a.base.num.abs * a.base.num.abs * a.root * b.base.den.abs * b.base.den.abs;
+    natural q = b.base.num.abs * b.base.num.abs * b.root * a.base.den.abs * a.base.den.abs;
+    return p < q;
+}
+
+constexpr bool sqrt(const natural& a, natural& out) {
+    if (a == 0 || a == 1) {
+        out = a;
+        return true;
+    }
+    if (!is_possible_square(a))
+        return false;
+    out = isqrt();
+}
+
+constexpr xrational sqrt(const xrational& a) {
+    if (a.root != 1) {
+        if (!is_possible_square(a.root))
+            throw std::runtime_error();
+        // TODO try to normalize it
+    }
+}
+
+}

@@ -400,8 +400,10 @@ constexpr void __mul(const natural& a, const natural& b, natural& out) {
     auto as = a.words.size();
     out.words.resize(a.words.size() + b.words.size());
     for (auto i = as; i-- > 0;) {
-        natural::dword carry = 0;
         const auto w = a.words[i];
+        if (w == 0)
+            continue;
+        natural::dword carry = 0;
         out.words[i] = 0;
         for (natural::size_type j = 0; j < b.words.size(); ++j) {
             carry += (natural::dword)w * b.words[j];
@@ -409,16 +411,87 @@ constexpr void __mul(const natural& a, const natural& b, natural& out) {
             out.words[i + j] = carry;
             carry >>= 64;
         }
-        for (auto j = b.words.size(); carry; j++) {
-            carry += out.words[i + j];
-            out.words[i + j] = carry;
+        natural::size_type j;
+        if (carry) {
+            j = i + b.words.size();
+            carry += out.words[j];
+            out.words[j] = carry;
             carry >>= 64;
+        }
+        if (carry) {
+            j += 1;
+            carry += out.words[j];
+            out.words[j] = carry;
         }
     }
     out.words.normalize();
 }
 
-constexpr void square(natural& a) {
+// supports &a == &out
+constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out) {
+    if (b == 0) {
+        out.words.set_zero();
+        if (carry)
+            out.words += carry;
+        return;
+    }
+    if (&a != &out)
+        out.words.reset(a.words.size(), /*initialize*/false);
+    for (natural::size_type i = 0; i < a.words.size(); ++i) {
+        natural::dword acc = a.words[i];
+        acc *= b;
+        acc += carry;
+        out.words[i] = acc;
+        carry = acc >> 64;
+    }
+    if (carry)
+        out.words += carry;
+}
+
+// assumes a.words.size() >= 2
+constexpr void __square(natural& a) {
+    if (a.words.size() == 2) {
+        auto carry = (natural::dword)a.words[0] * (natural::dword)a.words[0];
+        natural::word b0 = carry;
+        natural::word b1 = carry >> 64;
+
+        natural::dword pq = (natural::dword)a.words[0] * (natural::dword)a.words[1];
+        carry = b1 + pq; // can't use pq*2 here due to dword overflow
+        b1 = carry;
+        natural::word b2 = carry >> 64;
+
+        carry = b1 + pq;
+        b1 = carry;
+        carry >>= 64;
+        carry += b2;
+        b2 = carry;
+
+        natural::word b3 = carry >> 64;
+        carry = b2 + (natural::dword)a.words[1] * (natural::dword)a.words[1];
+        b2 = carry;
+        b3 += carry >> 64;
+
+        if (b3) {
+            a.words.reset(4, /*initialize*/false);
+            a.words[0] = b0;
+            a.words[1] = b1;
+            a.words[2] = b2;
+            a.words[3] = b3;
+            return;
+        }
+        if (b2) {
+            a.words.reset(3, /*initialize*/false);
+            a.words[0] = b0;
+            a.words[1] = b1;
+            a.words[2] = b2;
+            return;
+        }
+        a.words.reset(2, /*initialize*/false);
+        a.words[0] = b0;
+        a.words[1] = b1;
+        return;
+    }
+
     auto n = a.words.size();
     a.words.resize(n << 1);
     for (auto k = (n - 1) << 1; k >= 0; k--) {
@@ -441,6 +514,23 @@ constexpr void square(natural& a) {
     a.words.normalize();
 }
 
+constexpr void square(natural& a) {
+    if (a.words.size() == 0)
+        return;
+    if (a.words.size() == 1) {
+        natural::dword p = (natural::dword)a.words[0] * a.words[0];
+
+        a.words.reset_one_without_init();
+        a.words[0] = p;
+
+        natural::word high = p >> 64;
+        if (high)
+            a.words += high;
+        return;
+    }
+    __square(a);
+}
+
 constexpr void mul(const natural& a, const natural& b, natural& out) {
     if (a.words.size() == 0 || b.words.size() == 0) {
         out.set_zero();
@@ -448,14 +538,24 @@ constexpr void mul(const natural& a, const natural& b, natural& out) {
     }
 
     if (a.words.size() == 1) {
-        out = b;
-        out *= a.words[0];
+        if (b.words.size() == 1) {
+            natural::dword p = a.words[0];
+            p *= b.words[0];
+
+            out.words.reset_one_without_init();
+            out.words[0] = p;
+
+            natural::word high = p >> 64;
+            if (high)
+                out.words += high;
+            return;
+        }
+        __mul(b, a.words[0], /*carry*/0, out);
         return;
     }
 
     if (b.words.size() == 1) {
-        out = a;
-        out *= b.words[0];
+        __mul(a, b.words[0], /*carry*/0, out);
         return;
     }
 
@@ -474,14 +574,12 @@ constexpr void mul(natural& a, const natural& b) {
     }
 
     if (a.words.size() == 1) {
-        auto w = a.words[0];
-        a = b;
-        a *= w;
+        __mul(b, a.words[0], /*carry*/0, a);
         return;
     }
 
     if (&a == &b)
-        square(a);
+        __square(a);
     else
         __mul(a, b, a);
 }

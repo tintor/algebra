@@ -104,6 +104,7 @@ public:
             operator[](i) = o.operator[](i);
     }
 
+    constexpr void reset_one_without_init() { _size = 1; }
     constexpr void reset(size_type size, bool initialize = true);
     constexpr void operator+=(word a);
 
@@ -132,6 +133,7 @@ public:
     constexpr void erase_first_n_words(size_type n);
     constexpr void reserve(size_type capacity);
     constexpr void resize(size_type size);
+
     constexpr void insert_first_n_words(size_type n);
     constexpr void insert_first_word(word a);
 

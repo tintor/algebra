@@ -213,26 +213,40 @@ constexpr natural lcm(const natural& a, const natural& b) {
     return m;
 }
 
-constexpr natural __slow_and_correct_isqrt(const natural& x) {
-    if (x == 0 || x == 1)
+constexpr natural __slow_isqrt(const natural& x) {
+    const auto b = x.num_bits();
+    if (b <= 1)
         return x;
 
-    const auto b = x.num_bits();
     auto e = b + (b & 1);
     natural q, a, a2, xe;
+    int i = 0;
+    uint64_t qi = 0;
     while (true) {
-        q <<= 1;
-        a = q;
-        a |= 1;
-        mul(a, a, a2);
         xe = x;
         xe >>= e;
-        if (a2 <= xe)
-            q |= 1;
+        if (i < 64) {
+            qi <<= 1;
+            if (xe.words.size() > 2 || static_cast<unsigned __int128>(qi | 1) * (qi | 1) <= xe)
+                qi |= 1;
+        } else {
+            if (i == 64) {
+                q = qi;
+            }
+            q <<= 1;
+            a = q;
+            a |= 1;
+            mul(a, a, a2);
+            if (a2 <= xe)
+                q |= 1;
+        }
         if (e < 2)
             break;
         e -= 2;
+        i++;
     }
+    if (i < 64)
+        q = qi;
     return q;
 }
 
@@ -246,7 +260,7 @@ natural isqrt(const natural& x) {
     const int bits = x.num_bits();
     const int exponent = bits - 53;
     if (exponent > 1023)
-        return __slow_and_correct_isqrt(x); // too large for double
+        return __slow_isqrt(x); // too large for double
 
     // convert x to double
     const double xd = (exponent <= 0) ? x.words[0] : std::ldexp(static_cast<double>(extract_64bits(x, exponent)), exponent);
@@ -299,7 +313,7 @@ natural isqrt(const natural& x) {
     q >>= 1;
     return q;*/
 
-    return __slow_and_correct_isqrt(x);
+    return __slow_isqrt(x);
 }
 
 constexpr bool is_prime(const uint64_t a) {

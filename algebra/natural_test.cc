@@ -21,6 +21,14 @@ void rand_natural(natural& a, int min_size, int max_size, Random& rng) {
         a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
 }
 
+natural rand_natural(int size, Random& rng) {
+    natural a;
+    a.words.reset(size);
+    for (int i = 0; i < size; i++)
+        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    return a;
+}
+
 TEST_CASE("__word_div") {
     Random rng(0);
     natural a, b;
@@ -327,14 +335,6 @@ TEST_CASE("div10 stress with ucent 2") {
     }
 }
 
-natural rand_natural(int size, Random& rng) {
-    natural a;
-    a.words.reset(size);
-    for (int i = 0; i < size; i++)
-        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
-    return a;
-}
-
 TEST_CASE("stress + and -") {
     Random rng(0);
     for (int i = 0; i < 1000'000; i++) {
@@ -421,7 +421,7 @@ TEST_CASE("stress square in-place") {
     for (int i = 0; i < 100'000; i++) {
         natural a = rand_natural(rng.Uniform<int>(1, 5), rng);
         natural m = a;
-        m *= m;
+        square(m);
         REQUIRE(m == a * a);
     }
 }

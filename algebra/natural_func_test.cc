@@ -106,6 +106,26 @@ natural diff(const natural& a, const natural& b) {
     return (a > b) ? a - b : (b - a);
 }
 
+TEST_CASE("__slow_isqrt stress") {
+    long i = 0;
+    std::mt19937_64 rng(0);
+    int bits_max = 1024;
+    while (i < 100000) {
+        int bits = std::uniform_int_distribution<int>(1, bits_max)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        bits = x.num_bits();
+        natural q = __slow_isqrt(x);
+        if (q * q > x || (q + 1) * (q + 1) <= x) {
+            natural qe = q;
+            std::print("__slow_isqrt failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
+            bits_max = bits - 1;
+        }
+        i += 1;
+        if (i % 1'000'000 == 0)
+            print("{} mil, bits_max {}\n", i / 1'000'000, bits_max);
+    }
+}
+
 TEST_CASE("isqrt benchmark") {
     natural a;
 
@@ -113,6 +133,7 @@ TEST_CASE("isqrt benchmark") {
     a = pow(10_n, N); \
     print("1e" #N " bits {}\n", a.num_bits()); \
     BENCHMARK("isqrt() " #N) { return isqrt(a); }; \
+    BENCHMARK("__slow_isqrt() " #N) { return __slow_isqrt(a); }; \
     BENCHMARK("fast_isqrt() " #N) { return fast_isqrt(a); }; \
     BENCHMARK("std::sqrt() " #N) { return sqrt(static_cast<double>(a)); };
 
@@ -133,14 +154,14 @@ TEST_CASE("isqrt stress") {
     long i = 0;
     std::mt19937_64 rng(0);
     int bits_max = 126;
-    while (true) {
+    while (i < 100000) {
         int bits = std::uniform_int_distribution<int>(1, bits_max)(rng);
         natural x = uniform_sample_bits(bits, rng);
         bits = x.num_bits();
         natural q = isqrt(x);
         if (q * q > x || (q + 1) * (q + 1) <= x) {
-            natural qe = __slow_and_correct_isqrt(x);
-            std::print("failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
+            natural qe = __slow_isqrt(x);
+            std::print("isqrt failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
             bits_max = bits - 1;
         }
         i += 1;
@@ -193,7 +214,7 @@ TEST_CASE("pow") {
 }
 
 TEST_CASE("gcd") {
-    REQUIRE(std::countr_zero(0u) == 0);
+    REQUIRE(std::countr_zero(0u) == 32);
     REQUIRE(std::countr_zero(1u) == 0);
     REQUIRE(std::countr_zero(2u) == 1);
     REQUIRE(std::countr_zero(8u) == 3);
