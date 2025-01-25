@@ -13,32 +13,32 @@ struct xrational {
     rational base;
     natural root; // must be positive!
 
-    xrational(rational base, natural root = 1) : base(std::move(base)), root(std::move(root)) {
+    xrational() : base(0), root(1) { }
+    xrational(const xrational& a) : base(a.base), root(a.root) { }
+    xrational(rational_like auto base) : base(std::move(base)), root(1) { }
+    xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
         if (this->root == 0)
             throw std::runtime_error("root must be positive");
         simplify();
     }
-    xrational(std::integral auto a) : base(a), root(1) { }
-    xrational(integer a) : base(std::move(a)), root(1) { }
 
-    xrational& operator=(std::integral auto a) {
+    xrational& operator=(const xrational& a) {
+        base = a.base;
+        root = a.root;
+        return *this;
+    }
+
+    xrational& operator=(const rational_like auto& a) {
         base = a;
-        root = 1;
-        return *this;
-    }
-    xrational& operator=(integer a) {
-        base.num = std::move(a);
-        base.den = 1;
-        root = 1;
-        return *this;
-    }
-    xrational& operator=(rational a) {
-        base = std::move(a);
         root = 1;
         return *this;
     }
 
     void simplify() {
+        if (base.num.sign() == 0) {
+            root = 1;
+            return;
+        }
         natural w = 1, r = 1;
         exact_sqrt(root, w, r);
         if (w != 1)
@@ -65,7 +65,7 @@ constexpr xrational operator+(const xrational& a, const xrational& b) {
 
 constexpr xrational& operator+=(xrational& a, const xrational& b) {
     if (a.root != b.root)
-        throw std::runtime_error("adding xrationals with different roots");
+        throw std::runtime_error("subtracting xrationals with different roots");
     a.base += b.base;
     return a;
 }

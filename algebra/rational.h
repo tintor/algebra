@@ -139,7 +139,6 @@ constexpr rational operator*(const integral auto& a, const rational& b);
 constexpr rational& operator*=(rational& a, const rational& b);
 constexpr rational& operator*=(rational& a, const integral auto& b);
 
-constexpr rational& operator/=(rational&, const integer&);
 constexpr rational operator/(const rational&, const rational&);
 constexpr rational operator/(const rational&, const integral auto&);
 constexpr rational operator/(const integral auto&, const rational&);
