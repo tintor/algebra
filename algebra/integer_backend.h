@@ -115,7 +115,7 @@ public:
 
     constexpr void reset_one_without_init() { _size = 1; }
     constexpr void reset(size_type size, bool initialize = true);
-    constexpr void operator+=(uint64_t a);
+    constexpr void push_back(uint64_t a);
 
     constexpr void pop_back() {
         if (_size > 0) _size--; else if (_size < 0) _size++;
@@ -206,7 +206,7 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
             _words[i] = 0;
 }
 
-constexpr void integer_backend::operator+=(uint64_t a) {
+constexpr void integer_backend::push_back(uint64_t a) {
     if (_capacity) {
         if (size() == _capacity) {
             // heap -> heap x2

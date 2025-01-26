@@ -132,7 +132,7 @@ struct natural {
             if (b == 0)
                 return;
             if (i == words.size()) {
-                words += b;
+                words.push_back(b);
                 return;
             }
             dword acc = (dword)words[i] + b;
@@ -150,7 +150,7 @@ struct natural {
     constexpr natural& operator+=(uint128_t b) {
         __add(static_cast<uint64_t>(b), 0);
         if (words.size() == 0)
-            words += 0;
+            words.push_back(0);
         __add(static_cast<uint64_t>(b >> 64), 1);
         return *this;
     }
@@ -160,7 +160,7 @@ struct natural {
         if (b.words.size() > words.size()) {
             words.reserve(b.words.size());
             while (words.size() < b.words.size())
-                words += 0;
+                words.push_back(0);
         }
         dword acc = 0;
         for (size_type i = 0; i < words.size(); ++i) {
@@ -171,7 +171,7 @@ struct natural {
             acc >>= 64;
         }
         if (acc)
-            words += acc;
+            words.push_back(acc);
         return *this;
     }
 
@@ -258,7 +258,7 @@ struct natural {
         if (a == 0) {
             words.set_zero();
             if (carry)
-                words += carry;
+                words.push_back(carry);
             return;
         }
         for (size_type i = 0; i < words.size(); ++i) {
@@ -267,7 +267,7 @@ struct natural {
             carry = acc >> 64;
         }
         if (carry)
-            words += carry;
+            words.push_back(carry);
     }
     constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
 
@@ -579,7 +579,7 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
     if (b == 0) {
         out.words.set_zero();
         if (carry)
-            out.words += carry;
+            out.words.push_back(carry);
         return;
     }
     if (&a != &out)
@@ -590,7 +590,7 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
         carry = acc >> 64;
     }
     if (carry)
-        out.words += carry;
+        out.words.push_back(carry);
 }
 
 // assumes a.words.size() >= 2
@@ -670,7 +670,7 @@ constexpr void square(natural& a) {
 
         uint64_t high = p >> 64;
         if (high)
-            a.words += high;
+            a.words.push_back(high);
         return;
     }
     __square(a);
@@ -692,7 +692,7 @@ constexpr void mul(const natural& a, const natural& b, natural& out) {
 
             uint64_t high = p >> 64;
             if (high)
-                out.words += high;
+                out.words.push_back(high);
             return;
         }
         __mul(b, a.words[0], /*carry*/0, out);
@@ -1052,7 +1052,7 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
                 carry = current >> (bits_per_word - bit_shift);
             }
             if (carry)
-                a.words += carry;
+                a.words.push_back(carry);
         }
         a.words.insert_first_n_words(word_shift);
         return a;
@@ -1411,7 +1411,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
     if (count) {
         *this <<= count;
         if (words.size() == 0)
-            words += acc;
+            words.push_back(acc);
         else
             words[0] |= acc;
     }
