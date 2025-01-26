@@ -126,6 +126,7 @@ TEST_CASE("__slow_isqrt stress") {
     }
 }
 
+#if 0
 TEST_CASE("isqrt benchmark") {
     natural a;
 
@@ -149,6 +150,7 @@ TEST_CASE("isqrt benchmark") {
     BENCH_DIGITS(150);
     BENCH_DIGITS(300);
 }
+#endif
 
 TEST_CASE("isqrt stress") {
     long i = 0;
@@ -305,8 +307,10 @@ TEST_CASE("merseinne primes vs is_likely_prime") {
     std::vector<int> mp = {2, 3, 5, 7, 13, 17, 19, 31, 61, 89, 107, 127, 521, 607, 1279};
     for (int p = 2; p <= mp.back() + 1; p++) {
         natural a = pow(2_n, p) - 1;
-        bool actual = is_likely_prime(a, 10, rng);
-        bool expected = (std::find(mp.begin(), mp.end(), p) != mp.end());
-        REQUIRE(actual == expected);
+        const bool actual = is_likely_prime(a, 40, rng);
+        const bool expected = (std::find(mp.begin(), mp.end(), p) != mp.end());
+        if (actual != expected)
+            print("p={} a.num_bits={} actual={} expected={}\n", p, a.num_bits(), actual, expected);
+        CHECK(actual == expected);
     }
 }

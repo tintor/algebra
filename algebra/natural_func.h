@@ -1,6 +1,7 @@
 #pragma once
 #include "algebra/natural.h"
 #include <random>
+#include <span>
 
 namespace algebra {
 
@@ -9,8 +10,8 @@ constexpr natural pow(natural base, std::integral auto exp) {
         throw std::runtime_error("negative exponent in pow(natural, ...)");
     if (base == 2) {
         natural out;
-        out.words.reset((exp + natural::bits_per_word) / natural::bits_per_word);
-        out.words.back() = natural::word(1) << (exp % natural::bits_per_word);
+        out.words.reset((exp + 64) / 64);
+        out.words.back() = natural::word(1) << (exp % 64);
         return out;
     }
 
@@ -49,12 +50,12 @@ constexpr natural pow(natural base, const natural& _exp) {
 // uniformly sample from [0, (2**n)-1]
 constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
     static_assert(sizeof(rng()) == sizeof(natural::word));
-    auto w = (n + natural::bits_per_word - 1) / natural::bits_per_word;
+    auto w = (n + 64 - 1) / 64;
     out.words.reset(w, /*initialize*/false);
     while (w--)
         out.words[w] = rng();
-    if ((n % natural::bits_per_word) != 0)
-        out.words.back() &= (natural::word(1) << (n % natural::bits_per_word)) - 1;
+    if ((n % 64) != 0)
+        out.words.back() &= (natural::word(1) << (n % 64)) - 1;
     out.words.normalize();
 }
 
@@ -83,20 +84,20 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
         return;
     }
 
-    const natural::size_type n = (b + natural::bits_per_word - 1) / natural::bits_per_word;
+    const natural::size_type n = (b + 64 - 1) / 64;
     if (b == 64 * n) {
         // Note: power of two case is handled above!
         // mq = pow(2_n, 64 * n) / count
         // assert mq == 1
         while (true) {
-            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/out);
+            uniform_sample_bits(n * 64, rng, /*out*/out);
             if (out < count)
                 return;
         }
     }
     // TODO avoid this division in mq == 2 case
     natural temp;
-    natural mq = pow(natural(2), n * natural::bits_per_word);
+    natural mq = pow(natural(2), n * 64);
     mq /= count;
     if (mq == 2) {
         temp = count;
@@ -105,14 +106,14 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
     while (true) {
         if (mq == 2) {
             // optimization: avoid expensive div() for small mq
-            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/out);
+            uniform_sample_bits(n * 64, rng, /*out*/out);
             if (out < temp) {
                 if (out >= count)
                     out -= count;
                 return;
             }
         } else {
-            uniform_sample_bits(n * natural::bits_per_word, rng, /*out*/temp);
+            uniform_sample_bits(n * 64, rng, /*out*/temp);
             div(temp, count, /*out*/temp, /*out*/out);
             if (temp < mq)
                 return;
@@ -306,64 +307,6 @@ natural isqrt(const natural& x) {
     return __slow_isqrt(x);
 }
 
-constexpr bool is_prime(const uint64_t a) {
-    if (a <= 3)
-        return a >= 2;
-    if (a % 2 == 0 || a % 3 == 0)
-        return false;
-    uint32_t i = 5;
-    while (true) {
-        // overflow here is not possible
-        if (uint64_t(i) * i > a)
-            return true;
-        if (a % i == 0 || a % (i + 2) == 0)
-            return false;
-        i += 6;
-        // uint32_t oveflow check
-        if (i <= 5)
-            return true;
-    }
-}
-
-constexpr bool is_prime(const natural& a) {
-    if (a.is_uint64())
-        return is_prime(static_cast<uint64_t>(a));
-    if (a <= 3)
-        return a >= 2;
-    if (a.is_even() == 0 || a.mod3() == 0)
-        return false;
-    uint64_t i = 5;
-    while (true) {
-        if (i * i > a)
-            return true;
-        if (a % i == 0 || a % (i + 2) == 0)
-            return false;
-        i += 6;
-        // uint64_t oveflow check
-        if (i <= 5)
-            break;
-    }
-    natural ni = i - 6; // rollback to i before overflow
-    ni += 6; // overflow safe
-    natural q;
-    while (true) {
-        mul(ni, ni, /*out*/q); // q = ni * ni
-        if (q > a)
-            return true;
-
-        mod(a, ni, /*out*/q); // q = a % ni
-        if (!q)
-            return false;
-
-        ni += 2;
-        mod(a, ni, /*out*/q); // q = a % ni
-        if (!q)
-            return false;
-
-        ni += 4;
-    }
-}
-
 // returns (a ** n) mod p
 constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
     uint64_t b = 1;
@@ -404,11 +347,8 @@ constexpr natural pow_mod(natural a, natural n, natural p) {
     return out;
 }
 
-// Miller-Rabin algorithm
-// It returns false if n is composite and returns true if n
-// is probably prime.  k is an input parameter that determines
-// accuracy level. Higher value of `rounds` indicates more accuracy.
-constexpr bool is_likely_prime(const uint64_t n, int rounds, auto& rng) {
+// Deterministic Miller-Rabin algorithm for small numbers
+constexpr bool is_prime(const uint64_t n) {
     if (n <= 4)
         return n == 2 || n == 3;
     if (n % 2 == 0)
@@ -417,9 +357,10 @@ constexpr bool is_likely_prime(const uint64_t n, int rounds, auto& rng) {
     const auto s = std::countr_zero(n - 1);
     const uint64_t d = (n - 1) >> s;
 
-    for (int i = 0; i < rounds; i++) {
-        const uint64_t a = std::uniform_int_distribution<uint64_t>(2, n-2)(rng);
+    std::array<uint32_t, 3> bases32 = {2, 7, 61};
+    std::array<uint32_t, 7> bases64 = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
 
+    for (uint32_t a : (n <= UINT32_MAX) ? std::span<uint32_t>(bases32) : std::span<uint32_t>(bases64)) {
         uint64_t x = pow_mod(a, d, n);
         if (x == 1 || x == n - 1)
             continue;
@@ -436,9 +377,13 @@ constexpr bool is_likely_prime(const uint64_t n, int rounds, auto& rng) {
     return true;
 }
 
+// Miller-Rabin algorithm
+// It returns false if n is composite and returns true if n
+// is probably prime.  k is an input parameter that determines
+// accuracy level. Higher value of `rounds` indicates more accuracy.
 constexpr bool is_likely_prime(const natural& n, int rounds, auto& rng) {
     if (n.is_uint64())
-        return is_likely_prime(static_cast<uint64_t>(n), rounds, rng);
+        return is_prime(static_cast<uint64_t>(n));
 
     if (n <= 4)
         return n == 2 || n == 3;
@@ -452,6 +397,7 @@ constexpr bool is_likely_prime(const natural& n, int rounds, auto& rng) {
     d >>= s;
     natural x, a;
 
+    // TODO first few bases should be small and deterministic
     for (int i = 0; i < rounds; i++) {
         // sample uniformly from [2, n-2] and store in a
         uniform_sample(n_minus_3, rng, /*out*/a);
