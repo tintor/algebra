@@ -596,11 +596,11 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
 // assumes a.words.size() >= 2
 constexpr void __square(natural& a) {
     if (a.words.size() == 2) {
-        auto carry = (uint128_t)a.words[0] * (uint128_t)a.words[0];
+        auto carry = __mulq(a.words[0], a.words[0]);
         uint64_t b0 = carry;
         uint64_t b1 = carry >> 64;
 
-        uint128_t pq = (uint128_t)a.words[0] * (uint128_t)a.words[1];
+        uint128_t pq = __mulq(a.words[0], a.words[1]);
         carry = b1 + pq; // can't use pq*2 here due to dword overflow
         b1 = carry;
         uint64_t b2 = carry >> 64;
@@ -612,7 +612,7 @@ constexpr void __square(natural& a) {
         b2 = carry;
 
         uint64_t b3 = carry >> 64;
-        carry = b2 + (uint128_t)a.words[1] * (uint128_t)a.words[1];
+        carry = b2 + __mulq(a.words[1], a.words[1]);
         b2 = carry;
         b3 += carry >> 64;
 
@@ -648,7 +648,7 @@ constexpr void __square(natural& a) {
             auto j = k - i;
             const auto ai = (i < k) ? a.words[i] : w;
             const auto aj = (j < k) ? a.words[j] : w;
-            uint128_t carry = static_cast<uint128_t>(ai) * aj;
+            uint128_t carry = __mulq(ai, aj);
             for (auto p = k; carry; p++) {
                 carry += a.words[p];
                 a.words[p] = carry;
@@ -663,7 +663,7 @@ constexpr void square(natural& a) {
     if (a.words.size() == 0)
         return;
     if (a.words.size() == 1) {
-        uint128_t p = (uint128_t)a.words[0] * a.words[0];
+        uint128_t p = __mulq(a.words[0], a.words[0]);
 
         a.words.reset_one_without_init();
         a.words[0] = p;
@@ -761,7 +761,7 @@ constexpr void add_product(natural& acc, const natural& a, const natural& b) {
     for (size_t i = 0; i < a.words.size(); i++) {
         uint128_t carry = 0;
         for (natural::size_type j = 0; j < b.words.size(); j++) {
-            carry += (uint128_t)a.words[i] * b.words[j];
+            carry += __mulq(a.words[i], b.words[j]);
             carry += acc.words[i + j];
             acc.words[i + j] = carry;
             carry >>= 64;
@@ -789,10 +789,10 @@ constexpr void sub_product(natural& acc, const natural& a, const natural& b) {
 #if 0
     // TODO in this algo it doesn't matter if a*b or b*a
     // TODO figure out how to choose A B order based on sizes of A and B
-    for (size_t i = 0; i < a.words.size(); i++) {
+    for (decltype(a.words.size()) i = 0; i < a.words.size(); i++) {
         uint128_t carry = 0;
-        for (natural::size_type j = 0; j < b.words.size(); j++) {
-            carry += (uint128_t)a.words[i] * b.words[j];
+        for (decltype(b.words.size()) j = 0; j < b.words.size(); j++) {
+            carry += __mulq(a.words[i], b.words[j]);
             carry += acc.words[i + j];
             acc.words[i + j] = carry;
             carry >>= 64;
@@ -815,31 +815,6 @@ constexpr void sub_product(natural& acc, const natural& a, const uint64_t b) {
     mul(a, b, temp);
     acc -= temp;
 }
-
-#if 0
-ulong borrow = 0;
-for (size_t i = 0; i < b.words.size(); ++i) {
-    cent diff = (cent)words[i] - b.words[i] - borrow;
-    if (diff < 0) {
-        words[i] = static_cast<ulong>(diff + ((uint128_t)1 << 64));
-        borrow = 1;
-    } else {
-        words[i] = static_cast<ulong>(diff);
-        borrow = 0;
-    }
-}
-for (size_t i = b.words.size(); borrow && i < words.size(); ++i) {
-    cent diff = (cent)words[i] - borrow;
-    if (diff < 0) {
-        words[i] = static_cast<ulong>(diff + ((uint128_t)1 << 64));
-        borrow = 1;
-    } else {
-        words[i] = static_cast<ulong>(diff);
-        borrow = 0;
-    }
-}
-words.normalize();
-#endif
 
 constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quotient) {
     if (divisor == 0)
@@ -1037,19 +1012,18 @@ constexpr natural operator%(const natural& a, const natural& b) { natural rem; m
 constexpr natural& operator%=(natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); a = rem; return a; }
 
 constexpr natural& operator<<=(natural& a, int64_t b) {
-    auto bits_per_word = sizeof(uint64_t) * 8;
     if (b > 0) {
         if (a.words.size() == 0)
             return a;
-        auto word_shift = b / bits_per_word;
-        auto bit_shift = b % bits_per_word;
+        auto word_shift = b / 64;
+        auto bit_shift = b % 64;
 
         if (bit_shift) {
             uint64_t carry = 0;
             for (natural::size_type i = 0; i < a.words.size(); ++i) {
                 auto current = a.words[i];
                 a.words[i] = (current << bit_shift) | carry;
-                carry = current >> (bits_per_word - bit_shift);
+                carry = current >> (64 - bit_shift);
             }
             if (carry)
                 a.words.push_back(carry);
@@ -1059,8 +1033,8 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
     }
     if (b < 0) {
         b = -b;
-        auto word_shift = b / bits_per_word;
-        auto bit_shift = b % bits_per_word;
+        auto word_shift = b / 64;
+        auto bit_shift = b % 64;
 
         if (word_shift >= a.words.size()) {
             a.words.set_zero();
@@ -1073,7 +1047,7 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
             for (auto idx = a.words.size(); idx-- > 0;) {
                 auto current = a.words[idx];
                 a.words[idx] = (current >> bit_shift) | carry;
-                carry = (current << (bits_per_word - bit_shift));
+                carry = (current << (64 - bit_shift));
             }
         }
         a.words.normalize();

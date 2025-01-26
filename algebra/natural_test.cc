@@ -266,7 +266,7 @@ TEST_CASE("%") {
 }
 
 TEST_CASE("add stress with ucent") {
-    Random rng;
+    Random rng(6);
     const ucent m = std::numeric_limits<ucent>::max();
     for (int i = 0; i < 100000; i++) {
         ucent a = rng.Uniform<ucent>(0, m);
@@ -276,7 +276,7 @@ TEST_CASE("add stress with ucent") {
 }
 
 TEST_CASE("sub stress with ucent") {
-    Random rng;
+    Random rng(5);
     const ucent m = std::numeric_limits<ucent>::max();
     for (int i = 0; i < 100000; i++) {
         ucent a = rng.Uniform<ucent>(0, m);
@@ -288,7 +288,7 @@ TEST_CASE("sub stress with ucent") {
 }
 
 TEST_CASE("mul stress with ucent") {
-    Random rng;
+    Random rng(4);
     const ucent m = std::numeric_limits<ucent>::max();
     for (int i = 0; i < 100000; i++) {
         ucent a = rng.Uniform<ucent>(1, m);
@@ -298,7 +298,7 @@ TEST_CASE("mul stress with ucent") {
 }
 
 TEST_CASE("div stress with ucent") {
-    Random rng;
+    Random rng(3);
     const ucent m = std::numeric_limits<ucent>::max();
     for (int i = 0; i < 100000; i++) {
         ucent a = rng.Uniform<ucent>(0, m);
@@ -310,7 +310,7 @@ TEST_CASE("div stress with ucent") {
 }
 
 TEST_CASE("str stress with ucent") {
-    Random rng;
+    Random rng(1);
     const ucent m = std::numeric_limits<ucent>::max();
     for (int i = 0; i < 100000; i++) {
         ucent a = rng.Uniform<ucent>(0, m);
@@ -325,7 +325,7 @@ TEST_CASE("str stress with ucent") {
 }
 
 TEST_CASE("div10 stress with ucent 2") {
-    Random rng;
+    Random rng(2);
     const ucent m = std::numeric_limits<uint64_t>::max();
     for (int i = 0; i < 1'000'000; i++) {
         ucent a = rng.Uniform<ucent>(m + 1, m * 10);
@@ -427,7 +427,7 @@ TEST_CASE("stress square in-place") {
 }
 
 TEST_CASE("stress div with remainder") {
-    Random rng;
+    Random rng(10);
     for (int i = 0; i < 100'000; i++) {
         const natural a = rand_natural(rng.Uniform<int>(2, 10), rng);
 
