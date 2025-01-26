@@ -5,10 +5,11 @@
 #include <regex>
 #include <charconv>
 #include <random>
-#include <print>
 
 namespace algebra {
-using namespace algebra;
+
+struct rational;
+template<> struct IsNumberClass<rational> : std::true_type {};
 
 struct rational {
     integer num, den;

@@ -5,6 +5,9 @@
 
 namespace algebra {
 
+struct xrational;
+template<> struct IsNumberClass<xrational> : std::true_type {};
+
 // represents number of form: rational * sqrt(root)
 // it is closed under: multiplication and division
 // squaring always produces rational

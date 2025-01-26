@@ -5,6 +5,9 @@
 
 namespace algebra {
 
+template<int B> struct real;
+template<int B> struct IsNumberClass<real<B>> : std::true_type {};
+
 // assuming exp >= 0
 template<int B>
 constexpr integer shift(const integer& a, std::integral auto exp) {
@@ -205,9 +208,6 @@ constexpr bool operator==(const real<B>& a, const integral auto& b) {
     if (a.exp < 0) return a.num == shift<B>(b, -a.exp);
     return a.num == b;
 }
-
-template<int B>
-constexpr bool operator==(const integral auto& a, const real<B>& b) { return b == a; }
 
 template<int B>
 constexpr bool operator<(const real<B>& a, const real<B>& b) {
