@@ -10,8 +10,6 @@
 
 namespace algebra {
 
-template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
-
 template<typename T> struct IsNumberClass : std::false_type {};
 template<typename T> concept __ncsi = IsNumberClass<T>::value || std::integral<T>;
 
@@ -54,8 +52,8 @@ constexpr unsigned long abs_ulong(std::integral auto a) { static_assert(sizeof(a
 // TODO test cases for operator float()
 struct natural {
     using size_type = integer_backend::size_type;
-    using word = integer_backend::word;
-    using dword = integer_backend::dword;
+    using word = uint64_t;
+    using dword = uint128_t;
     static constexpr size_t bits_per_word = sizeof(word) * 8;
 
     integer_backend words;

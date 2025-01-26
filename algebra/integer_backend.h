@@ -2,8 +2,11 @@
 #include <concepts>
 #include <limits>
 #include <cmath>
+#include <type_traits>
 
 namespace algebra {
+
+template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
 
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
@@ -14,13 +17,11 @@ auto signum(T a) { return (a > 0) - (a < 0); }
 class integer_backend {
 public:
     using size_type = int;
-    using word = uint64_t;
-    using dword = uint128_t;
 
 private:
     union {
-        word* _words; // least significant first
-        word _single_word;
+        uint64_t* _words; // least significant first
+        uint64_t _single_word;
     };
     size_type _size; // negative value for negative number
     size_type _capacity;
@@ -30,13 +31,13 @@ public:
     constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size((a > 0) ? 1 : 0), _capacity(0) { }
     constexpr integer_backend(uint128_t a) {
         if (a > 0) {
-            if (a <= std::numeric_limits<word>::max()) {
+            if (a <= UINT64_MAX) {
                 _single_word = a;
                 _size = 1;
                 _capacity = 0;
                 return;
             }
-            _words = new word[2];
+            _words = new uint64_t[2];
             _words[0] = a;
             _words[1] = a >> 64;
             _size = 2;
@@ -56,7 +57,7 @@ public:
 
     constexpr integer_backend(const integer_backend& o) : _words(o._words), _size(o._size), _capacity(o._capacity) {
         if (_capacity) {
-            _words = new word[_capacity];
+            _words = new uint64_t[_capacity];
             for (size_type i = 0; i < _capacity; i++)
                 _words[i] = o._words[i];
         }
@@ -70,7 +71,7 @@ public:
     constexpr void operator=(std::unsigned_integral auto a) {
         if (a > 0) {
             if constexpr (sizeof(a) == 16) {
-                if (a > std::numeric_limits<uint64_t>::max()) {
+                if (a > UINT64_MAX) {
                     operator[](0) = a;
                     operator[](1) = a >> 64;
                     _size = 2;
@@ -109,7 +110,7 @@ public:
 
     constexpr void reset_one_without_init() { _size = 1; }
     constexpr void reset(size_type size, bool initialize = true);
-    constexpr void operator+=(word a);
+    constexpr void operator+=(uint64_t a);
 
     constexpr void pop_back() {
         if (_size > 0) _size--; else if (_size < 0) _size++;
@@ -122,10 +123,10 @@ public:
 
     constexpr size_type size() const { return std::abs(_size); }
     constexpr bool allocated() const { return _capacity; }
-    constexpr word operator[](size_type i) const { return _capacity ? _words[i] : _single_word; }
-    constexpr word& operator[](size_type i) { return _capacity ? _words[i] : _single_word; }
-    constexpr word back() const { return operator[](size() - 1); }
-    constexpr word& back() { return operator[](size() - 1); }
+    constexpr uint64_t operator[](size_type i) const { return _capacity ? _words[i] : _single_word; }
+    constexpr uint64_t& operator[](size_type i) { return _capacity ? _words[i] : _single_word; }
+    constexpr uint64_t back() const { return operator[](size() - 1); }
+    constexpr uint64_t& back() { return operator[](size() - 1); }
 
     constexpr void swap(integer_backend& o) {
         std::swap(_words, o._words);
@@ -138,7 +139,7 @@ public:
     constexpr void resize(size_type size);
 
     constexpr void insert_first_n_words(size_type n);
-    constexpr void insert_first_word(word a);
+    constexpr void insert_first_word(uint64_t a);
 
     constexpr void normalize() {
         if (_capacity) {
@@ -176,8 +177,8 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
             // heap -> heap x2
             _capacity = std::max(_capacity * 2, abs_size);
             delete[] _words;
-            _words = new word[_capacity];
-        } else if (std::abs(size) <= 1) {
+            _words = new uint64_t[_capacity];
+        } else if (abs_size <= 1) {
             // heap -> SBO
             delete[] _words;
             _single_word = 0;
@@ -190,7 +191,7 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
         } else {
             // SBO -> heap
             _capacity = abs_size;
-            _words = new word[_capacity];
+            _words = new uint64_t[_capacity];
         }
     }
     _size = size;
@@ -200,14 +201,14 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
             _words[i] = 0;
 }
 
-constexpr void integer_backend::operator+=(word a) {
+constexpr void integer_backend::operator+=(uint64_t a) {
     if (_capacity) {
         if (size() == _capacity) {
             // heap -> heap x2
-            word* w = new word[_capacity * 2];
-            for (word i = 0; i < _capacity; i++)
+            auto w = new uint64_t[_capacity * 2];
+            for (size_type i = 0; i < _capacity; i++)
                 w[i] = _words[i];
-            for (word i = 0; i < _capacity; i++)
+            for (size_type i = 0; i < _capacity; i++)
                 w[_capacity + i] = 0;
             delete[] _words;
             _words = w;
@@ -228,7 +229,7 @@ constexpr void integer_backend::operator+=(word a) {
             _single_word = a;
         } else {
             // SBO -> heap
-            word* w = new word[2];
+            auto w = new uint64_t[2];
             _capacity = 2;
             w[0] = _single_word;
             _words = w;
@@ -250,7 +251,7 @@ constexpr void integer_backend::reserve(size_type capacity) {
     if (capacity <= _capacity || capacity == 1)
         return;
     capacity = std::max(_capacity * 2, capacity);
-    word* words = new word[capacity];
+    auto words = new uint64_t[capacity];
     for (size_type i = 0; i < size(); i++)
         words[i] = operator[](i);
     if (_capacity)
@@ -279,7 +280,7 @@ constexpr void integer_backend::insert_first_n_words(size_type n) {
     _size += (_size >= 0) ? n : -n;
 }
 
-constexpr void integer_backend::insert_first_word(word a) {
+constexpr void integer_backend::insert_first_word(uint64_t a) {
     reserve(size() + 1);
     for (size_type i = size(); i-- > 0; )
         operator[](i + 1) = operator[](i);
