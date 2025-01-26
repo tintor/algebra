@@ -11,6 +11,9 @@ namespace algebra {
 struct rational;
 template<> struct IsNumberClass<rational> : std::true_type {};
 
+template<typename T> concept integral = std::same_as<T, integer> || std::same_as<T, natural> || std::integral<T>;
+template<typename T> concept rational_like = integral<T> || std::same_as<T, rational>;
+
 struct rational {
     integer num, den;
 
@@ -125,8 +128,8 @@ constexpr rational operator-(const rational& a) { return {-a.num, a.den}; }
 
 constexpr rational& operator+=(rational& a, const rational& b);
 constexpr rational operator+(const rational& a, const rational& b);
-constexpr rational operator+(const rational& a, const integral auto& b);
-constexpr rational operator+(const integral auto& a, const rational& b);
+constexpr rational operator+(const rational& a, const integral auto& b) { return {a.num + b * a.den, a.den}; }
+constexpr rational operator+(const integral auto& a, const rational& b) { return b + a; }
 
 constexpr rational& operator-=(rational& a, const rational& b);
 constexpr rational operator-(const rational& a, const rational& b);
@@ -150,12 +153,6 @@ constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_o
 
 constexpr bool operator==(const rational& a, const rational& b) { return a.num == b.num && a.den == b.den; }
 constexpr bool operator==(const rational& a, const integral auto b) { return a.num == b && a.den.is_one(); }
-constexpr bool operator==(const integral auto a, const rational& b) { return a == b.num && b.den.is_one(); }
-
-template<typename T> concept rational_like = integral<T> || std::same_as<T, rational>;
-constexpr bool operator>(const rational_like auto& a, const rational_like auto& b) { return a < b; }
-constexpr bool operator>=(const rational_like auto& a, const rational_like auto& b) { return !(a < b); }
-constexpr bool operator<=(const rational_like auto& a, const rational_like auto& b) { return b >= a; }
 
 namespace literals {
 constexpr auto operator""_q(const char* s) { return rational(s); }
@@ -268,9 +265,6 @@ constexpr rational operator+(const rational& a, const rational& b) {
     add_product(p, b.num, a.den);
     return rational{std::move(p), a.den * b.den};
 }
-
-constexpr rational operator+(const rational& a, const integral auto& b) { return {a.num + b * a.den, a.den}; }
-constexpr rational operator+(const integral auto& a, const rational& b) { return b + a; }
 
 constexpr rational& operator-=(rational& a, const rational& b) {
     if (a.den == b.den) {
