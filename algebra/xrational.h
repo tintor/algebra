@@ -7,6 +7,7 @@ namespace algebra {
 
 struct xrational;
 template<> struct IsNumberClass<xrational> : std::true_type {};
+template<typename T> concept xrational_like = rational_like<T> || std::same_as<T, xrational>;
 
 // represents number of form: rational * sqrt(root)
 // it is closed under: multiplication and division
@@ -179,12 +180,6 @@ constexpr bool operator<(const xrational& a, const xrational& b) {
 
 constexpr bool operator<(const xrational& a, const rational_like auto& b) { return a < xrational(b); }
 constexpr bool operator<(const rational_like auto& a, const xrational& b) { return xrational(a) < b; }
-
-template<typename T> concept xrational_like = rational_like<T> || std::same_as<T, xrational>;
-constexpr bool operator>(const xrational_like auto& a, const xrational_like auto& b) { return a < b; }
-constexpr bool operator>=(const xrational_like auto& a, const xrational_like auto& b) { return !(a < b); }
-constexpr bool operator<=(const xrational_like auto& a, const xrational_like auto& b) { return b >= a; }
-constexpr bool operator!=(const xrational_like auto& a, const xrational_like auto& b) { return !(a == b); }
 
 constexpr xrational sqrt(const xrational& a) {
     if (a.base.sign() < 0)
