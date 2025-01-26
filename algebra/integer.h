@@ -201,6 +201,8 @@ struct integer {
     constexpr void swap(integer& o) { abs.swap(o.abs); }
 };
 
+constexpr void negate(integer& a) { a.negate(); }
+
 #if 0
 constexpr neg_integer operator-(const integer& a) { return {&a}; }
 #else

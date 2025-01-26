@@ -149,7 +149,7 @@ template<typename T>
 constexpr auto dot2(const T& a) { return dot(a, a); }
 
 template<int D, typename T>
-constexpr Vec<D, T> lerp(const Vec<D, T>& a, const Vec<D, T>& b, const T& t) {
+constexpr Vec<D, T> lerp(const Vec<D, T>& a, const Vec<D, T>& b, const auto& t) {
     Vec<D, T> c = b;
     c -= a;
     c *= t;

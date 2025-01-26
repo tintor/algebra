@@ -59,6 +59,8 @@ struct xrational {
     }
 };
 
+constexpr void negate(xrational& a) { a.negate(); }
+
 constexpr xrational operator-(const xrational& a) { return {-a.base, a.root}; }
 
 constexpr xrational operator+(const xrational& a, const xrational& b) {
@@ -67,6 +69,8 @@ constexpr xrational operator+(const xrational& a, const xrational& b) {
     return {a.base + b.base, a.root};
 }
 
+constexpr xrational operator+(const xrational& a, const rational_like auto& b) { return {a.base + b, a.root}; }
+
 constexpr xrational& operator+=(xrational& a, const xrational& b) {
     if (a.root != b.root)
         throw std::runtime_error("subtracting xrationals with different roots");
@@ -74,11 +78,15 @@ constexpr xrational& operator+=(xrational& a, const xrational& b) {
     return a;
 }
 
+constexpr xrational& operator+=(xrational& a, const rational_like auto& b) { a.base += b; return a; }
+
 constexpr xrational operator-(const xrational& a, const xrational& b) {
     if (a.root != b.root)
         throw std::runtime_error("adding xrationals with different roots");
     return {a.base - b.base, a.root};
 }
+
+constexpr xrational operator-(const xrational& a, const rational_like auto& b) { return {a.base - b, a.root}; }
 
 constexpr xrational& operator-=(xrational& a, const xrational& b) {
     if (a.root != b.root)
@@ -86,6 +94,8 @@ constexpr xrational& operator-=(xrational& a, const xrational& b) {
     a.base -= b.base;
     return a;
 }
+
+constexpr xrational& operator-=(xrational& a, const rational_like auto& b) { a.base -= b; return a; }
 
 constexpr xrational sqr(const xrational& a) {
     natural num, den;
@@ -112,6 +122,18 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
     return {rational{std::move(w), a.base.den.abs * b.base.den.abs}, std::move(root)};
 }
 
+constexpr xrational operator*(const xrational& a, const rational_like auto& b) { return {a.base * b.base, a.root}; }
+
+constexpr xrational& operator*=(xrational& a, const xrational& b) {
+    a = a * b;
+    return a;
+}
+
+constexpr xrational& operator*=(xrational& a, const rational_like auto& b) {
+    a.base *= b;
+    return b;
+}
+
 constexpr xrational operator/(const xrational& a, const xrational& b) {
     if (&a == &b || (a.base == b.base && a.root == b.root))
         return xrational{rational{1}};
@@ -122,6 +144,18 @@ constexpr xrational operator/(const xrational& a, const xrational& b) {
     e /= b.base;
     e /= integer(b.root);
     return {std::move(e), a.root * b.root};
+}
+
+constexpr xrational operator/(const xrational& a, const rational_like auto& b) { return {a.base / b.base, a.root}; }
+
+constexpr xrational& operator/=(xrational& a, const xrational& b) {
+    a = a / b;
+    return a;
+}
+
+constexpr xrational& operator/=(xrational& a, const rational_like auto& b) {
+    a.base /= b;
+    return b;
 }
 
 struct bit_range {
