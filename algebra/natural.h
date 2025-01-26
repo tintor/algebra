@@ -54,7 +54,6 @@ struct natural {
     using size_type = integer_backend::size_type;
     using word = uint64_t;
     using dword = uint128_t;
-    static constexpr size_t bits_per_word = sizeof(word) * 8;
 
     integer_backend words;
 
@@ -114,7 +113,7 @@ struct natural {
             throw std::runtime_error("cast overflow");
         dword a = words[0];
         if (words.size() >= 2)
-            a |= dword(words[1]) << bits_per_word;
+            a |= dword(words[1]) << 64;
         return a;
     }
 
@@ -123,7 +122,7 @@ struct natural {
         for (size_type i = 0; i < words.size(); i++) {
             if (words[i])
                 return a + std::countr_zero(words[i]);
-            a += bits_per_word;
+            a += 64;
         }
         return a;
     }
@@ -138,7 +137,7 @@ struct natural {
             }
             dword acc = (dword)words[i] + b;
             words[i] = acc;
-            b = acc >> bits_per_word;
+            b = acc >> 64;
             i += 1;
         }
     }
@@ -169,7 +168,7 @@ struct natural {
             if (i < b.words.size())
                 acc += b.words[i];
             words[i] = acc;
-            acc >>= bits_per_word;
+            acc >>= 64;
         }
         if (acc)
             words += acc;
@@ -203,10 +202,10 @@ struct natural {
             return operator-=(static_cast<word>(b));
 
         // subtract low part of b
-        if (words[0] < natural::word(b) && words.size() < 2)
+        if (words[0] < uint64_t(b) && words.size() < 2)
             throw std::runtime_error("natural can't be negative");
 
-        words[0] -= natural::word(b);
+        words[0] -= uint64_t(b);
         for (size_type i = 1; i < words.size(); ++i)
             if (words[i]--)
                 break;
@@ -214,10 +213,10 @@ struct natural {
             words.pop_back();
 
         // subtract high part of b
-        if (words.size() < 3 && words[1] < natural::word(b >> 64))
+        if (words.size() < 3 && words[1] < uint64_t(b >> 64))
             throw std::runtime_error("natural can't be negative");
 
-        words[1] -= natural::word(b >> 64);
+        words[1] -= uint64_t(b >> 64);
         for (size_type i = 2; i < words.size(); ++i)
             if (words[i]--)
                 break;
@@ -330,10 +329,10 @@ struct natural {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr size_t num_bits() const { return words.size() ? words.size() * bits_per_word - std::countl_zero(words.back()) : 0; }
+    constexpr size_t num_bits() const { return words.size() ? words.size() * 64 - std::countl_zero(words.back()) : 0; }
     constexpr bool bit(size_t i) const {
-        size_t w = i / bits_per_word;
-        size_t b = i % bits_per_word;
+        size_t w = i / 64;
+        size_t b = i % 64;
         return w < words.size() && (words[w] & (word(1) << b));
     }
 
@@ -348,8 +347,8 @@ struct natural {
 
     constexpr operator bool() const { return words.size(); }
 
-    constexpr natural& operator++() { return operator+=(natural::word(1)); }
-    constexpr natural& operator--() { return operator-=(natural::word(1)); }
+    constexpr natural& operator++() { return operator+=(uint64_t(1)); }
+    constexpr natural& operator--() { return operator-=(uint64_t(1)); }
 
     constexpr natural operator++(int) { natural a = *this; operator++(); return a; }
     constexpr natural operator--(int) { natural a = *this; operator--(); return a; }
@@ -369,7 +368,7 @@ constexpr natural operator-(const natural& a) {
 constexpr natural operator+(const natural& a, const natural& b) { natural c = a; return c += b; }
 constexpr natural operator+(natural a, const std::unsigned_integral auto b) {
     if (b <= UINT64_MAX)
-        return a += static_cast<natural::word>(b);
+        return a += static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a += static_cast<uint128_t>(b);
 }
@@ -382,7 +381,7 @@ constexpr natural operator+(const std::integral auto a, natural b) { return std:
 
 constexpr natural& operator+=(natural& a, const std::unsigned_integral auto b) {
     if (b <= UINT64_MAX)
-        return a += static_cast<natural::word>(b);
+        return a += static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a += static_cast<uint128_t>(b);
 }
@@ -397,7 +396,7 @@ constexpr natural operator-(const natural& a, const natural& b) { natural c = a;
 
 constexpr natural operator-(natural a, const std::unsigned_integral auto b) {
     if (b <= UINT64_MAX)
-        return a -= natural::word(b);
+        return a -= uint64_t(b);
     if (a < b)
         throw std::runtime_error("natural can't be negative");
     static_assert(sizeof(b) <= 16);
@@ -406,9 +405,9 @@ constexpr natural operator-(natural a, const std::unsigned_integral auto b) {
 
 constexpr natural operator-(const std::unsigned_integral auto a, natural b) {
     if (a <= UINT64_MAX) {
-        if (b.words.size() > 1 || natural::word(a) < b.words[0])
+        if (b.words.size() > 1 || uint64_t(a) < b.words[0])
             throw std::runtime_error("natural can't be negative");
-        return natural::word(a) - b.words[0];
+        return uint64_t(a) - b.words[0];
     }
     if (a > b)
         throw std::runtime_error("natural can't be negative");
@@ -429,7 +428,7 @@ constexpr natural operator-(const std::signed_integral auto a, natural b) {
 
 constexpr natural& operator-=(natural& a, const std::unsigned_integral auto b) {
     if (b <= UINT64_MAX)
-        return a -= static_cast<natural::word>(b);
+        return a -= static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a -= static_cast<uint128_t>(b);
 }
@@ -498,7 +497,7 @@ constexpr bool operator==(const natural& a, const std::unsigned_integral auto b)
         return a.words[0] == b && a.words.size() <= 1;
     if (b <= UINT64_MAX)
         return a.words[0] == b && a.words.size() <= 1;
-    return a.words.size() == 2 && a.words[1] == natural::word(b >> 64) && a.words[0] == natural::word(b);
+    return a.words.size() == 2 && a.words[1] == uint64_t(b >> 64) && a.words[0] == uint64_t(b);
 }
 
 // TODO can this be optimized for mul(a, a, out)?
@@ -513,7 +512,7 @@ constexpr void __mul(const natural& a, const natural& b, natural& out) {
         const auto w = a.words[i];
         if (w == 0)
             continue;
-        natural::dword acc = 0;
+        uint128_t acc = 0;
         out.words[i] = 0;
         natural::size_type j = 0;
         while (j < b.words.size()) {
@@ -597,14 +596,14 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
 // assumes a.words.size() >= 2
 constexpr void __square(natural& a) {
     if (a.words.size() == 2) {
-        auto carry = (natural::dword)a.words[0] * (natural::dword)a.words[0];
-        natural::word b0 = carry;
-        natural::word b1 = carry >> 64;
+        auto carry = (uint128_t)a.words[0] * (uint128_t)a.words[0];
+        uint64_t b0 = carry;
+        uint64_t b1 = carry >> 64;
 
-        natural::dword pq = (natural::dword)a.words[0] * (natural::dword)a.words[1];
+        uint128_t pq = (uint128_t)a.words[0] * (uint128_t)a.words[1];
         carry = b1 + pq; // can't use pq*2 here due to dword overflow
         b1 = carry;
-        natural::word b2 = carry >> 64;
+        uint64_t b2 = carry >> 64;
 
         carry = b1 + pq;
         b1 = carry;
@@ -612,8 +611,8 @@ constexpr void __square(natural& a) {
         carry += b2;
         b2 = carry;
 
-        natural::word b3 = carry >> 64;
-        carry = b2 + (natural::dword)a.words[1] * (natural::dword)a.words[1];
+        uint64_t b3 = carry >> 64;
+        carry = b2 + (uint128_t)a.words[1] * (uint128_t)a.words[1];
         b2 = carry;
         b3 += carry >> 64;
 
@@ -649,7 +648,7 @@ constexpr void __square(natural& a) {
             auto j = k - i;
             const auto ai = (i < k) ? a.words[i] : w;
             const auto aj = (j < k) ? a.words[j] : w;
-            natural::dword carry = static_cast<natural::dword>(ai) * aj;
+            uint128_t carry = static_cast<uint128_t>(ai) * aj;
             for (auto p = k; carry; p++) {
                 carry += a.words[p];
                 a.words[p] = carry;
@@ -664,12 +663,12 @@ constexpr void square(natural& a) {
     if (a.words.size() == 0)
         return;
     if (a.words.size() == 1) {
-        natural::dword p = (natural::dword)a.words[0] * a.words[0];
+        uint128_t p = (uint128_t)a.words[0] * a.words[0];
 
         a.words.reset_one_without_init();
         a.words[0] = p;
 
-        natural::word high = p >> 64;
+        uint64_t high = p >> 64;
         if (high)
             a.words += high;
         return;
@@ -685,13 +684,13 @@ constexpr void mul(const natural& a, const natural& b, natural& out) {
 
     if (a.words.size() == 1) {
         if (b.words.size() == 1) {
-            natural::dword p = a.words[0];
+            uint128_t p = a.words[0];
             p *= b.words[0];
 
             out.words.reset_one_without_init();
             out.words[0] = p;
 
-            natural::word high = p >> 64;
+            uint64_t high = p >> 64;
             if (high)
                 out.words += high;
             return;
@@ -760,9 +759,9 @@ constexpr void add_product(natural& acc, const natural& a, const natural& b) {
     // TODO in this algo it doesn't matter if a*b or b*a
     // TODO figure out how to choose A B order based on sizes of A and B
     for (size_t i = 0; i < a.words.size(); i++) {
-        natural::dword carry = 0;
+        uint128_t carry = 0;
         for (natural::size_type j = 0; j < b.words.size(); j++) {
-            carry += (natural::dword)a.words[i] * b.words[j];
+            carry += (uint128_t)a.words[i] * b.words[j];
             carry += acc.words[i + j];
             acc.words[i + j] = carry;
             carry >>= 64;
@@ -791,9 +790,9 @@ constexpr void sub_product(natural& acc, const natural& a, const natural& b) {
     // TODO in this algo it doesn't matter if a*b or b*a
     // TODO figure out how to choose A B order based on sizes of A and B
     for (size_t i = 0; i < a.words.size(); i++) {
-        natural::dword carry = 0;
+        uint128_t carry = 0;
         for (natural::size_type j = 0; j < b.words.size(); j++) {
-            carry += (natural::dword)a.words[i] * b.words[j];
+            carry += (uint128_t)a.words[i] * b.words[j];
             carry += acc.words[i + j];
             acc.words[i + j] = carry;
             carry >>= 64;
@@ -822,7 +821,7 @@ ulong borrow = 0;
 for (size_t i = 0; i < b.words.size(); ++i) {
     cent diff = (cent)words[i] - b.words[i] - borrow;
     if (diff < 0) {
-        words[i] = static_cast<ulong>(diff + ((natural::dword)1 << 64));
+        words[i] = static_cast<ulong>(diff + ((uint128_t)1 << 64));
         borrow = 1;
     } else {
         words[i] = static_cast<ulong>(diff);
@@ -832,7 +831,7 @@ for (size_t i = 0; i < b.words.size(); ++i) {
 for (size_t i = b.words.size(); borrow && i < words.size(); ++i) {
     cent diff = (cent)words[i] - borrow;
     if (diff < 0) {
-        words[i] = static_cast<ulong>(diff + ((natural::dword)1 << 64));
+        words[i] = static_cast<ulong>(diff + ((uint128_t)1 << 64));
         borrow = 1;
     } else {
         words[i] = static_cast<ulong>(diff);
@@ -847,9 +846,9 @@ constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quoti
         throw std::runtime_error("division by zero");
     if (&dividend != &quotient)
         quotient.words.reset(dividend.words.size());
-    natural::dword acc = 0;
+    uint128_t acc = 0;
     for (auto i = dividend.words.size(); i-- > 0;) {
-        acc <<= natural::bits_per_word;
+        acc <<= 64;
         acc |= dividend.words[i];
         quotient.words[i] = acc / divisor;
         acc %= divisor;
@@ -860,9 +859,8 @@ constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quoti
 
 // returns static_cast<ucent>(a >> e) - without memory allocation
 constexpr uint128_t extract_128bits(const natural& a, int e) {
-    const auto bits_per_word = sizeof(natural::word) * 8;
-    const auto word_shift = e / bits_per_word;
-    const auto bit_shift = e % bits_per_word;
+    const auto word_shift = e / 64;
+    const auto bit_shift = e % 64;
 
     if (word_shift >= a.words.size())
         return 0;
@@ -879,9 +877,8 @@ constexpr uint128_t extract_128bits(const natural& a, int e) {
 
 // returns static_cast<ulong>(a >> e) - without memory allocation
 constexpr uint64_t extract_64bits(const natural& a, int e) {
-    const auto bits_per_word = sizeof(natural::word) * 8;
-    const auto word_shift = e / bits_per_word;
-    const auto bit_shift = e % bits_per_word;
+    const auto word_shift = e / 64;
+    const auto bit_shift = e % 64;
 
     if (word_shift >= a.words.size())
         return 0;
@@ -894,24 +891,22 @@ constexpr uint64_t extract_64bits(const natural& a, int e) {
 }
 
 // returns largest q such that a * q <= b (assuming a != 0)
-constexpr natural::word __word_div(const natural& a, const natural& b) {
+constexpr uint64_t __word_div(const natural& a, const natural& b) {
     if (a > b)
         return 0;
     if (a == b)
         return 1;
     if (b.words.size() == 1)
         return b.words[0] / a.words[0];
-    if (b.words.size() == 2) {
-        const natural::dword q = static_cast<natural::dword>(b) / static_cast<natural::dword>(a);
-        return std::min<natural::dword>(q, std::numeric_limits<natural::word>::max());
-    }
+    if (b.words.size() == 2)
+        return std::min<uint128_t>(static_cast<uint128_t>(b) / static_cast<uint128_t>(a), UINT64_MAX);
 
     const int e = b.num_bits() - 128;
-    const natural::dword q = extract_128bits(b, e) / std::max<natural::dword>(1, extract_128bits(a, e));
-    if (q > std::numeric_limits<natural::word>::max())
-        return std::numeric_limits<natural::word>::max();
+    const uint128_t q = extract_128bits(b, e) / std::max<uint128_t>(1, extract_128bits(a, e));
+    if (q > UINT64_MAX)
+        return UINT64_MAX;
 
-    natural::word g = q;
+    uint64_t g = q;
     if (g * a <= b)
         return g;
     return ((g - 1) * a <= b) ? (g - 1) : (g - 2);
@@ -930,7 +925,7 @@ constexpr void div(const natural& dividend, const natural& divisor, natural& quo
     for (auto i = dividend.words.size(); i-- > 0;) {
         if (remainder.words.size() || dividend.words[i])
             remainder.words.insert_first_word(dividend.words[i]);
-        const natural::word q = __word_div(divisor, remainder);
+        const uint64_t q = __word_div(divisor, remainder);
         quotient.words[i] = q;
         sub_product(remainder, divisor, q); // remainder -= divisor * q
     }
@@ -948,7 +943,7 @@ constexpr void mod(const natural& dividend, const natural& divisor, natural& rem
     for (auto i = dividend.words.size(); i-- > 0;) {
         if (remainder.words.size() || dividend.words[i])
             remainder.words.insert_first_word(dividend.words[i]);
-        const natural::word q = __word_div(divisor, remainder);
+        const uint64_t q = __word_div(divisor, remainder);
         sub_product(remainder, divisor, q); // remainder -= divisor * q
     }
 }
@@ -1026,7 +1021,7 @@ constexpr natural operator/(const natural& a, std::integral auto b) {
     if (b < 0)
         throw std::runtime_error("division of natural with negative number");
     natural q;
-    div(a, static_cast<natural::word>(b), q);
+    div(a, static_cast<uint64_t>(b), q);
     return q;
 }
 
@@ -1034,7 +1029,7 @@ constexpr natural& operator/=(natural& a, const natural &b) { natural rem; div(a
 constexpr natural& operator/=(natural& a, std::integral auto b) {
     if (b < 0)
         throw std::runtime_error("division of natural with negative number");
-    div(a, static_cast<natural::word>(b), a);
+    div(a, static_cast<uint64_t>(b), a);
     return a;
 }
 
@@ -1042,7 +1037,7 @@ constexpr natural operator%(const natural& a, const natural& b) { natural rem; m
 constexpr natural& operator%=(natural& a, const natural& b) { natural rem; mod(a, b, /*out*/rem); a = rem; return a; }
 
 constexpr natural& operator<<=(natural& a, int64_t b) {
-    auto bits_per_word = sizeof(natural::word) * 8;
+    auto bits_per_word = sizeof(uint64_t) * 8;
     if (b > 0) {
         if (a.words.size() == 0)
             return a;
@@ -1050,7 +1045,7 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
         auto bit_shift = b % bits_per_word;
 
         if (bit_shift) {
-            natural::word carry = 0;
+            uint64_t carry = 0;
             for (natural::size_type i = 0; i < a.words.size(); ++i) {
                 auto current = a.words[i];
                 a.words[i] = (current << bit_shift) | carry;
@@ -1074,7 +1069,7 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
 
         a.words.erase_first_n_words(word_shift);
         if (bit_shift != 0) {
-            natural::word carry = 0;
+            uint64_t carry = 0;
             for (auto idx = a.words.size(); idx-- > 0;) {
                 auto current = a.words[idx];
                 a.words[idx] = (current >> bit_shift) | carry;
@@ -1126,7 +1121,7 @@ constexpr natural& operator|=(natural& a, const natural& b) {
     return a;
 }
 
-constexpr natural& operator|=(natural& a, natural::word b) {
+constexpr natural& operator|=(natural& a, uint64_t b) {
     if (a.words.size() == 0) {
         a = b;
     } else {
@@ -1158,7 +1153,7 @@ constexpr natural& operator&=(natural& a, const natural& b) {
     return a;
 }
 
-constexpr natural& operator&=(natural& a, natural::word b) {
+constexpr natural& operator&=(natural& a, uint64_t b) {
     a.words[0] &= b;
     a.words.normalize();
     return a;
@@ -1187,7 +1182,7 @@ constexpr natural& operator^=(natural& a, const natural& b) {
     return a;
 }
 
-constexpr natural& operator^=(natural& a, natural::word b) {
+constexpr natural& operator^=(natural& a, uint64_t b) {
     if (a.words.size() == 0) {
         a = b;
     } else {
@@ -1327,7 +1322,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
     if (p >= end)
         throw std::runtime_error("expecting digit instead of end of string");
 
-    natural::word acc = 0;
+    uint64_t acc = 0;
     unsigned count = 0;
     if (base == 10) {
         while (p < end) {
@@ -1341,7 +1336,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
             acc = acc * 10 + c - '0';
             count += 1;
             if (count == 19) {
-                const natural::word m = 10'000'000'000'000'000'000ull;
+                const uint64_t m = 10'000'000'000'000'000'000ull;
                 mul_add(m, acc);
                 acc = 0;
                 count = 0;
