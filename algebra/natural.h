@@ -10,6 +10,25 @@
 
 namespace algebra {
 
+template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
+
+template<typename T> struct IsNumberClass : std::false_type {};
+template<typename T> concept __ncsi = IsNumberClass<T>::value || std::integral<T>;
+
+constexpr bool operator==(const __ncsi auto& a, std::signed_integral auto b) { return b >= 0 && a == make_unsigned(b); }
+constexpr bool operator==(std::signed_integral auto a, const __ncsi auto& b) { return a >= 0 && b == make_unsigned(a); }
+constexpr bool operator==(std::unsigned_integral auto a, const __ncsi auto& b) { return b == a; }
+
+constexpr bool operator>(const __ncsi auto& a, const __ncsi auto& b) { return b < a; }
+constexpr bool operator>=(const __ncsi auto& a, const __ncsi auto& b) { return !(a < b); }
+constexpr bool operator<=(const __ncsi auto& a, const __ncsi auto& b) { return !(b < a); }
+constexpr bool operator!=(const __ncsi auto& a, const __ncsi auto& b) { return !(a == b); }
+
+struct natural;
+template<> struct IsNumberClass<natural> : std::true_type {};
+
+constexpr uint128_t __mulq(uint64_t a, uint64_t b) { return uint128_t(a) * b; }
+
 constexpr uint64_t pow(uint64_t base, unsigned exp) {
     if (base == 2)
         return 1 << exp;
@@ -92,7 +111,7 @@ struct natural {
         return words[0];
     }
 
-    constexpr operator unsigned __int128() const {
+    constexpr operator uint128_t() const {
         if (!is_uint128())
             throw std::runtime_error("cast overflow");
         dword a = words[0];
@@ -111,14 +130,31 @@ struct natural {
         return a;
     }
 
-    constexpr natural& operator+=(word b) {
-        for (size_type i = 0; b && i < words.size(); ++i) {
+    constexpr void __add(word b, size_type i) {
+        while (true) {
+            if (b == 0)
+                return;
+            if (i == words.size()) {
+                words += b;
+                return;
+            }
             dword acc = (dword)words[i] + b;
             words[i] = acc;
             b = acc >> bits_per_word;
+            i += 1;
         }
-        if (b)
-            words += b;
+    }
+
+    constexpr natural& operator+=(word b) {
+        __add(b, 0);
+        return *this;
+    }
+
+    constexpr natural& operator+=(uint128_t b) {
+        __add(static_cast<uint64_t>(b), 0);
+        if (words.size() == 0)
+            words += 0;
+        __add(static_cast<uint64_t>(b >> 64), 1);
         return *this;
     }
 
@@ -144,33 +180,59 @@ struct natural {
 
     constexpr natural& operator-=(word b) {
         if (!words.allocated()) {
+            if (words[0] < b)
+                throw std::runtime_error("natural can't be negative");
             words[0] -= b;
-            words.normalize();
+            if (words[0] == 0)
+                words.pop_back();
             return *this;
         }
 
-        word* w = &words[0];
-        size_type s = words.size();
+        if (words[0] < b && words.size() < 2)
+            throw std::runtime_error("natural can't be negative");
 
-        if (*w >= b) {
-            *w -= b;
-            return *this;
-        }
-        *w -= b;
-        for (size_type i = 1; i < s; ++i)
-            if (w[i]--) {
-                if (w[s - 1] == 0)
-                    words.pop_back();
+        words[0] -= b;
+        for (size_type i = 1; i < words.size(); ++i)
+            if (words[i]--)
                 break;
-            }
-        words.normalize();
+        if (words.back() == 0)
+            words.pop_back();
+        return *this;
+    }
+
+    constexpr natural& operator-=(uint128_t b) {
+        if (b <= UINT64_MAX)
+            return operator-=(static_cast<word>(b));
+
+        // subtract low part of b
+        if (words[0] < natural::word(b) && words.size() < 2)
+            throw std::runtime_error("natural can't be negative");
+
+        words[0] -= natural::word(b);
+        for (size_type i = 1; i < words.size(); ++i)
+            if (words[i]--)
+                break;
+        if (words.back() == 0)
+            words.pop_back();
+
+        // subtract high part of b
+        if (words.size() < 3 && words[1] < natural::word(b >> 64))
+            throw std::runtime_error("natural can't be negative");
+
+        words[1] -= natural::word(b >> 64);
+        for (size_type i = 2; i < words.size(); ++i)
+            if (words[i]--)
+                break;
+        if (words.back() == 0)
+            words.pop_back();
+
         return *this;
     }
 
     constexpr natural& operator-=(const natural& b) {
         word borrow = 0;
         for (size_type i = 0; i < b.words.size(); ++i) {
-            __int128 diff = (__int128)words[i] - b.words[i] - borrow;
+            int128_t diff = (int128_t)words[i] - b.words[i] - borrow;
             if (diff < 0) {
                 words[i] = diff + ((dword)1 << 64);
                 borrow = 1;
@@ -180,7 +242,7 @@ struct natural {
             }
         }
         for (size_t i = b.words.size(); borrow && i < words.size(); ++i) {
-            __int128 diff = (__int128)words[i] - borrow;
+            int128_t diff = (int128_t)words[i] - borrow;
             if (diff < 0) {
                 words[i] = diff + ((dword)1 << 64);
                 borrow = 1;
@@ -288,8 +350,8 @@ struct natural {
 
     constexpr operator bool() const { return words.size(); }
 
-    constexpr natural& operator++() { operator+=(1); return *this; }
-    constexpr natural& operator--() { operator-=(1); return *this; }
+    constexpr natural& operator++() { return operator+=(natural::word(1)); }
+    constexpr natural& operator--() { return operator-=(natural::word(1)); }
 
     constexpr natural operator++(int) { natural a = *this; operator++(); return a; }
     constexpr natural operator--(int) { natural a = *this; operator--(); return a; }
@@ -300,23 +362,85 @@ struct natural {
 
 constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - std::countl_zero(a); }
 
-constexpr natural operator+(const natural& a, const natural& b) { natural c = a; c += b; return c; }
-constexpr natural operator+(natural a, const std::integral auto b) {
+constexpr natural operator-(const natural& a) {
+    if (a.words.size() == 0)
+        return 0;
+    throw std::runtime_error("natural can't be negative");
+}
+
+constexpr natural operator+(const natural& a, const natural& b) { natural c = a; return c += b; }
+constexpr natural operator+(natural a, const std::unsigned_integral auto b) {
+    if (b <= UINT64_MAX)
+        return a += static_cast<natural::word>(b);
+    static_assert(sizeof(b) <= 16);
+    return a += static_cast<uint128_t>(b);
+}
+constexpr natural operator+(natural a, const std::signed_integral auto b) {
     if (b < 0)
-        throw std::runtime_error("addition of natural and negative number");
-    a += static_cast<natural::word>(b);
-    return a;
+        return a - make_unsigned(-b);
+    return a + make_unsigned(b);
 }
 constexpr natural operator+(const std::integral auto a, natural b) { return std::move(b) + a; }
 
-constexpr natural operator-(const natural& a, const natural& b) { natural c = a; c -= b; return c; }
-constexpr natural operator-(natural a, const std::integral auto b) {
-    if (b < 0)
-        throw std::runtime_error("subtraction of natural and negative number");
-    a -= static_cast<natural::word>(b);
-    return a;
+constexpr natural& operator+=(natural& a, const std::unsigned_integral auto b) {
+    if (b <= UINT64_MAX)
+        return a += static_cast<natural::word>(b);
+    static_assert(sizeof(b) <= 16);
+    return a += static_cast<uint128_t>(b);
 }
-constexpr natural operator-(const std::integral auto a, natural b) { return natural(a) - b; }
+
+constexpr natural& operator+=(natural& a, const std::signed_integral auto b) {
+    if (b < 0)
+        return a -= make_unsigned(-b);
+    return a += make_unsigned(b);
+}
+
+constexpr natural operator-(const natural& a, const natural& b) { natural c = a; return c -= b; }
+
+constexpr natural operator-(natural a, const std::unsigned_integral auto b) {
+    if (b <= UINT64_MAX)
+        return a -= natural::word(b);
+    if (a < b)
+        throw std::runtime_error("natural can't be negative");
+    static_assert(sizeof(b) <= 16);
+    return a -= static_cast<uint128_t>(b);
+}
+
+constexpr natural operator-(const std::unsigned_integral auto a, natural b) {
+    if (a <= UINT64_MAX) {
+        if (b.words.size() > 1 || natural::word(a) < b.words[0])
+            throw std::runtime_error("natural can't be negative");
+        return natural::word(a) - b.words[0];
+    }
+    if (a > b)
+        throw std::runtime_error("natural can't be negative");
+    return a - static_cast<uint128_t>(b);
+}
+
+constexpr natural operator-(natural a, const std::signed_integral auto b) {
+    if (b < 0)
+        return a + make_unsigned(-b);
+    return a - make_unsigned(b);
+}
+
+constexpr natural operator-(const std::signed_integral auto a, natural b) {
+    if (a < 0)
+        throw std::runtime_error("natural can't be negative");
+    return make_unsigned(-a) - b;
+}
+
+constexpr natural& operator-=(natural& a, const std::unsigned_integral auto b) {
+    if (b <= UINT64_MAX)
+        return a -= static_cast<natural::word>(b);
+    static_assert(sizeof(b) <= 16);
+    return a -= static_cast<uint128_t>(b);
+}
+
+constexpr natural& operator-=(natural& a, const std::signed_integral auto b) {
+    if (b < 0)
+        return a += make_unsigned(-b);
+    return a -= make_unsigned(b);
+}
 
 constexpr bool operator<(const natural& a, const natural& b) {
     if (a.words.size() > b.words.size())
@@ -338,25 +462,29 @@ constexpr bool operator<(const std::unsigned_integral auto a, const natural& b) 
 constexpr bool operator<(const natural& a, const std::signed_integral auto b) { return b >= 0 && a < static_cast<uint64_t>(b); }
 constexpr bool operator<(const std::signed_integral auto a, const natural b) { return a < 0 || static_cast<uint64_t>(a) < b; }
 
-constexpr bool operator<(const natural& a, const unsigned __int128 b) {
+constexpr bool operator<(const natural& a, const uint128_t b) {
     if (b <= UINT64_MAX)
         return a < static_cast<uint64_t>(b);
-
-    if (a.words.size() <= 1)
+    if (a.words.size() < 2)
         return true;
     if (a.words.size() > 2)
         return false;
-    natural::word bw0 = b;
-    natural::word bw1 = b >> natural::bits_per_word;
-    return a.words[1] < bw1 || (a.words[1] == bw1 && a.words[0] < bw0);
+    if (a.words[1] < static_cast<uint64_t>(b >> 64))
+        return true;
+    return a.words[1] == static_cast<uint64_t>(b >> 64) && a.words[0] < static_cast<uint64_t>(b);
 }
 
-template<typename T>
-concept std_integral_or_natural = std::integral<T> || std::same_as<T, natural>;
-
-constexpr bool operator>(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return b < a; }
-constexpr bool operator>=(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return !(a < b); }
-constexpr bool operator<=(const std_integral_or_natural auto& a, const std_integral_or_natural auto& b) { return !(a > b); }
+constexpr bool operator<(const uint128_t a, const natural& b) {
+    if (a <= UINT64_MAX)
+        return static_cast<uint64_t>(b) < b;
+    if (b.words.size() < 2)
+        return false;
+    if (b.words.size() > 2)
+        return true;
+    if (static_cast<uint64_t>(a >> 64) < b.words[1])
+        return true;
+    return static_cast<uint64_t>(a >> 64) == b.words[1] && static_cast<uint64_t>(a) < b.words[0];
+}
 
 constexpr bool operator==(const natural& a, const natural& b) {
     if (a.words.size() != b.words.size())
@@ -367,28 +495,13 @@ constexpr bool operator==(const natural& a, const natural& b) {
     return true;
 }
 
-constexpr bool operator==(const natural& a, const uint32_t b) { return a.words[0] == b && a.words.size() <= 1; }
-constexpr bool operator==(const uint32_t a, const natural b) { return b == a; }
-
-constexpr bool operator==(const natural& a, const int b) { return b >= 0 && a == static_cast<uint32_t>(b); }
-constexpr bool operator==(const int a, const natural b) { return a >= 0 && static_cast<uint32_t>(a) == b; }
-
-constexpr bool operator==(const natural& a, const uint64_t b) { return a.words[0] == b && a.words.size() <= 1; }
-constexpr bool operator==(const uint64_t a, const natural& b) { return b == a; }
-
-constexpr bool operator==(const natural& a, const unsigned __int128 b) {
+constexpr bool operator==(const natural& a, const std::unsigned_integral auto b) {
+    if constexpr (sizeof(b) <= 8)
+        return a.words[0] == b && a.words.size() <= 1;
     if (b <= UINT64_MAX)
-        return a == static_cast<uint64_t>(b);
-
-    if (a.words.size() != 2)
-        return false;
-    natural::word bw0 = b;
-    natural::word bw1 = b >> 64;
-    return a.words[1] == bw1 && a.words[0] == bw0;
+        return a.words[0] == b && a.words.size() <= 1;
+    return a.words.size() == 2 && a.words[1] == natural::word(b >> 64) && a.words[0] == natural::word(b);
 }
-constexpr bool operator==(const unsigned __int128 a, const natural& b) { return b == a; }
-
-constexpr bool operator!=(const auto& a, const auto& b) { return !(a == b); }
 
 // TODO can this be optimized for mul(a, a, out)?
 
@@ -402,25 +515,63 @@ constexpr void __mul(const natural& a, const natural& b, natural& out) {
         const auto w = a.words[i];
         if (w == 0)
             continue;
-        natural::dword carry = 0;
+        natural::dword acc = 0;
         out.words[i] = 0;
-        for (natural::size_type j = 0; j < b.words.size(); ++j) {
-            carry += (natural::dword)w * b.words[j];
-            carry += out.words[i + j];
-            out.words[i + j] = carry;
-            carry >>= 64;
-        }
-        natural::size_type j;
-        if (carry) {
-            j = i + b.words.size();
-            carry += out.words[j];
-            out.words[j] = carry;
-            carry >>= 64;
-        }
-        if (carry) {
+        natural::size_type j = 0;
+        while (j < b.words.size()) {
+            acc += __mulq(w, b.words[j]);
+            acc += out.words[i + j];
+            out.words[i + j] = acc;
+            acc >>= 64;
             j += 1;
-            carry += out.words[j];
-            out.words[j] = carry;
+        }
+        if (acc) {
+            acc += out.words[i + j];
+            out.words[i + j] = acc;
+            acc >>= 64;
+            if (acc) {
+                j += 1;
+                acc += out.words[i + j];
+                out.words[i + j] = acc;
+            }
+        }
+    }
+    out.words.normalize();
+}
+
+constexpr void __mul(const natural& a, uint128_t b, natural& out) {
+    if (&a != &out)
+        out.set_zero();
+    auto as = a.words.size();
+    out.words.resize(a.words.size() + 2);
+
+    for (auto i = as; i-- > 0;) {
+        const auto aw = a.words[i];
+        if (aw == 0)
+            continue;
+
+        uint64_t* ow = &out.words[i];
+        *ow = 0;
+
+        auto acc = __mulq(aw, b);
+        acc += *ow;
+        *ow = acc;
+        acc >>= 64;
+
+        acc += __mulq(aw, b >> 64);
+        acc += *++ow;
+        *ow = acc;
+        acc >>= 64;
+
+        if (acc) {
+            acc += *++ow;
+            *ow = acc;
+            acc >>= 64;
+
+            if (acc) {
+                acc += *++ow;
+                *ow = acc;
+            }
         }
     }
     out.words.normalize();
@@ -437,9 +588,7 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
     if (&a != &out)
         out.words.reset(a.words.size(), /*initialize*/false);
     for (natural::size_type i = 0; i < a.words.size(); ++i) {
-        natural::dword acc = a.words[i];
-        acc *= b;
-        acc += carry;
+        auto acc = __mulq(a.words[i], b) + carry;
         out.words[i] = acc;
         carry = acc >> 64;
     }
@@ -584,15 +733,28 @@ constexpr void mul(natural& a, const natural& b) {
 }
 
 constexpr natural operator*(const natural& a, const natural& b) { natural c; mul(a, b, /*out*/c); return c; }
-constexpr natural operator*(natural a, std::integral auto b) {
+constexpr natural operator*(natural a, std::unsigned_integral auto b) { return a *= b; }
+constexpr natural operator*(natural a, std::signed_integral auto b) {
     if (b < 0)
         throw std::runtime_error("multiplication of natural with negative number");
-    a *= static_cast<natural::word>(b);
-    return a;
+    return std::move(a) * make_unsigned(b);
 }
 constexpr natural operator*(std::integral auto a, natural b) { return std::move(b) * a; }
 
 constexpr natural& operator*=(natural& a, const natural& b) { mul(a, b); return a; }
+constexpr natural& operator*=(natural& a, std::unsigned_integral auto b) {
+    static_assert(sizeof(b) == 16 || sizeof(b) <= 8);
+
+    if (b <= UINT64_MAX)
+        return a *= static_cast<uint64_t>(b);
+    __mul(a, static_cast<uint128_t>(b), a);
+    return a;
+}
+constexpr natural& operator*=(natural& a, std::signed_integral auto b) {
+    if (b < 0)
+        throw std::runtime_error("multiplication of natural with negative number");
+    return a *= make_unsigned(b);
+}
 
 // acc += a * b
 constexpr void add_product(natural& acc, const natural& a, const natural& b) {
@@ -699,7 +861,7 @@ constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quoti
 }
 
 // returns static_cast<ucent>(a >> e) - without memory allocation
-constexpr unsigned __int128 extract_128bits(const natural& a, int e) {
+constexpr uint128_t extract_128bits(const natural& a, int e) {
     const auto bits_per_word = sizeof(natural::word) * 8;
     const auto word_shift = e / bits_per_word;
     const auto bit_shift = e % bits_per_word;
@@ -707,13 +869,13 @@ constexpr unsigned __int128 extract_128bits(const natural& a, int e) {
     if (word_shift >= a.words.size())
         return 0;
 
-    unsigned __int128 res = a.words[word_shift] >> bit_shift;
+    uint128_t res = a.words[word_shift] >> bit_shift;
     if (word_shift + 1 >= a.words.size())
         return res;
-    res |= static_cast<unsigned __int128>(a.words[word_shift + 1]) << (64 - bit_shift);
+    res |= static_cast<uint128_t>(a.words[word_shift + 1]) << (64 - bit_shift);
     if (word_shift + 2 >= a.words.size())
         return res;
-    res |= static_cast<unsigned __int128>(a.words[word_shift + 2]) << (128 - bit_shift);
+    res |= static_cast<uint128_t>(a.words[word_shift + 2]) << (128 - bit_shift);
     return res;
 }
 

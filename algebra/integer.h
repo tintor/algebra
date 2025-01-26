@@ -4,6 +4,7 @@
 namespace algebra {
 
 struct integer;
+template<> struct IsNumberClass<integer> : std::true_type {};
 
 #if 0
 struct neg_integer {

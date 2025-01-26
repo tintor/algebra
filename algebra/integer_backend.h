@@ -5,14 +5,17 @@
 
 namespace algebra {
 
+using int128_t = __int128;
+using uint128_t = unsigned __int128;
+
 template<typename T>
 auto signum(T a) { return (a > 0) - (a < 0); }
 
 class integer_backend {
 public:
     using size_type = int;
-    using word = unsigned long;
-    using dword = unsigned __int128;
+    using word = uint64_t;
+    using dword = uint128_t;
 
 private:
     union {
@@ -25,7 +28,7 @@ private:
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
     constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size((a > 0) ? 1 : 0), _capacity(0) { }
-    constexpr integer_backend(unsigned __int128 a) {
+    constexpr integer_backend(uint128_t a) {
         if (a > 0) {
             if (a <= std::numeric_limits<word>::max()) {
                 _single_word = a;
