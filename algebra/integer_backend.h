@@ -28,25 +28,30 @@ private:
 
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
-    constexpr integer_backend(std::unsigned_integral auto a) : _single_word(a), _size((a > 0) ? 1 : 0), _capacity(0) { }
-    constexpr integer_backend(uint128_t a) {
-        if (a > 0) {
-            if (a <= UINT64_MAX) {
-                _single_word = a;
-                _size = 1;
-                _capacity = 0;
-                return;
-            }
-            _words = new uint64_t[2];
-            _words[0] = a;
-            _words[1] = a >> 64;
-            _size = 2;
-            _capacity = 2;
+    constexpr integer_backend(std::integral auto a) {
+        const bool negative = a < 0;
+        const auto au = make_unsigned((a < 0) ? -a : a);
+
+        static_assert(sizeof(a) == 16 || sizeof(a) <= 8);
+        if (a == 0) {
+            _single_word = 0;
+            _size = 0;
+            _capacity = 0;
             return;
         }
-        _single_word = 0;
-        _size = 0;
-        _capacity = 0;
+        if (au <= UINT64_MAX) {
+            _single_word = au;
+            _size = negative ? -1 : 1;
+            _capacity = 0;
+            return;
+        }
+        if constexpr (sizeof(a) == 16) {
+            _words = new uint64_t[2];
+            _words[0] = au;
+            _words[1] = au >> 64;
+            _size = negative ? -2 : 2;
+            _capacity = 2;
+        }
     }
 
     constexpr integer_backend(integer_backend&& o) : _words(o._words), _size(o._size), _capacity(o._capacity) {
