@@ -122,7 +122,7 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
     return {rational{std::move(w), a.base.den.abs * b.base.den.abs}, std::move(root)};
 }
 
-constexpr xrational operator*(const xrational& a, const rational_like auto& b) { return {a.base * b.base, a.root}; }
+constexpr xrational operator*(const xrational& a, const rational_like auto& b) { return {a.base * b, a.root}; }
 
 constexpr xrational& operator*=(xrational& a, const xrational& b) {
     a = a * b;
@@ -131,7 +131,7 @@ constexpr xrational& operator*=(xrational& a, const xrational& b) {
 
 constexpr xrational& operator*=(xrational& a, const rational_like auto& b) {
     a.base *= b;
-    return b;
+    return a;
 }
 
 constexpr xrational operator/(const xrational& a, const xrational& b) {
@@ -146,7 +146,7 @@ constexpr xrational operator/(const xrational& a, const xrational& b) {
     return {std::move(e), a.root * b.root};
 }
 
-constexpr xrational operator/(const xrational& a, const rational_like auto& b) { return {a.base / b.base, a.root}; }
+constexpr xrational operator/(const xrational& a, const rational_like auto& b) { return {a.base / b, a.root}; }
 
 constexpr xrational& operator/=(xrational& a, const xrational& b) {
     a = a / b;

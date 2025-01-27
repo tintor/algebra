@@ -77,19 +77,25 @@ VEC_OP(-)
 VEC_OP(*)
 VEC_OP(/)
 
-#define VEC_AOP(OP) \
-template<int D, typename T> \
-constexpr algebra::Vec<D, T>& operator OP(algebra::Vec<D, T>& a, const algebra::Vec<D, T>& b) { \
+#define __VEC_AOP_vv(OP, TA, TB) \
+constexpr algebra::Vec<D, TA>& operator OP(algebra::Vec<D, TA>& a, const algebra::Vec<D, TB>& b) { \
     for (int i = 0; i < D; i++) \
         a[i] OP b[i]; \
     return a; \
-} \
-template<int D, typename T> \
-constexpr algebra::Vec<D, T>& operator OP(algebra::Vec<D, T>& a, const T& b) { \
+}
+
+#define __VEC_AOP_vs(OP, TA, TB) \
+constexpr algebra::Vec<D, TA>& operator OP(algebra::Vec<D, TA>& a, const TB& b) { \
     for (int i = 0; i < D; i++) \
         a[i] OP b; \
     return a; \
 }
+
+#define VEC_AOP_vs(OP, TA, TB) template<int D> __VEC_AOP_vs(OP, TA, TB)
+
+#define VEC_AOP(OP) \
+template<int D, typename T> __VEC_AOP_vv(OP, T, T) \
+template<int D, typename T> __VEC_AOP_vs(OP, T, T)
 
 VEC_AOP(+=)
 VEC_AOP(-=)
