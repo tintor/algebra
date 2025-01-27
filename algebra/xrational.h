@@ -63,17 +63,20 @@ constexpr void negate(xrational& a) { a.negate(); }
 
 constexpr xrational operator-(const xrational& a) { return {-a.base, a.root}; }
 
-constexpr xrational operator+(const xrational& a, const xrational& b) {
+constexpr void __addition_compatible(const xrational& a, const xrational& b) {
     if (a.root != b.root)
         throw std::runtime_error("adding xrationals with different roots");
+}
+
+constexpr xrational operator+(const xrational& a, const xrational& b) {
+    __addition_compatible(a, b);
     return {a.base + b.base, a.root};
 }
 
 constexpr xrational operator+(const xrational& a, const rational_like auto& b) { return {a.base + b, a.root}; }
 
 constexpr xrational& operator+=(xrational& a, const xrational& b) {
-    if (a.root != b.root)
-        throw std::runtime_error("subtracting xrationals with different roots");
+    __addition_compatible(a, b);
     a.base += b.base;
     return a;
 }
@@ -81,16 +84,14 @@ constexpr xrational& operator+=(xrational& a, const xrational& b) {
 constexpr xrational& operator+=(xrational& a, const rational_like auto& b) { a.base += b; return a; }
 
 constexpr xrational operator-(const xrational& a, const xrational& b) {
-    if (a.root != b.root)
-        throw std::runtime_error("adding xrationals with different roots");
+    __addition_compatible(a, b);
     return {a.base - b.base, a.root};
 }
 
 constexpr xrational operator-(const xrational& a, const rational_like auto& b) { return {a.base - b, a.root}; }
 
 constexpr xrational& operator-=(xrational& a, const xrational& b) {
-    if (a.root != b.root)
-        throw std::runtime_error("adding xrationals with different roots");
+    __addition_compatible(a, b);
     a.base -= b.base;
     return a;
 }

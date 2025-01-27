@@ -65,7 +65,7 @@ void test_segment_segment_squared_distance(V a, V b, V c, V d, M e, const array<
     REQUIRE_segment_segment_squared_distance(d, c, b, a, e, orig);
 }
 
-M SampleQ(Random& rng) { return {rng.Uniform<int>(-1000, 1000), rng.Uniform<int>(1, 1000)}; }
+M SampleQ(Random& rng) { return rational{rng.Uniform<int>(-1000, 1000), rng.Uniform<int>(1, 1000)}; }
 V SampleQV3(Random& rng) { return {SampleQ(rng), SampleQ(rng), SampleQ(rng)}; }
 
 void test_segment_segment_squared_distance2(V a, V b, V c, V d, Random& rng) {
