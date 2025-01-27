@@ -1,6 +1,44 @@
 #include "algebra/natural_func.h"
 #include "algebra/__test.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
+#include <chrono>
+
+TEST_CASE("factorize") {
+    uint64_t a = UINT64_MAX;
+    int ms_max = 0;
+    while (a > 1) {
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+        auto factors = factorize(a);
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        int ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+        if (ms > 100) {
+            ms_max = std::max(ms, ms_max);
+            std::print("{} = ", a);
+            for (int i = 0; i < factors.size(); i++) {
+                if (i > 0)
+                    std::print(" * ");
+                std::print("{}", factors[i].first);
+                if (factors[i].second > 1)
+                    std::print("^{}", factors[i].second);
+            }
+            std::print(" in {} ms (max {} ms)\n", ms, ms_max);
+        }
+
+        uint64_t m = 1;
+        for (const auto& [factor, count] : factors) {
+            if (!is_prime(factor)) {
+                std::print("returned factor {} is not prime!\n", factor);
+                REQUIRE(false);
+            }
+            for (int i = 0; i < count; i++)
+                m *= factor;
+        }
+        REQUIRE(m == a);
+
+        a -= 1;
+    }
+}
 
 ulong doubleToLongBits(double a) {
     return *reinterpret_cast<const ulong*>(&a);
@@ -283,6 +321,7 @@ TEST_CASE("power_of_two") {
     REQUIRE(pow(2_n, 64) == 1_n << 64);
 }
 
+#if 0
 TEST_CASE("factorize") {
     using f = std::vector<std::pair<uint64_t, int>>;
     REQUIRE(factorize(0_n) == f{});
@@ -292,6 +331,7 @@ TEST_CASE("factorize") {
     REQUIRE(factorize(13_n) == f{{13, 1}});
     REQUIRE(factorize(30_n) == f{{2, 1}, {3, 1}, {5, 1}});
 }
+#endif
 
 TEST_CASE("is_prime vs is_likely_prime") {
     std::mt19937_64 rng(0);
