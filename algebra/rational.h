@@ -11,7 +11,7 @@ namespace algebra {
 struct rational;
 template<> struct IsNumberClass<rational> : std::true_type {};
 
-template<typename T> concept integral = std::same_as<T, integer> || std::same_as<T, natural> || std::integral<T>;
+template<typename T> concept integral = std::same_as<T, integer> || std::same_as<T, natural> || std_int<T>;
 template<typename T> concept rational_like = integral<T> || std::same_as<T, rational>;
 
 struct rational {
@@ -26,27 +26,25 @@ private:
 public:
     constexpr static rational normalized(integer num, integer den) { return {std::move(num), std::move(den), /*dummy*/0}; }
 
-    constexpr rational(std::integral auto a) : num(a), den(1) { }
+    constexpr rational(std_int auto a) : num(a), den(1) { }
 
-    template<std::integral N, std::integral D>
-    constexpr rational(N _n, D _d) {
-        const bool negative = (_n < 0) != (_d < 0);
-        std::make_unsigned_t<larger_type<N, D>> n = (_n < 0) ? -_n : _n;
-        std::make_unsigned_t<larger_type<N, D>> d = (_d < 0) ? -_d : _d;
+    constexpr rational(std_int auto n, std_int auto d) {
+        std::make_unsigned_t<larger_type<decltype(n), decltype(d)>> un = (n < 0) ? -n : n;
+        std::make_unsigned_t<larger_type<decltype(n), decltype(d)>> ud = (d < 0) ? -d : d;
 
-        if (n == 0) {
+        if (un == 0) {
             num = uint64_t(0);
             den = uint64_t(1);
             return;
         }
 
-        auto z = std::countr_zero(n | d);
-        n >>= z;
-        d >>= z;
-        auto e = gcd(n, d);
-        num = n / e;
-        den = d / e;
-        if (negative)
+        auto z = std::countr_zero(un | ud);
+        un >>= z;
+        ud >>= z;
+        auto e = gcd(un, ud);
+        num = un / e;
+        den = ud / e;
+        if ((n < 0) != (d < 0))
             num.negate();
     }
 
@@ -357,7 +355,7 @@ constexpr rational& operator/=(rational& a, const integral auto& b) {
 
 constexpr rational operator/(const rational& a, const rational& b) { return {a.num * b.den, a.den * b.num}; }
 constexpr rational operator/(const rational& a, const integral auto& b) { return {a.num, a.den * b}; }
-constexpr rational operator/(const integral auto& a, const rational& b) { return {a * b.den, b.num}; }
+constexpr rational operator/(const integral auto& a, const rational& b) { return {b.den * a, b.num}; }
 
 static_assert(sizeof(rational) == 32);
 

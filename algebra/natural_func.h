@@ -136,7 +136,7 @@ constexpr natural uniform_sample(const natural& min, const natural& max, auto& r
     return out;
 }
 
-template<std::unsigned_integral T>
+template<std_unsigned_int T>
 constexpr T __gcd_inner(T a, T b) {
     while (b) {
         b >>= __builtin_ctzl(b); // since b is non-zero

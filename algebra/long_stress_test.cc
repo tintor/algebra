@@ -65,6 +65,9 @@ void set_yellow() {
     print("\033[1;33m");
 }
 
+#if 1
+#define TEST(E) REQUIRE(E)
+#else
 #define TEST(E) { \
     M __m{#E, seed, std::source_location::current()}; \
     try { \
@@ -80,7 +83,11 @@ void set_yellow() {
         exit(0); \
     }\
 }
+#endif
 
+#if 1
+#define TEST2(E, MSG) do { if (!(E)) { std::print("TEST({}) FAILED with message: {}", #E, MSG); REQUIRE(E); } } while(0);
+#else
 #define TEST2(E, MSG) { \
     M __m{#E, seed, std::source_location::current(), MSG}; \
     try { \
@@ -96,6 +103,7 @@ void set_yellow() {
         exit(0); \
     }\
 }
+#endif
 
 struct M {
     const char* expr;

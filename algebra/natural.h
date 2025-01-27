@@ -11,16 +11,16 @@
 namespace algebra {
 
 template<typename T> struct IsNumberClass : std::false_type {};
-template<typename T> concept __ncsi = IsNumberClass<T>::value || std::integral<T>;
-
-constexpr bool operator==(const __ncsi auto& a, std::signed_integral auto b) { return b >= 0 && a == make_unsigned(b); }
-constexpr bool operator==(std::signed_integral auto a, const __ncsi auto& b) { return a >= 0 && b == make_unsigned(a); }
-constexpr bool operator==(std::unsigned_integral auto a, const __ncsi auto& b) { return b == a; }
+template<typename T> concept __ncsi = IsNumberClass<T>::value || std_int<T>;
 
 constexpr bool operator>(const __ncsi auto& a, const __ncsi auto& b) { return b < a; }
 constexpr bool operator>=(const __ncsi auto& a, const __ncsi auto& b) { return !(a < b); }
 constexpr bool operator<=(const __ncsi auto& a, const __ncsi auto& b) { return !(b < a); }
 constexpr bool operator!=(const __ncsi auto& a, const __ncsi auto& b) { return !(a == b); }
+
+constexpr auto operator+(std_int auto a, const __ncsi auto& b) { return b + a; }
+constexpr auto operator*(std_int auto a, const __ncsi auto& b) { return b * a; }
+constexpr bool operator==(std_int auto a, const __ncsi auto& b) { return b == a; }
 
 struct natural;
 template<> struct IsNumberClass<natural> : std::true_type {};
@@ -82,7 +82,7 @@ struct natural {
     integer_backend words;
 
     constexpr natural() {}
-    constexpr natural(std::integral auto a) : words(a) {
+    constexpr natural(std_int auto a) : words(a) {
         if (a < 0)
             throw std::runtime_error("assigning negative number to natural");
     }
@@ -90,7 +90,7 @@ struct natural {
     constexpr natural(const natural& o) : words(o.words) { }
 
     constexpr void set_zero() { words.set_zero(); }
-    constexpr void operator=(std::integral auto a) { words = a; }
+    constexpr void operator=(std_int auto a) { words = a; }
     constexpr void operator=(natural&& o) { words = std::move(o.words); }
     constexpr void operator=(const natural& o) { words = o.words; }
 
@@ -301,7 +301,7 @@ struct natural {
     }
     constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
 
-    constexpr uint64_t operator%(std::integral auto b) const {
+    constexpr uint64_t operator%(std_int auto b) const {
         static_assert(sizeof(b) <= 8);
         if (b <= 0)
             throw std::runtime_error((b == 0) ? "division by zero" : "division of natural by negative number");
@@ -365,7 +365,7 @@ struct natural {
         return acc % 5;
     }
 
-    constexpr natural& operator%=(std::integral auto b) { *this = operator%(b); return *this; }
+    constexpr natural& operator%=(std_int auto b) { *this = operator%(b); return *this; }
 
     constexpr natural(std::string_view s, unsigned base = 10);
     constexpr natural(const char* s, uint32_t base = 10) : natural(std::string_view(s), base) {}
@@ -421,27 +421,27 @@ constexpr natural operator-(const natural& a) {
 }
 
 constexpr natural operator+(const natural& a, const natural& b) { natural c = a; return c += b; }
-constexpr natural operator+(natural a, const std::unsigned_integral auto b) {
+constexpr natural operator+(natural a, const std_unsigned_int auto b) {
     if (b <= UINT64_MAX)
         return a += static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a += static_cast<uint128_t>(b);
 }
-constexpr natural operator+(natural a, const std::signed_integral auto b) {
+constexpr natural operator+(natural a, const std_signed_int auto b) {
     if (b < 0)
         return a - make_unsigned(-b);
     return a + make_unsigned(b);
 }
-constexpr natural operator+(const std::integral auto a, natural b) { return std::move(b) + a; }
+constexpr natural operator+(const std_int auto a, natural b) { return std::move(b) + a; }
 
-constexpr natural& operator+=(natural& a, const std::unsigned_integral auto b) {
+constexpr natural& operator+=(natural& a, const std_unsigned_int auto b) {
     if (b <= UINT64_MAX)
         return a += static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a += static_cast<uint128_t>(b);
 }
 
-constexpr natural& operator+=(natural& a, const std::signed_integral auto b) {
+constexpr natural& operator+=(natural& a, const std_signed_int auto b) {
     if (b < 0)
         return a -= make_unsigned(-b);
     return a += make_unsigned(b);
@@ -449,7 +449,7 @@ constexpr natural& operator+=(natural& a, const std::signed_integral auto b) {
 
 constexpr natural operator-(const natural& a, const natural& b) { natural c = a; return c -= b; }
 
-constexpr natural operator-(natural a, const std::unsigned_integral auto b) {
+constexpr natural operator-(natural a, const std_unsigned_int auto b) {
     if (b <= UINT64_MAX)
         return a -= uint64_t(b);
     if (a < b)
@@ -458,7 +458,7 @@ constexpr natural operator-(natural a, const std::unsigned_integral auto b) {
     return a -= static_cast<uint128_t>(b);
 }
 
-constexpr natural operator-(const std::unsigned_integral auto a, natural b) {
+constexpr natural operator-(const std_unsigned_int auto a, natural b) {
     if (a <= UINT64_MAX) {
         if (b.words.size() > 1 || uint64_t(a) < b.words[0])
             throw std::runtime_error("natural can't be negative");
@@ -469,26 +469,26 @@ constexpr natural operator-(const std::unsigned_integral auto a, natural b) {
     return a - static_cast<uint128_t>(b);
 }
 
-constexpr natural operator-(natural a, const std::signed_integral auto b) {
+constexpr natural operator-(natural a, const std_signed_int auto b) {
     if (b < 0)
         return a + make_unsigned(-b);
     return a - make_unsigned(b);
 }
 
-constexpr natural operator-(const std::signed_integral auto a, natural b) {
+constexpr natural operator-(const std_signed_int auto a, natural b) {
     if (a < 0)
         throw std::runtime_error("natural can't be negative");
     return make_unsigned(-a) - b;
 }
 
-constexpr natural& operator-=(natural& a, const std::unsigned_integral auto b) {
+constexpr natural& operator-=(natural& a, const std_unsigned_int auto b) {
     if (b <= UINT64_MAX)
         return a -= static_cast<uint64_t>(b);
     static_assert(sizeof(b) <= 16);
     return a -= static_cast<uint128_t>(b);
 }
 
-constexpr natural& operator-=(natural& a, const std::signed_integral auto b) {
+constexpr natural& operator-=(natural& a, const std_signed_int auto b) {
     if (b < 0)
         return a += make_unsigned(-b);
     return a -= make_unsigned(b);
@@ -508,11 +508,11 @@ constexpr bool operator<(const natural& a, const natural& b) {
     return false;
 }
 
-constexpr bool operator<(const natural& a, const std::unsigned_integral auto b) { return a.words[0] < b && a.words.size() <= 1; }
-constexpr bool operator<(const std::unsigned_integral auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
+constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { return a.words[0] < b && a.words.size() <= 1; }
+constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
 
-constexpr bool operator<(const natural& a, const std::signed_integral auto b) { return b >= 0 && a < static_cast<uint64_t>(b); }
-constexpr bool operator<(const std::signed_integral auto a, const natural b) { return a < 0 || static_cast<uint64_t>(a) < b; }
+constexpr bool operator<(const natural& a, const std_signed_int auto b) { return b >= 0 && a < static_cast<uint64_t>(b); }
+constexpr bool operator<(const std_signed_int auto a, const natural b) { return a < 0 || static_cast<uint64_t>(a) < b; }
 
 constexpr bool operator<(const natural& a, const uint128_t b) {
     if (b <= UINT64_MAX)
@@ -547,13 +547,14 @@ constexpr bool operator==(const natural& a, const natural& b) {
     return true;
 }
 
-constexpr bool operator==(const natural& a, const std::unsigned_integral auto b) {
+constexpr bool operator==(const natural& a, const std_unsigned_int auto b) {
     if constexpr (sizeof(b) <= 8)
         return a.words[0] == b && a.words.size() <= 1;
     if (b <= UINT64_MAX)
         return a.words[0] == b && a.words.size() <= 1;
     return a.words.size() == 2 && a.words[1] == uint64_t(b >> 64) && a.words[0] == uint64_t(b);
 }
+constexpr bool operator==(const natural& a, const std_signed_int auto b) { return b >= 0 && a == make_unsigned(b); }
 
 // TODO can this be optimized for mul(a, a, out)?
 
@@ -785,16 +786,16 @@ constexpr void mul(natural& a, const natural& b) {
 }
 
 constexpr natural operator*(const natural& a, const natural& b) { natural c; mul(a, b, /*out*/c); return c; }
-constexpr natural operator*(natural a, std::unsigned_integral auto b) { return a *= b; }
-constexpr natural operator*(natural a, std::signed_integral auto b) {
+constexpr natural operator*(natural a, std_unsigned_int auto b) { return a *= b; }
+constexpr natural operator*(natural a, std_signed_int auto b) {
     if (b < 0)
         throw std::runtime_error("multiplication of natural with negative number");
     return std::move(a) * make_unsigned(b);
 }
-constexpr natural operator*(std::integral auto a, natural b) { return std::move(b) * a; }
+constexpr natural operator*(std_int auto a, natural b) { return std::move(b) * a; }
 
 constexpr natural& operator*=(natural& a, const natural& b) { mul(a, b); return a; }
-constexpr natural& operator*=(natural& a, std::unsigned_integral auto b) {
+constexpr natural& operator*=(natural& a, std_unsigned_int auto b) {
     static_assert(sizeof(b) == 16 || sizeof(b) <= 8);
 
     if (b <= UINT64_MAX)
@@ -802,7 +803,7 @@ constexpr natural& operator*=(natural& a, std::unsigned_integral auto b) {
     __mul(a, static_cast<uint128_t>(b), a);
     return a;
 }
-constexpr natural& operator*=(natural& a, std::signed_integral auto b) {
+constexpr natural& operator*=(natural& a, std_signed_int auto b) {
     if (b < 0)
         throw std::runtime_error("multiplication of natural with negative number");
     return a *= make_unsigned(b);
@@ -1047,7 +1048,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
 }
 
 constexpr natural operator/(const natural& a, const natural& b) { natural quot, rem; div(a, b, /*out*/quot, /*out*/rem); return quot; }
-constexpr natural operator/(const natural& a, std::integral auto b) {
+constexpr natural operator/(const natural& a, std_int auto b) {
     if (b < 0)
         throw std::runtime_error("division of natural with negative number");
     natural q;
@@ -1056,7 +1057,7 @@ constexpr natural operator/(const natural& a, std::integral auto b) {
 }
 
 constexpr natural& operator/=(natural& a, const natural &b) { natural rem; div(a, b, /*out*/a, /*out*/rem); return a; }
-constexpr natural& operator/=(natural& a, std::integral auto b) {
+constexpr natural& operator/=(natural& a, std_int auto b) {
     if (b < 0)
         throw std::runtime_error("division of natural with negative number");
     div(a, static_cast<uint64_t>(b), a);
@@ -1114,11 +1115,11 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
 constexpr CLASS& operator>>=(CLASS& a, int64_t b) { a <<= -b; return a; } \
 constexpr CLASS operator>>(CLASS a, int64_t b) { a <<= -b; return a; } \
 constexpr CLASS operator<<(CLASS a, int64_t b) { a <<= b; return a; } \
-template<typename T> requires (std::integral<T> && !std::same_as<T, int64_t>) \
+template<typename T> requires (std_int<T> && !std::same_as<T, int64_t>) \
 constexpr CLASS& operator<<=(CLASS& a, T b) { a <<= (int64_t)b; return a; } \
-constexpr CLASS& operator>>=(CLASS& a, std::integral auto b) { a >>= (int64_t)b; return a; } \
-constexpr CLASS operator<<(const CLASS& a, std::integral auto b) { return a << (int64_t)b; } \
-constexpr CLASS operator>>(const CLASS& a, std::integral auto b) { return a >> (int64_t)b; }
+constexpr CLASS& operator>>=(CLASS& a, std_int auto b) { a >>= (int64_t)b; return a; } \
+constexpr CLASS operator<<(const CLASS& a, std_int auto b) { return a << (int64_t)b; } \
+constexpr CLASS operator>>(const CLASS& a, std_int auto b) { return a >> (int64_t)b; }
 
 ALGEBRA_SHIFT_OP(natural)
 

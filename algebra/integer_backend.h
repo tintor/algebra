@@ -6,6 +6,10 @@
 
 namespace algebra {
 
+template<typename T> concept std_int = std::integral<T> && !std::same_as<T, bool>;
+template<typename T> concept std_signed_int = std::signed_integral<T> && !std::same_as<T, bool>;
+template<typename T> concept std_unsigned_int = std::unsigned_integral<T> && !std::same_as<T, bool>;
+
 template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
 
 using int128_t = __int128;
@@ -29,7 +33,7 @@ private:
 
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
-    constexpr integer_backend(std::integral auto a) {
+    constexpr integer_backend(std_int auto a) {
         const bool negative = a < 0;
         const auto au = make_unsigned((a < 0) ? -a : a);
 
@@ -79,7 +83,7 @@ public:
             delete[] _words;
     }
 
-    constexpr void operator=(std::integral auto a) {
+    constexpr void operator=(std_int auto a) {
         const bool negative = a < 0;
         const auto au = make_unsigned((a < 0) ? -a : a);
 

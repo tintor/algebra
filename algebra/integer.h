@@ -18,7 +18,7 @@ struct integer {
     natural abs;
 
     constexpr integer() {}
-    constexpr integer(std::integral auto a) : abs(make_unsigned((a < 0) ? -a : a)) { if (a < 0) negate(); }
+    constexpr integer(std_int auto a) : abs(make_unsigned((a < 0) ? -a : a)) { if (a < 0) negate(); }
     constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
     constexpr integer(natural&& o) : abs(std::move(o)) { }
     constexpr integer(const integer& o) : abs(o.abs) { }
@@ -33,7 +33,7 @@ struct integer {
     }
 #endif
 
-    constexpr void operator=(std::integral auto a) { abs.words = a; }
+    constexpr void operator=(std_int auto a) { abs.words = a; }
     constexpr void operator=(integer&& o) { abs = std::move(o.abs); }
     constexpr void operator=(natural&& o) { abs = std::move(o); }
     constexpr void operator=(const integer& o) { abs = o.abs; }
@@ -248,11 +248,11 @@ constexpr integer operator-(const integer& a, const integer& b) {
     return c;
 }
 
-constexpr integer operator+(const integer& a, std::integral auto b) { return a + integer(b); }
-constexpr integer operator+(std::integral auto a, const integer& b) { return integer(a) + b; }
+constexpr integer operator+(const integer& a, std_int auto b) { return a + integer(b); }
+constexpr integer operator+(std_int auto a, const integer& b) { return integer(a) + b; }
 
-constexpr integer operator-(integer a, std::integral auto b) { return a - integer(b); }
-constexpr integer operator-(std::integral auto a, integer b) { return integer(a) - b; }
+constexpr integer operator-(integer a, std_int auto b) { return a - integer(b); }
+constexpr integer operator-(std_int auto a, integer b) { return integer(a) - b; }
 
 constexpr integer& operator+=(integer& a, const integer& b) {
     if (a.is_negative() == b.is_negative()) {
@@ -283,34 +283,47 @@ constexpr integer& operator-=(integer& a, const integer& b) {
     return a;
 }
 
-// TODO finish this!
-constexpr integer& operator+=(integer& a, std::integral auto b) {
+constexpr integer& operator+=(integer& a, std_int auto b) {
     if (b < 0)
         return a -= make_unsigned(-b);
-    if (a.is_negative()) {
-        a.abs -= make_unsigned(b); // what if A needs to flip sign?
-    } else {
-        a.abs += make_unsigned(b);
+
+    auto ub = make_unsigned(b);
+    if (!a.is_negative()) {
+        a.abs += ub;
+        return a;
     }
+
+    if (a.abs >= ub) {
+        a.abs -= ub;
+        return a;
+    }
+    a = ub - static_cast<decltype(ub)>(a.abs);
+    a.negate();
     return a;
 }
 
-// TODO finish this!
-constexpr integer& operator-=(integer& a, std::integral auto b) {
+constexpr integer& operator-=(integer& a, std_int auto b) {
     if (b < 0)
         return a += make_unsigned(-b);
+
+    auto ub = make_unsigned(b);
     if (a.is_negative()) {
-        a.abs += make_unsigned(-b);
-        a.abs.words.set_negative(true);
-    } else {
-        a.abs -= make_unsigned(b); // what if A needs to flip sign?
+        a.abs += ub;
+        return a;
     }
+
+    if (a.abs >= ub) {
+        a.abs -= ub;
+        return a;
+    }
+    a = ub - static_cast<decltype(ub)>(a.abs);
+    a.negate();
     return a;
 }
 
 constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
 
-constexpr bool operator==(const integer& a, std::integral auto b) {
+constexpr bool operator==(const integer& a, std_int auto b) {
     if (b < 0)
         return a.is_negative() && a.abs == make_unsigned(-b);
     return !a.is_negative() && a.abs == make_unsigned(b);
@@ -341,7 +354,8 @@ constexpr integer operator*(const integer& a, const natural& b) {
 }
 constexpr integer operator*(const natural& a, const integer& b) { return b * a; }
 
-constexpr integer operator*(const integer& a, std::integral auto b) {
+// TODO avoid memory allocation here for int128!
+constexpr integer operator*(const integer& a, std_int auto b) {
     integer c;
     mul(a, integer(b), c);
     return c;
@@ -359,7 +373,7 @@ constexpr integer& operator*=(integer& a, const natural& b) {
     return a;
 }
 
-constexpr integer& operator*=(integer& a, std::integral auto b) {
+constexpr integer& operator*=(integer& a, std_int auto b) {
     const bool negative = a.is_negative() != (b < 0);
     a.abs *= make_unsigned((b < 0) ? -b : b);
     a.abs.words.set_negative(negative);
@@ -505,7 +519,7 @@ constexpr unsigned mod(const integer& a, unsigned b) {
 
 constexpr integer& operator%=(integer& a, const integer& b) { a = a % b; return a; }
 
-constexpr integer& operator%=(integer& a, std::integral auto b) { a = a % integer(b); return a; }
+constexpr integer& operator%=(integer& a, std_int auto b) { a = a % integer(b); return a; }
 
 constexpr bool operator<(const integer& a, const integer& b) {
     if (a.is_negative())
@@ -513,8 +527,8 @@ constexpr bool operator<(const integer& a, const integer& b) {
     return !b.is_negative() && a.abs < b.abs;
 }
 // TODO issue temporary memory allocation for cent / ucent
-constexpr bool operator<(const integer& a, std::integral auto b) { return a < integer(b); }
-constexpr bool operator<(std::integral auto a, const integer& b) { return integer(a) < b; }
+constexpr bool operator<(const integer& a, std_int auto b) { return a < integer(b); }
+constexpr bool operator<(std_int auto a, const integer& b) { return integer(a) < b; }
 
 constexpr integer operator~(integer a) {
     if (a.sign() >= 0) {
