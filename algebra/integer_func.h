@@ -18,7 +18,7 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     return integer(uniform_sample(max_min.abs, rng)) + min;
 }
 
-constexpr integer exp2(std::integral auto exp) {
+constexpr integer exp2(std_int auto exp) {
     if (exp < 0)
         throw std::runtime_error("negative exponent in exp2(...)");
     integer out;
@@ -27,7 +27,7 @@ constexpr integer exp2(std::integral auto exp) {
     return out;
 }
 
-constexpr integer pow(integer base, std::integral auto exp) {
+constexpr integer pow(integer base, std_int auto exp) {
     if (base == 2)
         return exp2(exp);
     if (base == 4)
@@ -58,7 +58,7 @@ constexpr integer pow(integer base, std::integral auto exp) {
     return result;
 }
 
-constexpr integer pow(integer base, std::integral auto exp, integer result) {
+constexpr integer pow(integer base, std_int auto exp, integer result) {
     if (base == 2)
         return result << exp;
     if (exp < 0)

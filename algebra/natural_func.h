@@ -4,7 +4,7 @@
 
 namespace algebra {
 
-constexpr natural pow(natural base, std::integral auto exp) {
+constexpr natural pow(natural base, std_int auto exp) {
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(natural, ...)");
     if (base == 2) {
@@ -150,19 +150,19 @@ constexpr T __gcd_inner(T a, T b) {
 template <typename A, typename B>
 using larger_type = std::conditional_t<(sizeof(A) >= sizeof(B)), A, B>;
 
-template<std::integral A, std::integral B>
-constexpr auto gcd(A _a, B _b) {
-    std::make_unsigned_t<larger_type<A, B>> a = (_a < 0) ? -_a : _a;
-    std::make_unsigned_t<larger_type<A, B>> b = (_b < 0) ? -_b : _b;
-    if (a == 0)
-        return b;
-    if (b == 0)
-        return a;
-    auto az = std::countr_zero(a);
+constexpr auto gcd(std_int auto a, std_int auto b) -> std::make_unsigned_t<larger_type<decltype(a), decltype(b)>> {
+    using T = std::make_unsigned_t<larger_type<decltype(a), decltype(b)>>;
+    T ua = abs_unsigned(a);
+    T ub = abs_unsigned(b);
+    if (ua == 0)
+        return ub;
+    if (ub == 0)
+        return ua;
+    auto az = std::countr_zero(ua);
     if (az == 0)
-        return __gcd_inner(a, b);
-    auto common = std::min(az, std::countr_zero(b));
-    return __gcd_inner(a >> az, b >> common) << common;
+        return __gcd_inner(ua, ub);
+    auto common = std::min(az, std::countr_zero(ub));
+    return __gcd_inner(ua >> az, ub >> common) << common;
 }
 
 constexpr natural gcd(natural a, natural b) {
@@ -193,8 +193,8 @@ constexpr natural gcd(natural a, natural b) {
     return a;
 }
 
-constexpr natural gcd(natural a, std::integral auto b) { return gcd(std::move(a), natural(make_unsigned((b < 0) ? -b : b))); }
-constexpr natural gcd(std::integral auto a, natural b) { return gcd(std::move(b), a); }
+constexpr natural gcd(natural a, std_int auto b) { return gcd(std::move(a), natural(abs_unsigned(b))); }
+constexpr natural gcd(std_int auto a, natural b) { return gcd(natural(abs_unsigned(a)), std::move(b)); }
 
 // least common multiple
 constexpr natural lcm(const natural& a, const natural& b) {

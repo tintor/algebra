@@ -10,7 +10,7 @@ template<int B> struct IsNumberClass<real<B>> : std::true_type {};
 
 // assuming exp >= 0
 template<int B>
-constexpr integer shift(const integer& a, std::integral auto exp) {
+constexpr integer shift(const integer& a, std_int auto exp) {
     if (exp == 0)
         return a;
     if constexpr (B == 2)
@@ -23,7 +23,7 @@ struct real {
     integer num;
     int exp;
 
-    constexpr real(std::integral auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
+    constexpr real(std_int auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
     constexpr real(natural a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
     constexpr real(integer a, int exp, int dummy) : num(std::move(a)), exp(exp) { }

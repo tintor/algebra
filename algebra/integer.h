@@ -18,9 +18,9 @@ struct integer {
     natural abs;
 
     constexpr integer() {}
-    constexpr integer(std_int auto a) : abs(make_unsigned((a < 0) ? -a : a)) { if (a < 0) negate(); }
+    constexpr integer(std_int auto a) : abs(abs_unsigned(a)) { if (a < 0) negate(); }
     constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
-    constexpr integer(natural&& o) : abs(std::move(o)) { }
+    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); }
     constexpr integer(const integer& o) : abs(o.abs) { }
     constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); }
 
@@ -35,9 +35,9 @@ struct integer {
 
     constexpr void operator=(std_int auto a) { abs.words = a; }
     constexpr void operator=(integer&& o) { abs = std::move(o.abs); }
-    constexpr void operator=(natural&& o) { abs = std::move(o); }
+    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); }
     constexpr void operator=(const integer& o) { abs = o.abs; }
-    constexpr void operator=(const natural& o) { abs = o; }
+    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); }
 
     constexpr size_type sign() const { return abs.words.sign(); }
     constexpr bool is_negative() const { return sign() < 0; }
@@ -248,11 +248,11 @@ constexpr integer operator-(const integer& a, const integer& b) {
     return c;
 }
 
-constexpr integer operator+(const integer& a, std_int auto b) { return a + integer(b); }
-constexpr integer operator+(std_int auto a, const integer& b) { return integer(a) + b; }
+constexpr integer operator+(integer a, std_int auto b) { return a += b; }
+constexpr integer operator+(std_int auto a, integer b) { return b += a; }
 
-constexpr integer operator-(integer a, std_int auto b) { return a - integer(b); }
-constexpr integer operator-(std_int auto a, integer b) { return integer(a) - b; }
+constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
+constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
 
 constexpr integer& operator+=(integer& a, const integer& b) {
     if (a.is_negative() == b.is_negative()) {
@@ -284,10 +284,10 @@ constexpr integer& operator-=(integer& a, const integer& b) {
 }
 
 constexpr integer& operator+=(integer& a, std_int auto b) {
-    if (b < 0)
-        return a -= make_unsigned(-b);
-
     auto ub = make_unsigned(b);
+    if (b < 0)
+        return a -= ~ub + 1;
+
     if (!a.is_negative()) {
         a.abs += ub;
         return a;
@@ -303,10 +303,10 @@ constexpr integer& operator+=(integer& a, std_int auto b) {
 }
 
 constexpr integer& operator-=(integer& a, std_int auto b) {
-    if (b < 0)
-        return a += make_unsigned(-b);
-
     auto ub = make_unsigned(b);
+    if (b < 0)
+        return a += ~ub + 1;
+
     if (a.is_negative()) {
         a.abs += ub;
         return a;
@@ -325,7 +325,7 @@ constexpr bool operator==(const integer& a, const integer& b) { return a.abs == 
 
 constexpr bool operator==(const integer& a, std_int auto b) {
     if (b < 0)
-        return a.is_negative() && a.abs == make_unsigned(-b);
+        return a.is_negative() && a.abs == abs_unsigned(b);
     return !a.is_negative() && a.abs == make_unsigned(b);
 }
 
@@ -375,7 +375,7 @@ constexpr integer& operator*=(integer& a, const natural& b) {
 
 constexpr integer& operator*=(integer& a, std_int auto b) {
     const bool negative = a.is_negative() != (b < 0);
-    a.abs *= make_unsigned((b < 0) ? -b : b);
+    a.abs *= abs_unsigned(b);
     a.abs.words.set_negative(negative);
     return a;
 }
@@ -423,7 +423,7 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
         quot = -a;
         return 0;
     }
-    int64_t rem = div(a.abs, make_unsigned((b < 0) ? -b : b), quot.abs);
+    int64_t rem = div(a.abs, abs_unsigned(b), quot.abs);
     if (quot.abs)
         quot.abs.words.set_negative(a.is_negative() != (b < 0));
     return a.is_negative() ? -rem : rem;
@@ -462,7 +462,7 @@ constexpr int64_t operator%(const integer& a, int64_t b) {
     for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= a.abs.words[i];
-        acc %= make_unsigned((b < 0) ? -b : b);
+        acc %= abs_unsigned(b);
     }
     return (a.sign() >= 0) ? acc : -static_cast<int64_t>(acc);
 }

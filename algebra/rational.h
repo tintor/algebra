@@ -29,14 +29,15 @@ public:
     constexpr rational(std_int auto a) : num(a), den(1) { }
 
     constexpr rational(std_int auto n, std_int auto d) {
-        std::make_unsigned_t<larger_type<decltype(n), decltype(d)>> un = (n < 0) ? -n : n;
-        std::make_unsigned_t<larger_type<decltype(n), decltype(d)>> ud = (d < 0) ? -d : d;
-
-        if (un == 0) {
+        if (n == 0) {
             num = uint64_t(0);
             den = uint64_t(1);
             return;
         }
+
+        using T = std::make_unsigned_t<larger_type<decltype(n), decltype(d)>>;
+        T un = abs_unsigned(n);
+        T ud = abs_unsigned(d);
 
         auto z = std::countr_zero(un | ud);
         un >>= z;

@@ -227,7 +227,7 @@ constexpr xrational sqrt(const xrational& a) {
     return {rational{whole, a.base.den}, root};
 }
 
-constexpr xrational& operator<<=(xrational& a, std::integral auto b) { a.base <<= b; return a; }
+constexpr xrational& operator<<=(xrational& a, std_int auto b) { a.base <<= b; return a; }
 ALGEBRA_SHIFT_OP(xrational)
 
 namespace literals {

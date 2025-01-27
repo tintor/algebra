@@ -208,17 +208,17 @@ constexpr expr_ptr operator/(expr_ptr a, expr_ptr b);
 constexpr expr_ptr make_product(std::vector<expr_ptr> v);
 constexpr expr_ptr pow(expr_ptr a, const rational& b);
 
-constexpr expr_ptr operator+(std::integral auto a, expr_ptr b) { return make_integer(a) + b; }
-constexpr expr_ptr operator+(expr_ptr a, std::integral auto b) { return a + make_integer(b); }
+constexpr expr_ptr operator+(std_int auto a, expr_ptr b) { return make_integer(a) + b; }
+constexpr expr_ptr operator+(expr_ptr a, std_int auto b) { return a + make_integer(b); }
 
-constexpr expr_ptr operator-(std::integral auto a, expr_ptr b) { return make_integer(a) - b; }
-constexpr expr_ptr operator-(expr_ptr a, std::integral auto b) { return a - make_integer(b); }
+constexpr expr_ptr operator-(std_int auto a, expr_ptr b) { return make_integer(a) - b; }
+constexpr expr_ptr operator-(expr_ptr a, std_int auto b) { return a - make_integer(b); }
 
-constexpr expr_ptr operator*(std::integral auto a, expr_ptr b) { return make_integer(a) * b; }
-constexpr expr_ptr operator*(expr_ptr a, std::integral auto b) { return a * make_integer(b); }
+constexpr expr_ptr operator*(std_int auto a, expr_ptr b) { return make_integer(a) * b; }
+constexpr expr_ptr operator*(expr_ptr a, std_int auto b) { return a * make_integer(b); }
 
-constexpr expr_ptr operator/(std::integral auto a, expr_ptr b) { return make_integer(a) / b; }
-constexpr expr_ptr operator/(expr_ptr a, std::integral auto b) { return a / make_integer(b); }
+constexpr expr_ptr operator/(std_int auto a, expr_ptr b) { return make_integer(a) / b; }
+constexpr expr_ptr operator/(expr_ptr a, std_int auto b) { return a / make_integer(b); }
 
 constexpr bool identical(expr_ptr a, expr_ptr b) {
     auto ai = dcast<expr_integer>(a);
@@ -526,8 +526,8 @@ constexpr expr_ptr operator/(expr_ptr a, expr_ptr b) {
 
 #define EXPR_CMP(OP) \
 constexpr bool operator OP(expr_ptr a, expr_ptr b) { return (a - b)->sign() OP 0; } \
-constexpr bool operator OP(std::integral auto a, expr_ptr b) { return make_rational(a) OP b; } \
-constexpr bool operator OP(expr_ptr a, std::integral auto b) { return a OP make_rational(b); }
+constexpr bool operator OP(std_int auto a, expr_ptr b) { return make_rational(a) OP b; } \
+constexpr bool operator OP(expr_ptr a, std_int auto b) { return a OP make_rational(b); }
 
 EXPR_CMP(<)
 EXPR_CMP(>)

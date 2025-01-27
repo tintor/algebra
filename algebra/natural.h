@@ -429,7 +429,7 @@ constexpr natural operator+(natural a, const std_unsigned_int auto b) {
 }
 constexpr natural operator+(natural a, const std_signed_int auto b) {
     if (b < 0)
-        return a - make_unsigned(-b);
+        return a - abs_unsigned(b);
     return a + make_unsigned(b);
 }
 constexpr natural operator+(const std_int auto a, natural b) { return std::move(b) + a; }
@@ -443,7 +443,7 @@ constexpr natural& operator+=(natural& a, const std_unsigned_int auto b) {
 
 constexpr natural& operator+=(natural& a, const std_signed_int auto b) {
     if (b < 0)
-        return a -= make_unsigned(-b);
+        return a -= abs_unsigned(b);
     return a += make_unsigned(b);
 }
 
@@ -471,14 +471,14 @@ constexpr natural operator-(const std_unsigned_int auto a, natural b) {
 
 constexpr natural operator-(natural a, const std_signed_int auto b) {
     if (b < 0)
-        return a + make_unsigned(-b);
+        return a + (~make_unsigned(b) + 1);
     return a - make_unsigned(b);
 }
 
 constexpr natural operator-(const std_signed_int auto a, natural b) {
     if (a < 0)
         throw std::runtime_error("natural can't be negative");
-    return make_unsigned(-a) - b;
+    return make_unsigned(a) - b;
 }
 
 constexpr natural& operator-=(natural& a, const std_unsigned_int auto b) {
@@ -490,7 +490,7 @@ constexpr natural& operator-=(natural& a, const std_unsigned_int auto b) {
 
 constexpr natural& operator-=(natural& a, const std_signed_int auto b) {
     if (b < 0)
-        return a += make_unsigned(-b);
+        return a += ~make_unsigned(b) + 1;
     return a -= make_unsigned(b);
 }
 

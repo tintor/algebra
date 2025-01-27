@@ -10,7 +10,8 @@ template<typename T> concept std_int = std::integral<T> && !std::same_as<T, bool
 template<typename T> concept std_signed_int = std::signed_integral<T> && !std::same_as<T, bool>;
 template<typename T> concept std_unsigned_int = std::unsigned_integral<T> && !std::same_as<T, bool>;
 
-template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
+template<std_int T> constexpr std::make_unsigned_t<T> make_unsigned(T a) { return a; }
+constexpr auto abs_unsigned(std_int auto a) { return (a < 0) ? (~make_unsigned(a) + 1) : make_unsigned(a); }
 
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
@@ -34,8 +35,7 @@ private:
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
     constexpr integer_backend(std_int auto a) {
-        const bool negative = a < 0;
-        const auto au = make_unsigned((a < 0) ? -a : a);
+        const auto au = abs_unsigned(a);
 
         static_assert(sizeof(a) == 16 || sizeof(a) <= 8);
         if (a == 0) {
@@ -46,7 +46,7 @@ public:
         }
         if (au <= UINT64_MAX) {
             _single_word = au;
-            _size = negative ? -1 : 1;
+            _size = (a < 0) ? -1 : 1;
             _capacity = 0;
             return;
         }
@@ -54,7 +54,7 @@ public:
             _words = new uint64_t[2];
             _words[0] = au;
             _words[1] = au >> 64;
-            _size = negative ? -2 : 2;
+            _size = (a < 0) ? -2 : 2;
             _capacity = 2;
         }
     }
@@ -84,22 +84,21 @@ public:
     }
 
     constexpr void operator=(std_int auto a) {
-        const bool negative = a < 0;
-        const auto au = make_unsigned((a < 0) ? -a : a);
-
+        const auto au = abs_unsigned(a);
         static_assert(sizeof(a) == 16 || sizeof(a) <= 8);
+
         if (a == 0) {
             set_zero();
             return;
         }
         if (au <= UINT64_MAX) {
-            _size = negative ? -1 : 1;
+            _size = (a < 0) ? -1 : 1;
             operator[](0) = au;
             return;
         }
         if constexpr (sizeof(au) == 16) {
             reset_two_without_init();
-            _size = negative ? -2 : 2;
+            _size = (a < 0) ? -2 : 2;
             operator[](0) = au;
             operator[](1) = au >> 64;
         }

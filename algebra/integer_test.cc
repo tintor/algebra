@@ -78,6 +78,7 @@ TEST_CASE("static_cast<int>") {
     int b = std::numeric_limits<int>::min();
     REQUIRE(static_cast<int>(integer(a)) == a);
     integer e(b);
+    REQUIRE(e.sign() == -1);
     REQUIRE(e.abs.words[0] == 2147483648);
     REQUIRE(static_cast<int>(integer(b)) == b);
 }
