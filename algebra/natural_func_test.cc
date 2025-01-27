@@ -3,8 +3,9 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <chrono>
 
+#if 0
 TEST_CASE("factorize") {
-    uint64_t a = UINT64_MAX;
+    natural a = pow(2_n, 128);
     int ms_max = 0;
     while (a > 1) {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -12,7 +13,7 @@ TEST_CASE("factorize") {
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         int ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
-        if (ms > 100) {
+        if (ms >= 0) {
             ms_max = std::max(ms, ms_max);
             std::print("{} = ", a);
             for (int i = 0; i < factors.size(); i++) {
@@ -25,9 +26,9 @@ TEST_CASE("factorize") {
             std::print(" in {} ms (max {} ms)\n", ms, ms_max);
         }
 
-        uint64_t m = 1;
+        natural m = 1;
         for (const auto& [factor, count] : factors) {
-            if (!is_prime(factor)) {
+            if (!is_likely_prime(factor, 40)) {
                 std::print("returned factor {} is not prime!\n", factor);
                 REQUIRE(false);
             }
@@ -39,6 +40,7 @@ TEST_CASE("factorize") {
         a -= 1;
     }
 }
+#endif
 
 ulong doubleToLongBits(double a) {
     return *reinterpret_cast<const ulong*>(&a);
@@ -321,33 +323,42 @@ TEST_CASE("power_of_two") {
     REQUIRE(pow(2_n, 64) == 1_n << 64);
 }
 
-#if 0
-TEST_CASE("factorize") {
+TEST_CASE("factorize(uint64_t)") {
     using f = std::vector<std::pair<uint64_t, int>>;
+    REQUIRE(factorize(uint64_t(0)) == f{});
+    REQUIRE(factorize(uint64_t(1)) == f{});
+    REQUIRE(factorize(uint64_t(12)) == f{{2, 2}, {3, 1}});
+    REQUIRE(factorize(uint64_t(16)) == f{{2, 4}});
+    REQUIRE(factorize(uint64_t(13)) == f{{13, 1}});
+    REQUIRE(factorize(uint64_t(30)) == f{{2, 1}, {3, 1}, {5, 1}});
+    REQUIRE(factorize(uint64_t(49)) == f{{7, 2}});
+}
+
+TEST_CASE("factorize(natural)") {
+    using f = std::vector<std::pair<natural, int>>;
     REQUIRE(factorize(0_n) == f{});
     REQUIRE(factorize(1_n) == f{});
     REQUIRE(factorize(12_n) == f{{2, 2}, {3, 1}});
     REQUIRE(factorize(16_n) == f{{2, 4}});
     REQUIRE(factorize(13_n) == f{{13, 1}});
     REQUIRE(factorize(30_n) == f{{2, 1}, {3, 1}, {5, 1}});
+    REQUIRE(factorize(49_n) == f{{7, 2}});
+    REQUIRE(factorize(340282366920938463463374607431768211453_n) == f{{11, 1}, {6949, 1}, {4451685225093714772084598273548427_n, 1}});
 }
-#endif
 
 TEST_CASE("is_prime vs is_likely_prime") {
-    std::mt19937_64 rng(0);
     for (uint64_t p = 50'000'000; p <= 50'100'000; p++) {
-        bool m = is_likely_prime(natural(p), 10, rng);
+        bool m = is_likely_prime(natural(p), 10);
         bool e = is_prime(p);
         REQUIRE(m == e);
     }
 }
 
 TEST_CASE("merseinne primes vs is_likely_prime") {
-    std::mt19937_64 rng(0);
     std::vector<int> mp = {2, 3, 5, 7, 13, 17, 19, 31, 61, 89, 107, 127, 521, 607, 1279};
     for (int p = 2; p <= mp.back() + 1; p++) {
         natural a = pow(2_n, p) - 1;
-        const bool actual = is_likely_prime(a, 40, rng);
+        const bool actual = is_likely_prime(a, 40);
         const bool expected = (std::find(mp.begin(), mp.end(), p) != mp.end());
         if (actual != expected)
             print("p={} a.num_bits={} actual={} expected={}\n", p, a.num_bits(), actual, expected);

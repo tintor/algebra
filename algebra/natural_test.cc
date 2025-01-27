@@ -120,7 +120,7 @@ TEST_CASE("static_cast<uint64_t>") {
 }
 
 TEST_CASE("ucent") {
-    natural::dword a = 1;
+    uint128_t a = 1;
     for (int i = 0; i < 128; i++) {
         natural b(a);
         REQUIRE(b == a);

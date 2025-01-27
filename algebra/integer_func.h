@@ -23,7 +23,7 @@ constexpr integer exp2(std::integral auto exp) {
         throw std::runtime_error("negative exponent in exp2(...)");
     integer out;
     out.abs.words.reset((exp + 64) / 64);
-    out.abs.words.back() = integer::word(1) << (exp % 64);
+    out.abs.words.back() = uint64_t(1) << (exp % 64);
     return out;
 }
 

@@ -47,13 +47,37 @@ constexpr uint64_t pow(uint64_t base, unsigned exp) {
     return result;
 }
 
-constexpr unsigned long abs_ulong(std::integral auto a) { static_assert(sizeof(a) <= 8); return (a >= 0) ? a : (~static_cast<unsigned long>(a) + 1); }
+// assumes both A and B are in [0, M) range
+constexpr uint128_t add_mod(uint128_t a, uint128_t b, uint128_t m) {
+    return (b >= m - a) ? (a + b - m) : (a + b);
+}
+
+// assumes both A and B are in [0, M) range
+constexpr uint128_t mul_mod(uint128_t a, uint128_t b, uint128_t m) {
+    if (a == 0 || b == 0)
+        return 0;
+    if (a == 1)
+        return b;
+    if (b == 1)
+        return a;
+    if (a < UINT128_MAX / b)
+        return (a * b) % m;
+
+    uint128_t result = 0;
+    while (a && b) {
+        if (a < b)
+            std::swap(a, b);
+        if (b & 1)
+            result = add_mod(result, a, m);
+        a = add_mod(a, a, m);
+        b >>= 1;
+    }
+    return result;
+}
 
 // TODO test cases for operator float()
 struct natural {
     using size_type = integer_backend::size_type;
-    using word = uint64_t;
-    using dword = uint128_t;
 
     integer_backend words;
 
@@ -111,9 +135,9 @@ struct natural {
     constexpr operator uint128_t() const {
         if (!is_uint128())
             throw std::runtime_error("cast overflow");
-        dword a = words[0];
+        uint128_t a = words[0];
         if (words.size() >= 2)
-            a |= dword(words[1]) << 64;
+            a |= static_cast<uint128_t>(words[1]) << 64;
         return a;
     }
 
@@ -127,7 +151,7 @@ struct natural {
         return a;
     }
 
-    constexpr void __add(word b, size_type i) {
+    constexpr void __add(uint64_t b, size_type i) {
         while (true) {
             if (b == 0)
                 return;
@@ -135,14 +159,14 @@ struct natural {
                 words.push_back(b);
                 return;
             }
-            dword acc = (dword)words[i] + b;
+            uint128_t acc = (uint128_t)words[i] + b;
             words[i] = acc;
             b = acc >> 64;
             i += 1;
         }
     }
 
-    constexpr natural& operator+=(word b) {
+    constexpr natural& operator+=(uint64_t b) {
         __add(b, 0);
         return *this;
     }
@@ -162,7 +186,7 @@ struct natural {
             while (words.size() < b.words.size())
                 words.push_back(0);
         }
-        dword acc = 0;
+        uint128_t acc = 0;
         for (size_type i = 0; i < words.size(); ++i) {
             acc += words[i];
             if (i < b.words.size())
@@ -175,7 +199,7 @@ struct natural {
         return *this;
     }
 
-    constexpr natural& operator-=(word b) {
+    constexpr natural& operator-=(uint64_t b) {
         if (!words.allocated()) {
             if (words[0] < b)
                 throw std::runtime_error("natural can't be negative");
@@ -188,6 +212,11 @@ struct natural {
         if (words[0] < b && words.size() < 2)
             throw std::runtime_error("natural can't be negative");
 
+        if (words[0] > b) {
+            words[0] -= b;
+            return *this;
+        }
+
         words[0] -= b;
         for (size_type i = 1; i < words.size(); ++i)
             if (words[i]--)
@@ -197,9 +226,10 @@ struct natural {
         return *this;
     }
 
+    // TODO fix same issue as above
     constexpr natural& operator-=(uint128_t b) {
         if (b <= UINT64_MAX)
-            return operator-=(static_cast<word>(b));
+            return operator-=(static_cast<uint64_t>(b));
 
         // subtract low part of b
         if (words[0] < uint64_t(b) && words.size() < 2)
@@ -227,11 +257,11 @@ struct natural {
     }
 
     constexpr natural& operator-=(const natural& b) {
-        word borrow = 0;
+        uint64_t borrow = 0;
         for (size_type i = 0; i < b.words.size(); ++i) {
             int128_t diff = (int128_t)words[i] - b.words[i] - borrow;
             if (diff < 0) {
-                words[i] = diff + ((dword)1 << 64);
+                words[i] = diff + ((uint128_t)1 << 64);
                 borrow = 1;
             } else {
                 words[i] = diff;
@@ -241,7 +271,7 @@ struct natural {
         for (size_t i = b.words.size(); borrow && i < words.size(); ++i) {
             int128_t diff = (int128_t)words[i] - borrow;
             if (diff < 0) {
-                words[i] = diff + ((dword)1 << 64);
+                words[i] = diff + ((uint128_t)1 << 64);
                 borrow = 1;
             } else {
                 words[i] = diff;
@@ -262,7 +292,7 @@ struct natural {
             return;
         }
         for (size_type i = 0; i < words.size(); ++i) {
-            dword acc = (dword)words[i] * a + carry;
+            uint128_t acc = (uint128_t)words[i] * a + carry;
             words[i] = acc;
             carry = acc >> 64;
         }
@@ -272,31 +302,56 @@ struct natural {
     constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
 
     constexpr uint64_t operator%(std::integral auto b) const {
+        static_assert(sizeof(b) <= 8);
         if (b <= 0)
             throw std::runtime_error((b == 0) ? "division by zero" : "division of natural by negative number");
-        dword acc = 0;
+        uint128_t acc = 0;
         for (size_type i = words.size(); i-- > 0;) {
             acc <<= 64;
             acc |= words[i];
-            acc %= static_cast<word>(b);
+            acc %= static_cast<uint64_t>(b);
         }
         return acc;
+    }
+
+    constexpr uint128_t operator%(const uint128_t b) const {
+        if (b <= UINT64_MAX)
+            return operator%(static_cast<uint64_t>(b));
+        if (b == 0)
+            throw std::runtime_error("division by zero");
+
+        // compute m = (2**128) % b
+        uint128_t m = UINT128_MAX % b;
+        m += 1;
+        if (m == b)
+            m = 0;
+
+        uint128_t res = 0;
+        for (size_type i = 0; i < words.size(); i += 2) {
+            res = mul_mod(res, m, b);
+            uint128_t acc = words[i];
+            if (i + 1 < words.size())
+                acc |= static_cast<uint128_t>(words[i + 1]) << 64;
+            res = add_mod(res, acc % b, b);
+        }
+        return res;
     }
 
     constexpr uint64_t mod2() const { return words[0] % 2; }
 
     constexpr uint64_t mod3() const {
-        word acc = 0;
+        uint64_t acc = 0;
         for (size_type i = words.size(); i-- > 0;)
             acc += words[i] % 3;
         return acc % 3;
     }
 
+    // 1180591620717411302909 = 30101795611 * 39219973319 in 294820 ms
     constexpr uint64_t mod4() const { return words[0] % 4; }
 
     constexpr uint64_t mod5() const {
-        word acc = 0;
-        if (words.size() > std::numeric_limits<word>::max() / 4) {
+        uint64_t acc = 0;
+        if (words.size() > UINT64_MAX / 4) {
             for (size_type i = words.size(); i-- > 0;) {
                 acc += words[i] % 5;
                 if ((i % 65536) == 0)
@@ -333,7 +388,7 @@ struct natural {
     constexpr bool bit(size_t i) const {
         size_t w = i / 64;
         size_t b = i % 64;
-        return w < words.size() && (words[w] & (word(1) << b));
+        return w < words.size() && (words[w] & (uint64_t(1) << b));
     }
 
     constexpr size_t popcount() const {

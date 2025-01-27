@@ -2,6 +2,16 @@
 #include "algebra/natural_func.h"
 #include "algebra/__test.h"
 
+TEST_CASE("ctor") {
+    integer a = -1;
+    integer b(a.abs);
+    REQUIRE(b == 1);
+    REQUIRE(b.sign() == 1);
+    integer c(a);
+    REQUIRE(c == -1);
+    REQUIRE(c.sign() == -1);
+}
+
 TEST_CASE("operator-") {
     integer a = 20;
     a = -a;

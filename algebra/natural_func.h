@@ -1,6 +1,5 @@
 #pragma once
 #include "algebra/natural.h"
-#include <random>
 #include <span>
 
 namespace algebra {
@@ -11,7 +10,7 @@ constexpr natural pow(natural base, std::integral auto exp) {
     if (base == 2) {
         natural out;
         out.words.reset((exp + 64) / 64);
-        out.words.back() = natural::word(1) << (exp % 64);
+        out.words.back() = uint64_t(1) << (exp % 64);
         return out;
     }
 
@@ -49,13 +48,13 @@ constexpr natural pow(natural base, const natural& _exp) {
 
 // uniformly sample from [0, (2**n)-1]
 constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
-    static_assert(sizeof(rng()) == sizeof(natural::word));
+    static_assert(sizeof(rng()) == 8);
     auto w = (n + 64 - 1) / 64;
     out.words.reset(w, /*initialize*/false);
     while (w--)
         out.words[w] = rng();
     if ((n % 64) != 0)
-        out.words.back() &= (natural::word(1) << (n % 64)) - 1;
+        out.words.back() &= (uint64_t(1) << (n % 64)) - 1;
     out.words.normalize();
 }
 
@@ -194,8 +193,8 @@ constexpr natural gcd(natural a, natural b) {
     return a;
 }
 
-constexpr natural gcd(std::integral auto a, natural b) { return gcd(natural(abs_ulong(a)), std::move(b)); }
-constexpr natural gcd(natural a, std::integral auto b) { return gcd(std::move(a), natural(abs_ulong(b))); }
+constexpr natural gcd(natural a, std::integral auto b) { return gcd(std::move(a), natural(make_unsigned((b < 0) ? -b : b))); }
+constexpr natural gcd(std::integral auto a, natural b) { return gcd(std::move(b), a); }
 
 // least common multiple
 constexpr natural lcm(const natural& a, const natural& b) {
@@ -390,27 +389,25 @@ constexpr bool is_prime(const uint64_t n) {
 // It returns false if n is composite and returns true if n
 // is probably prime.  k is an input parameter that determines
 // accuracy level. Higher value of `rounds` indicates more accuracy.
-constexpr bool is_likely_prime(const natural& n, int rounds, auto& rng) {
+constexpr bool is_likely_prime(const natural& n, int rounds) {
     if (n.is_uint64())
         return is_prime(static_cast<uint64_t>(n));
 
-    if (n <= 4)
-        return n == 2 || n == 3;
-    if (n.is_even())
+    std::array<int, 40> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
+        71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173};
+    if (rounds > primes.size())
+        throw std::runtime_error("rounds arg is too high");
+    if (n.mod2() == 0 || n.mod3() == 0 || n.mod5() == 0)
         return false;
 
     const natural n_minus_1 = n - 1;
-    const natural n_minus_3 = n - 3;
     auto s = n_minus_1.num_trailing_zeros();
     natural d = n_minus_1;
     d >>= s;
     natural x, a;
 
-    // TODO first few bases should be small and deterministic
     for (int i = 0; i < rounds; i++) {
-        // sample uniformly from [2, n-2] and store in a
-        uniform_sample(n_minus_3, rng, /*out*/a);
-        a += 2;
+        a = primes[i];
 
         pow_mod(a, d, n, /*out*/x);
         if (x == 1 || x == n_minus_1)
@@ -437,16 +434,6 @@ constexpr bool is_possible_square(const natural& a) {
     return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
 }
 
-enum class IsPrime {
-    Yes, Likely, No
-};
-
-struct Factor {
-    natural factor;
-    uint32_t count;
-    IsPrime is_prime;
-};
-
 uint64_t try_fermat_factorize(uint64_t n) {
     if (n % 2 == 0)
         return 2;
@@ -470,86 +457,11 @@ uint64_t try_fermat_factorize(uint64_t n) {
     return 0;
 }
 
-constexpr std::vector<Factor> factorize(natural a) {
-    if (a <= 1)
-        return {};
-
-    std::vector<Factor> out;
-
-    uint32_t z = a.num_trailing_zeros();
-    if (z > 0) {
-        out.push_back({2, z, IsPrime::Yes});
-        a >>= z;
-    }
-
-    std::optional<natural> a_sqrt;
-    if (is_possible_square(a)) {
-        natural s = isqrt(a);
-        if (s * s == a) {
-            auto factors = factorize(s);
-            for (Factor& f : factors)
-                out.push_back({std::move(f.factor), f.count * 2, f.is_prime});
-            return out;
-        }
-        a_sqrt = std::move(s);
-    }
-
-    std::optional<std::mt19937_64> rng;
-    uint64_t p = 3;
-    while (a > 1) {
-        if (p > 256) {
-            if (a_sqrt == std::nullopt) {
-                natural s = isqrt(a);
-                if (s * s == a) {
-                    // TODO downside here is that recursion will try to search for factors again from 3
-                    auto factors = factorize(s);
-                    for (Factor& f : factors)
-                        out.push_back({std::move(f.factor), f.count * 2, f.is_prime});
-                    return out;
-                }
-                a_sqrt = std::move(s);
-
-                if (a <= UINT64_MAX) {
-                    if (is_prime(static_cast<uint64_t>(a))) {
-                        out.push_back({a, 1, IsPrime::Yes});
-                        break;
-                    }
-                } else {
-                    if (rng == std::nullopt)
-                        rng = std::mt19937_64(0);
-                    if (is_likely_prime(a, 40, *rng)) {
-                        out.push_back({a, 1, IsPrime::Likely});
-                        break;
-                    }
-                    out.push_back({a, 1, IsPrime::No});
-                    break;
-                }
-            }
-            if (p > *a_sqrt) {
-                out.push_back({a, 1, IsPrime::Yes});
-                break;
-            }
-        } else {
-            if (p >= a) {
-                out.push_back({a, 1, IsPrime::Yes});
-                break;
-            }
-        }
-
-        // TODO make this O(log(count)) instead of O(count)
-        uint32_t count = 0;
-        while (a % p == 0) {
-            a /= p;
-            count += 1;
-        }
-        if (count)
-            out.push_back(Factor{p, count, IsPrime::Yes});
-        p += 2;
-    }
-    return out;
-}
+constexpr bool is_likely_prime(const natural& n, int rounds);
 
 constexpr std::vector<std::pair<uint64_t, int>> factorize(uint64_t a) {
+    if (a <= 1)
+        return {};
     std::vector<std::pair<uint64_t, int>> out;
     auto z = std::countr_zero(a);
     if (z) {
@@ -623,6 +535,116 @@ constexpr std::vector<std::pair<uint64_t, int>> factorize(uint64_t a) {
     return out;
 }
 
+constexpr std::vector<std::pair<natural, int>> factorize(natural a) {
+    if (a <= 1)
+        return {};
+    std::vector<std::pair<natural, int>> out;
+
+    auto count = a.num_trailing_zeros();
+    if (count) {
+        out.emplace_back(2, count);
+        a >>= count;
+        if (a == 1)
+            return out;
+    }
+
+    if (a.mod3() == 0) {
+        count = 1;
+        a /= 3;
+        while (a > 1 && a.mod3() == 0) {
+            a /= 3;
+            count += 1;
+        }
+        out.emplace_back(3, count);
+        if (a == 1)
+            return out;
+    }
+
+    int f = 1;
+    while (is_possible_square(a)) {
+        natural s = isqrt(a);
+        if (s * s != a)
+            break;
+        a = s;
+        f *= 2;
+    }
+    if (is_likely_prime(a, 40)) {
+        out.emplace_back(a, f);
+        return out;
+    }
+    if (a.is_uint64()) {
+        for (auto e : factorize(static_cast<uint64_t>(a)))
+            out.push_back({e.first, e.second * f});
+        return out;
+    }
+
+    uint64_t p = 5;
+    while (true) {
+        if (a % p == 0) {
+            int count = f;
+            a /= p;
+            while (a % p == 0) {
+                a /= p;
+                count += f;
+            }
+            out.emplace_back(p, count);
+            if (a == 1)
+                break;
+
+            while (is_possible_square(a)) {
+                natural s = isqrt(a);
+                if (s * s != a)
+                    break;
+                a = s;
+                f *= 2;
+            }
+            if (is_likely_prime(a, 40)) {
+                out.emplace_back(a, f);
+                break;
+            }
+            if (a.is_uint64()) {
+                for (auto e : factorize(static_cast<uint64_t>(a)))
+                    out.push_back({e.first, e.second * f});
+                return out;
+            }
+        }
+        p += 2;
+
+        if (a % p == 0) {
+            int count = f;
+            a /= p;
+            while (a % p == 0) {
+                a /= p;
+                count += f;
+            }
+            out.emplace_back(p, count);
+            if (a == 1)
+                break;
+
+            while (is_possible_square(a)) {
+                natural s = isqrt(a);
+                if (s * s != a)
+                    break;
+                a = s;
+                f *= 2;
+            }
+            if (is_likely_prime(a, 40)) {
+                out.emplace_back(a, f);
+                break;
+            }
+            if (a.is_uint64()) {
+                for (auto e : factorize(static_cast<uint64_t>(a)))
+                    out.push_back({e.first, e.second * f});
+                return out;
+            }
+        }
+        p += 4;
+        if (p < 5)
+            throw std::runtime_error("overflow");
+    }
+    return out;
+}
+
 constexpr bool is_power_of_two(const natural& a) {
     return a.num_bits() == 1 + a.num_trailing_zeros();
 }
@@ -690,7 +712,6 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
         a_sqrt = std::move(s);
     }
 
-    std::optional<std::mt19937_64> rng;
     uint64_t p = 3;
     while (a > 1) {
         if (p > 256) {
@@ -701,10 +722,7 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
                     return;
                 }
                 a_sqrt = std::move(s);
-
-                if (rng == std::nullopt)
-                    rng = std::mt19937_64(0);
-                if (is_likely_prime(a, 40, *rng))
+                if (is_likely_prime(a, 40))
                     break;
             }
             if (p > *a_sqrt)

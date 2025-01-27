@@ -88,10 +88,13 @@ constexpr real<Base>::real(const rational& s) {
     } else {
         const auto base_factors = factorize(Base);
         // Check if s.den has any prime factors not in base
-        integer a = s.den;
+        natural a = s.den.abs, q;
         for (auto [factor, count] : base_factors)
-            while (a > 1 && a % factor == 0)
-                a /= static_cast<long>(factor);
+            while (a > 1) {
+                if (div(a, factor, q))
+                    break;
+                std::swap(a, q);
+            }
         if (a > 1)
             throw std::runtime_error("inexact conversion");
 

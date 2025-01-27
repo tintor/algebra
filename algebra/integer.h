@@ -14,18 +14,15 @@ struct neg_integer {
 
 struct integer {
     using size_type = natural::size_type;
-    using word = natural::word;
-    using dword = natural::dword;
 
     natural abs;
 
     constexpr integer() {}
-    constexpr integer(std::unsigned_integral auto a) : abs(a) { }
-    constexpr integer(std::signed_integral auto a) : abs(abs_ulong(a)) { if (a < 0) abs.words.negate(); }
+    constexpr integer(std::integral auto a) : abs(make_unsigned((a < 0) ? -a : a)) { if (a < 0) negate(); }
     constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
     constexpr integer(natural&& o) : abs(std::move(o)) { }
     constexpr integer(const integer& o) : abs(o.abs) { }
-    constexpr integer(const natural& o) : abs(o) { }
+    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); }
 
 #if 0
     constexpr integer(const neg_integer& o) : integer(*o.a) { negate(); }
@@ -62,7 +59,7 @@ struct integer {
             return false;
         if (abs.words[0] <= INT16_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<word>(INT16_MAX) + 1;
+        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT16_MAX) + 1;
     }
 
     constexpr bool is_int32() const {
@@ -70,7 +67,7 @@ struct integer {
             return false;
         if (abs.words[0] <= INT32_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<word>(INT32_MAX) + 1;
+        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT32_MAX) + 1;
     }
 
     constexpr bool is_int64() const {
@@ -78,7 +75,7 @@ struct integer {
             return false;
         if (abs.words[0] <= INT64_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<word>(INT64_MAX) + 1;
+        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT64_MAX) + 1;
     }
 
     constexpr bool is_int128() const {
@@ -87,10 +84,10 @@ struct integer {
         if (abs.words.size() < 2)
             return true;
 
-        word w = abs.words[1];
-        if ((w & (word(1) << 63)) == 0)
+        uint64_t w = abs.words[1];
+        if ((w & (uint64_t(1) << 63)) == 0)
             return true;
-        return sign() < 0 && w == word(1) << 63;
+        return sign() < 0 && w == uint64_t(1) << 63;
     }
 
     constexpr bool is_uint8() const { return sign() >= 0 && abs.is_uint8(); }
@@ -118,10 +115,10 @@ struct integer {
     static_assert(sizeof(long long) == 8);
 
     constexpr operator __int128() const {
-        if (sign() == 2) return (dword(abs.words[1]) << 64) | abs.words[0];
-        if (sign() == 1) return dword(abs.words[0]);
-        if (sign() == -1) return -dword(abs.words[0]);
-        if (sign() == -2) return -((dword(abs.words[1]) << 64) | abs.words[0]);
+        if (sign() == 2) return (uint128_t(abs.words[1]) << 64) | abs.words[0];
+        if (sign() == 1) return uint128_t(abs.words[0]);
+        if (sign() == -1) return -uint128_t(abs.words[0]);
+        if (sign() == -2) return -((uint128_t(abs.words[1]) << 64) | abs.words[0]);
         return 0;
     }
 
@@ -155,11 +152,11 @@ struct integer {
             return abs.popcount();
 
         size_t c = 0;
-        word carry = 1;
+        uint64_t carry = 1;
         for (size_type i = 0; i < abs.words.size(); i++) {
-            dword w = (dword)abs.words[i] + carry;
+            uint128_t w = (uint128_t)abs.words[i] + carry;
             carry = w >> 64;
-            c += std::popcount(~static_cast<word>(w));
+            c += std::popcount(~static_cast<uint64_t>(w));
         }
         return c;
     }
@@ -170,17 +167,17 @@ struct integer {
 
     constexpr integer& operator++() {
         if (!is_negative())
-            abs += word(1);
+            abs += uint64_t(1);
         else
-            abs -= word(1);
+            abs -= uint64_t(1);
         return *this;
     }
 
     constexpr integer& operator--() {
         if (is_negative())
-            abs += word(1);
+            abs += uint64_t(1);
         else if (abs.words.size() > 0)
-            abs -= word(1);
+            abs -= uint64_t(1);
         else
             *this = -1;
         return *this;
@@ -286,19 +283,37 @@ constexpr integer& operator-=(integer& a, const integer& b) {
     return a;
 }
 
-constexpr integer& operator+=(integer& a, std::integral auto b) { return a += integer(b); }
-constexpr integer& operator-=(integer& a, std::integral auto b) { return a -= integer(b); }
+// TODO finish this!
+constexpr integer& operator+=(integer& a, std::integral auto b) {
+    if (b < 0)
+        return a -= make_unsigned(-b);
+    if (a.is_negative()) {
+        a.abs -= make_unsigned(b); // what if A needs to flip sign?
+    } else {
+        a.abs += make_unsigned(b);
+    }
+    return a;
+}
+
+// TODO finish this!
+constexpr integer& operator-=(integer& a, std::integral auto b) {
+    if (b < 0)
+        return a += make_unsigned(-b);
+    if (a.is_negative()) {
+        a.abs += make_unsigned(-b);
+        a.abs.words.set_negative(true);
+    } else {
+        a.abs -= make_unsigned(b); // what if A needs to flip sign?
+    }
+    return a;
+}
 
 constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
 
-constexpr bool operator==(std::integral auto a, const integer& b) {
-    // TODO(optimize) comparison with large cent/ucent here will require temp allocation!
-    return integer(a) == b;
-}
-
 constexpr bool operator==(const integer& a, std::integral auto b) {
-    // TODO(optimize) comparison with large cent/ucent here will require temp allocation!
-    return a == integer(b);
+    if (b < 0)
+        return a.is_negative() && a.abs == make_unsigned(-b);
+    return !a.is_negative() && a.abs == make_unsigned(b);
 }
 
 constexpr void mul(const integer& a, const integer& b, integer& c) {
@@ -331,7 +346,6 @@ constexpr integer operator*(const integer& a, std::integral auto b) {
     mul(a, integer(b), c);
     return c;
 }
-constexpr integer operator*(std::integral auto a, const integer& b) { return b * a; }
 
 constexpr integer& operator*=(integer& a, const integer& b) {
     mul(a, b);
@@ -346,9 +360,9 @@ constexpr integer& operator*=(integer& a, const natural& b) {
 }
 
 constexpr integer& operator*=(integer& a, std::integral auto b) {
-    a.abs *= abs_ulong(b);
-    if (b < 0)
-        a.negate();
+    const bool negative = a.is_negative() != (b < 0);
+    a.abs *= make_unsigned((b < 0) ? -b : b);
+    a.abs.words.set_negative(negative);
     return a;
 }
 
@@ -386,7 +400,7 @@ constexpr integer operator/(const integer& a, const integer& b) {
     return quot;
 }
 
-constexpr long div(const integer& a, long b, integer& quot) {
+constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
     if (b == 1) {
         quot = a;
         return 0;
@@ -395,20 +409,20 @@ constexpr long div(const integer& a, long b, integer& quot) {
         quot = -a;
         return 0;
     }
-    auto rem = div(a.abs, abs_ulong(b), quot.abs);
+    int64_t rem = div(a.abs, make_unsigned((b < 0) ? -b : b), quot.abs);
     if (quot.abs)
         quot.abs.words.set_negative(a.is_negative() != (b < 0));
-    return (a.is_negative() != (b < 0)) ? -static_cast<long>(rem) : static_cast<long>(rem);
+    return a.is_negative() ? -rem : rem;
 }
 
-constexpr integer operator/(const integer& a, long b) {
+constexpr integer operator/(const integer& a, int64_t b) {
     integer quot;
     div(a, b, quot);
     return quot;
 }
 
-constexpr integer operator/(const integer& a, int b) { return a / (long)b; }
-constexpr integer operator/(const integer& a, unsigned b) { return a / (long)b; }
+constexpr integer operator/(const integer& a, int b) { return a / (int64_t)b; }
+constexpr integer operator/(const integer& a, unsigned b) { return a / (int64_t)b; }
 // TODO ulong?
 
 constexpr void operator/=(integer& a, const integer& b) {
@@ -416,7 +430,7 @@ constexpr void operator/=(integer& a, const integer& b) {
     div(a, b, a, rem);
 }
 
-constexpr void operator/=(integer& a, long b) { div(a, b, a); }
+constexpr void operator/=(integer& a, int64_t b) { div(a, b, a); }
 constexpr void operator/=(integer& a, int b) { div(a, (long)b, a); }
 constexpr void operator/=(integer& a, unsigned b) { div(a, (long)b, a); }
 // TODO ulong?
@@ -427,25 +441,25 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
     return remainder;
 }
 
-constexpr long operator%(const integer& a, long b) {
+constexpr int64_t operator%(const integer& a, int64_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
-    integer::dword acc = 0;
+    uint128_t acc = 0;
     for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= a.abs.words[i];
-        acc %= abs_ulong(b);
+        acc %= make_unsigned((b < 0) ? -b : b);
     }
-    return (b >= 0) ? acc : -static_cast<long>(acc);
+    return (a.sign() >= 0) ? acc : -static_cast<int64_t>(acc);
 }
 
-constexpr int operator%(const integer& a, int b) { return a % (long)b; }
-constexpr long operator%(const integer& a, unsigned b) { return a % (long)b; }
+constexpr int operator%(const integer& a, int b) { return a % (int64_t)b; }
+constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)b; }
 
 constexpr integer operator%(const integer& a, uint64_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
-    integer::dword acc = 0;
+    uint128_t acc = 0;
     for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= a.abs.words[i];
@@ -457,7 +471,7 @@ constexpr integer operator%(const integer& a, uint64_t b) {
 constexpr uint64_t mod(const integer& a, uint64_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
-    integer::dword acc = 0;
+    uint128_t acc = 0;
     for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= a.abs.words[i];
@@ -473,10 +487,10 @@ constexpr uint64_t mod(const integer& a, uint64_t b) {
 constexpr unsigned mod(const integer& a, unsigned b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
-    integer::word m = (integer::word(1) << 32) % b;
+    uint64_t m = (uint64_t(1) << 32) % b;
     m = (m * m) % b;
 
-    integer::word acc = 0;
+    uint64_t acc = 0;
     for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
         acc *= m;
         acc += a.abs.words[i] % b;

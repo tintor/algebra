@@ -10,6 +10,7 @@ template<std::integral T> constexpr std::make_unsigned_t<T> make_unsigned(T a) {
 
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
+static const auto UINT128_MAX = std::numeric_limits<uint128_t>::max();
 
 template<typename T>
 auto signum(T a) { return (a > 0) - (a < 0); }
