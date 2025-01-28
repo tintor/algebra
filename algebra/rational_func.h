@@ -195,8 +195,9 @@ constexpr rational PI(unsigned n) {
 }
 
 constexpr rational sin(rational x, unsigned n) {
-    const bool negate = x.num.sign() < 0;
-    x.num.abs.words.set_negative(false);
+    const bool negate = x.num.is_negative();
+    if (negate)
+        x.num.negate();
     x %= 2 * PI(10);
 
     rational out = x;
@@ -216,7 +217,8 @@ constexpr rational sin(rational x, unsigned n) {
 }
 
 constexpr rational cos(rational x, unsigned n) {
-    x.num.abs.words.set_negative(false);
+    if (x.num.is_negative())
+        x.num.negate();
     x %= 2 * PI(10);
 
     rational out = 1;
