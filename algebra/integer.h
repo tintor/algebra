@@ -46,6 +46,12 @@ struct integer {
     constexpr bool is_one() const { return abs.words.size() == 1 && abs.words[0] == 1 && sign() >= 0; }
     constexpr bool is_zero() const { return abs.words.size() == 0; }
 
+    constexpr operator natural() const {
+        if (is_negative())
+            throw std::runtime_error("can't assign negative to natural");
+        return abs;
+    }
+
     constexpr bool is_int8() const {
         if (abs.words.size() > 1)
             return false;

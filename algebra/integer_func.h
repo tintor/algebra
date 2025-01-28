@@ -21,23 +21,22 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
 constexpr integer exp2(std_int auto exp) {
     if (exp < 0)
         throw std::runtime_error("negative exponent in exp2(...)");
-    integer out;
-    out.abs.words.reset((exp + 64) / 64);
-    out.abs.words.back() = uint64_t(1) << (exp % 64);
+    integer out = 1;
+    out <<= exp;
     return out;
 }
 
 constexpr integer pow(integer base, std_int auto exp) {
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
     if (base == 2)
         return exp2(exp);
     if (base == 4)
         return exp2(static_cast<uint64_t>(exp) * 2);
     if (base == 8)
         return exp2(static_cast<uint64_t>(exp) * 3);
-    if (base.sign() > 0 && is_power_of_two(base.abs))
+    if (is_power_of_two(base))
         return exp2(static_cast<uint64_t>(exp) * base.num_trailing_zeros());
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(integer, ...)");
     if (exp == 0)
         return 1;
     if (exp == 1)
@@ -67,7 +66,7 @@ constexpr integer pow(integer base, std_int auto exp, integer result) {
         return 1;
     if (exp == 1)
         return result * base;
-    if (base.sign() > 0 && is_power_of_two(base.abs))
+    if (is_power_of_two(base))
         return result << (static_cast<uint64_t>(exp) * base.num_trailing_zeros());
 
     if (exp & 1)
@@ -126,7 +125,9 @@ constexpr bool mod_inverse(const natural& a, const natural& n, natural& out) {
         return false;
     if (t.sign() < 0)
         t += n;
-    out = t.abs;
+    if (t.sign() < 0)
+        t.negate();
+    out = t;
     return true;
 }
 
