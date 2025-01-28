@@ -508,19 +508,22 @@ constexpr natural& operator-=(natural& a, const std_signed_int auto b) {
     return a -= make_unsigned(b);
 }
 
-constexpr bool operator<(const natural& a, const natural& b) {
-    if (a.words.size() > b.words.size())
+template<std_int Size>
+constexpr bool __less(const uint64_t* a, const Size A, const uint64_t* b, const Size B) {
+    if (A > B)
         return false;
-    if (a.words.size() < b.words.size())
+    if (A < B)
         return true;
-    for (auto i = a.words.size(); i-- > 0;) {
-        if (a.words[i] > b.words[i])
+    for (auto i = A; i-- > 0;) {
+        if (a[i] > b[i])
             return false;
-        if (a.words[i] < b.words[i])
+        if (a[i] < b[i])
             return true;
     }
     return false;
 }
+
+constexpr bool operator<(const natural& a, const natural& b) { return __less(a.words.data(), a.words.size(), b.words.data(), b.words.size()); }
 
 constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { return a.words[0] < b && a.words.size() <= 1; }
 constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
@@ -570,40 +573,60 @@ constexpr bool operator==(const natural& a, const std_unsigned_int auto b) {
 }
 constexpr bool operator==(const natural& a, const std_signed_int auto b) { return b >= 0 && a == make_unsigned(b); }
 
-// TODO can this be optimized for mul(a, a, out)?
+// `q` needs to have capacity of at least A + B!
+// supports q == a
+// b != q
+template<std_int Size>
+constexpr void __mul(const uint64_t* a, const Size A, const uint64_t* b, const Size B, uint64_t* q, Size& Q, bool init = true) {
+    // TODO if a != q it might be possible to swap a and b depending on their sizes! maybe have A be smaller than B
 
-// supports &a == &out
-constexpr void __mul(const natural& a, const natural& b, natural& out) {
-    if (&a != &out)
-        out.set_zero();
-    auto as = a.words.size();
-    out.words.resize(a.words.size() + b.words.size());
-    for (auto i = as; i-- > 0;) {
-        const auto w = a.words[i];
+    Q = A + B;
+    if (init)
+        for (Size i = A; i < Q; i++)
+            q[i] = 0;
+    for (Size i = A; i-- > 0;) {
+        const uint64_t w = a[i];
         if (w == 0)
             continue;
-        uint128_t acc = 0;
-        out.words[i] = 0;
-        natural::size_type j = 0;
-        while (j < b.words.size()) {
-            acc += __mulq(w, b.words[j]);
-            acc += out.words[i + j];
-            out.words[i + j] = acc;
+
+        uint64_t* qi = q + i;
+        auto acc = __mulq(w, *b);
+        *qi = acc;
+        acc >>= 64;
+        Size j = 1;
+
+        while (j < B) {
+            acc += __mulq(w, b[j]);
+            acc += qi[j];
+            qi[j] = acc;
             acc >>= 64;
             j += 1;
         }
+
         if (acc) {
-            acc += out.words[i + j];
-            out.words[i + j] = acc;
+            acc += qi[j];
+            qi[j] = acc;
             acc >>= 64;
             if (acc) {
                 j += 1;
-                acc += out.words[i + j];
-                out.words[i + j] = acc;
+                acc += qi[j];
+                qi[j] = acc;
             }
         }
     }
-    out.words.normalize();
+    while (Q && !q[Q - 1])
+        Q -= 1;
+}
+
+// supports &a == &q
+constexpr void __mul(const natural& a, const natural& b, natural& q) {
+    natural::size_type Q;
+    if (&a != &q)
+        q.set_zero();
+    auto A = a.words.size();
+    q.words.resize(A + b.words.size());
+    __mul(a.words.data(), A, b.words.data(), b.words.size(), q.words.data(), Q, /*init*/false);
+    q.words.resize(Q);
 }
 
 constexpr void __mul(const natural& a, uint128_t b, natural& out) {

@@ -146,6 +146,8 @@ public:
     constexpr size_type size() const { return std::abs(_size); }
     constexpr bool empty() const { return _size == 0; }
     constexpr bool allocated() const { return _capacity; }
+    constexpr const uint64_t* data() const { return _capacity ? _words : &_single_word; }
+    constexpr uint64_t* data() { return _capacity ? _words : &_single_word; }
     constexpr uint64_t operator[](size_type i) const { return _capacity ? _words[i] : _single_word; }
     constexpr uint64_t& operator[](size_type i) { return _capacity ? _words[i] : _single_word; }
     constexpr uint64_t back() const { return operator[](size() - 1); }

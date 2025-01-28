@@ -146,9 +146,9 @@ constexpr rational operator/(const rational&, const rational&);
 constexpr rational operator/(const rational&, const integral auto&);
 constexpr rational operator/(const integral auto&, const rational&);
 
-constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num < b.num) : (a.num * b.den <  b.num * a.den); }
-constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a < b.num) : (a * b.den < b.num); }
-constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_one() ? (a.num < b) : (a.num < b * a.den); }
+constexpr bool operator<(const rational& a, const rational& b) { return (a.den == b.den) ? (a.num < b.num) : less_ab_cd(a.num, b.den, b.num, a.den); }
+constexpr bool operator<(integral auto a, const rational& b) { return b.den.is_one() ? (a < b.num) : less_ab_c(a, b.den, b.num); }
+constexpr bool operator<(const rational& a, integral auto b) { return a.den.is_one() ? (a.num < b) : less_a_bc(a.num, b, a.den); }
 
 constexpr bool operator==(const rational& a, const rational& b) { return a.num == b.num && a.den == b.den; }
 constexpr bool operator==(const rational& a, const integral auto b) { return a.num == b && a.den.is_one(); }
@@ -308,40 +308,6 @@ constexpr rational operator*(const rational& a, const integral auto& b) { return
 constexpr rational operator*(const integral auto& a, const rational& b) { return {a * b.num, b.den}; }
 
 constexpr rational& operator/=(rational& a, const rational& b) {
-#if 0
-    integer e;
-
-    auto z = a.den.num_trailing_zeros();
-    if (z >= 64)
-        z = std::min(z, b.den.num_trailing_zeros());
-        if (z >= 64) {
-            e = b.den;
-            e >>= z;
-            a.num *= e;
-            a.den >>= z;
-
-            // since z > 0, q must be 0
-            a.den *= b.num;
-            a.simplify();
-            return a;
-        }
-    }
-
-    auto q = a.num.num_trailing_zeros();
-    if (q >= 64) {
-        q = std::min(q, b.num.num_trailing_zeros()));
-        if (q >= 64) {
-            a.num >>= q;
-            a.num *= b.den;
-            e = b.num;
-            e >>= q;
-            a.den *= e;
-            a.simplify();
-            return a;
-        }
-    }
-#endif
-
     a.num *= b.den;
     a.den *= b.num;
     a.simplify();
