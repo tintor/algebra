@@ -1,5 +1,6 @@
 #include "algebra/natural.h"
 #include "algebra/__test.h"
+#include <catch2/benchmark/catch_benchmark.hpp>
 
 TEST_CASE("div 10") {
     natural a = 10;
@@ -27,6 +28,88 @@ natural rand_natural(int size, Random& rng) {
     for (int i = 0; i < size; i++)
         a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
     return a;
+}
+
+#if 1
+TEST_CASE("mul benchmark") {
+    Random rng(0);
+    natural a, b;
+
+    a = rand_natural(4, rng);
+    b = rand_natural(4, rng);
+    BENCHMARK("a * b 4") { return a * b; };
+    BENCHMARK("karatsuba 4") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(8, rng);
+    b = rand_natural(8, rng);
+    BENCHMARK("a * b 8") { return a * b; };
+    BENCHMARK("karatsuba 8") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(16, rng);
+    b = rand_natural(16, rng);
+    BENCHMARK("a * b 16") { return a * b; };
+    BENCHMARK("karatsuba 16") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(32, rng);
+    b = rand_natural(32, rng);
+    BENCHMARK("a * b 32") { return a * b; };
+    BENCHMARK("karatsuba 32") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(64, rng);
+    b = rand_natural(64, rng);
+    BENCHMARK("a * b 64") { return a * b; };
+    BENCHMARK("karatsuba 64") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(128, rng);
+    b = rand_natural(128, rng);
+    BENCHMARK("a * b 128") { return a * b; };
+    BENCHMARK("karatsuba 128") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(256, rng);
+    b = rand_natural(256, rng);
+    BENCHMARK("a * b 256") { return a * b; };
+    BENCHMARK("karatsuba 256") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(512, rng);
+    b = rand_natural(512, rng);
+    BENCHMARK("a * b 512") { return a * b; };
+    BENCHMARK("karatsuba 512") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(5120, rng);
+    b = rand_natural(5120, rng);
+    BENCHMARK("a * b 5120") { return a * b; };
+    BENCHMARK("karatsuba 5120") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(5120*2, rng);
+    b = rand_natural(5120*2, rng);
+    BENCHMARK("a * b 5120*2") { return a * b; };
+    BENCHMARK("karatsuba 5120*2") { return mul_karatsuba(a, b); };
+}
+#endif
+
+TEST_CASE("mul_karatsuba easy") {
+    natural a;
+    natural b;
+    a.words.reset(4);
+    a.words[0] = 1;
+    a.words[1] = 2;
+    a.words[2] = 3;
+    a.words[3] = 4;
+    b.words.reset(4);
+    b.words[0] = 5;
+    b.words[1] = 6;
+    b.words[2] = 7;
+    b.words[3] = 8;
+    REQUIRE(a * b == mul_karatsuba(a, b));
+}
+
+TEST_CASE("mul_karatsuba") {
+    Random rng(0);
+    for (int i = 0; i < 1000'000; i++) {
+        natural a = rand_natural(rng.Uniform<int>(0, 4), rng);
+        natural b = rand_natural(rng.Uniform<int>(0, 4), rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
 }
 
 TEST_CASE("__word_div") {

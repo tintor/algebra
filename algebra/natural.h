@@ -576,15 +576,14 @@ constexpr bool operator==(const natural& a, const std_signed_int auto b) { retur
 // `q` needs to have capacity of at least A + B!
 // supports q == a
 // b != q
-template<std_int Size>
-constexpr void __mul(const uint64_t* a, const Size A, const uint64_t* b, const Size B, uint64_t* q, Size& Q, bool init = true) {
+constexpr void __mul(const uint64_t* a, const int A, const uint64_t* b, const int B, uint64_t* q, int& Q, bool init = true) {
     // TODO if a != q it might be possible to swap a and b depending on their sizes! maybe have A be smaller than B
 
     Q = A + B;
     if (init)
-        for (Size i = A; i < Q; i++)
+        for (int i = A; i < Q; i++)
             q[i] = 0;
-    for (Size i = A; i-- > 0;) {
+    for (int i = A; i-- > 0;) {
         const uint64_t w = a[i];
         if (w == 0)
             continue;
@@ -593,7 +592,7 @@ constexpr void __mul(const uint64_t* a, const Size A, const uint64_t* b, const S
         auto acc = __mulq(w, *b);
         *qi = acc;
         acc >>= 64;
-        Size j = 1;
+        int j = 1;
 
         while (j < B) {
             acc += __mulq(w, b[j]);
@@ -616,6 +615,190 @@ constexpr void __mul(const uint64_t* a, const Size A, const uint64_t* b, const S
     }
     while (Q && !q[Q - 1])
         Q -= 1;
+}
+
+// shift must be >= 0
+constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int shift = 0) {
+    //std::print("_add a");
+    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
+    //std::print("\n");
+
+    //std::print("     b");
+    //for (int i = 0; i < B; i++) std::print(" {}", b[i]);
+    //std::print(" [shift {}]\n", shift);
+
+    while (A < B + shift)
+        a[A++] = 0;
+
+    uint128_t acc = 0;
+    for (int i = 0; i < B; ++i) {
+        acc += a[shift + i];
+        acc += b[i];
+        a[shift + i] = acc;
+        acc >>= 64;
+    }
+    for (int i = shift + B; i < A; ++i) {
+        acc += a[i];
+        a[i] = acc;
+        acc >>= 64;
+    }
+    if (acc)
+        a[A++] = acc;
+
+    //std::print("_add result");
+    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
+    //std::print("\n");
+}
+
+// assuming a >= b
+constexpr void __sub(uint64_t* a, int& A, const uint64_t* b, const int B) {
+    //std::print("_sub a");
+    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
+    //std::print("\n");
+
+    //std::print("     b");
+    //for (int i = 0; i < B; i++) std::print(" {}", b[i]);
+    //std::print("\n");
+
+    uint64_t borrow = 0;
+    for (int i = 0; i < B; ++i) {
+        int128_t diff = (int128_t)a[i] - b[i] - borrow;
+        if (diff < 0) {
+            a[i] = diff + ((uint128_t)1 << 64);
+            borrow = 1;
+        } else {
+            a[i] = diff;
+            borrow = 0;
+        }
+    }
+    for (int i = B; borrow && i < A; ++i) {
+        int128_t diff = (int128_t)a[i] - borrow;
+        if (diff < 0) {
+            a[i] = diff + ((uint128_t)1 << 64);
+            borrow = 1;
+        } else {
+            a[i] = diff;
+            borrow = 0;
+        }
+    }
+    while (A && !a[A - 1])
+        A -= 1;
+    //std::print("_sub result");
+    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
+    //std::print("\n");
+}
+
+// assuming a.size >= b.size
+constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q) {
+    if (A < B) {
+        std::swap(a, b);
+        std::swap(A, B);
+    }
+    if (A < 4) {
+        __mul(a, A, b, B, q, Q);
+        return;
+    }
+
+    const int m = (A + 1) / 2; // m >= 2
+
+    const uint64_t* a0 = a;
+    const int A0 = m;
+    const uint64_t* a1 = a + m;
+    const int A1 = A - m;
+
+    uint64_t* aa = new uint64_t[std::max(A0, A1) + 1];
+    std::copy(a0, a0 + A0, aa);
+    int AA = A0;
+    __add(aa, AA, a1, A1); // aa = a_low + a_high
+
+    uint64_t* r;
+    int R;
+    if (B <= m) {
+        r = new uint64_t[AA + B];
+        __mul_karatsuba_rec(aa, AA, b, B, r, R); // r = aa * b
+        delete[] aa;
+
+        __mul_karatsuba_rec(a0, A0, b, B, q, Q);
+        __sub(r, R, q, Q);
+        __add(q, Q, r, R, m);
+        delete[] r;
+    } else {
+        const uint64_t* b0 = b;
+        const int B0 = m;
+        const uint64_t* b1 = b + m;
+        const int B1 = B - m;
+
+        uint64_t* bb = new uint64_t[std::max(B0, B1) + 1];
+        int BB = B0;
+        std::copy(b0, b0 + B0, bb);
+        __add(bb, BB, b1, B1); // bb = b_low + b_high
+
+        r = new uint64_t[AA + BB];
+        __mul_karatsuba_rec(aa, AA, bb, BB, r, R); // r = aa * bb
+        delete[] aa;
+        delete[] bb;
+
+        // TODO reuse aa as p
+        uint64_t* p = new uint64_t[A1 + B1];
+        int P;
+        __mul_karatsuba_rec(a1, A1, b1, B1, p, P);
+        __mul_karatsuba_rec(a0, A0, b0, B0, q, Q);
+
+        __sub(r, R, p, P);
+        __sub(r, R, q, Q);
+        __add(q, Q, p, P, m * 2);
+        __add(q, Q, r, R, m);
+        delete[] p;
+        delete[] r;
+    }
+}
+
+constexpr void mul_karatsuba(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q) {
+    if (A < B) {
+        std::swap(A, B);
+        std::swap(a, b);
+    }
+    if (B == 0) {
+        Q = 0;
+        return;
+    }
+    if (B == 1) {
+        if (A == 1) {
+            auto acc = __mulq(*a, *b);
+            *q = acc;
+            acc >>= 64;
+            if (acc) {
+                q[1] = acc;
+                Q = 2;
+            } else {
+                Q = 1;
+            }
+            return;
+        }
+        __mul(b, 1, a, A, q, Q);
+        return;
+    }
+    if (B <= 2) {
+        __mul(b, B, a, A, q, Q);
+        return;
+    }
+    num_alloc = 0;
+    __mul_karatsuba_rec(a, A, b, B, q, Q);
+}
+
+constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
+    auto A = a.words.size();
+    auto B = b.words.size();
+    q.words.reset(A + B, /*init*/false);
+    int Q;
+    mul_karatsuba(a.words.data(), A, b.words.data(), B, q.words.data(), Q);
+    q.words.resize(Q);
+}
+
+constexpr natural mul_karatsuba(const natural& a, const natural& b) {
+    natural q;
+    mul_karatsuba(a, b, q);
+    return q;
 }
 
 // supports &a == &q
