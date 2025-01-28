@@ -62,7 +62,7 @@ constexpr real<Base>::real(const rational& s) {
     // s.den must be a non-negative power of B (otherwise exception will be thrown!
     num = s.num;
     if constexpr (Base == 2) {
-        if (!is_power_of_two(s.den.abs))
+        if (!is_power_of_two(s.den))
             throw std::runtime_error("inexact conversion");
         exp = -s.den.num_trailing_zeros();
         auto z = num.num_trailing_zeros();

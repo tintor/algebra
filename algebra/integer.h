@@ -186,6 +186,7 @@ struct integer {
     constexpr integer operator++(int) { integer a = *this; operator++(); return a; }
     constexpr integer operator--(int) { integer a = *this; operator--(); return a; }
 
+    constexpr auto bit(size_t i) const { return abs.bit(i); }
     constexpr auto num_bits() const { return abs.num_bits(); }
     constexpr auto num_trailing_zeros() const { return abs.num_trailing_zeros(); }
 

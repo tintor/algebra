@@ -96,11 +96,11 @@ constexpr void pow(const rational& base, const integer& exp, rational& out) {
 
     out = 1;
     rational _base = base;
-    if (exp.abs.is_odd())
+    if (exp.is_odd())
         out *= _base;
-    for (size_t i = 1; i < exp.abs.num_bits(); i++) {
+    for (size_t i = 1; i < exp.num_bits(); i++) {
         _base *= _base;
-        if (exp.abs.bit(i))
+        if (exp.bit(i))
             out *= _base;
     }
     if (exp.sign() < 0)

@@ -152,4 +152,8 @@ constexpr int signum(const integer& a) {
     return (a.sign() > 0) - (a.sign() < 0);
 }
 
+constexpr bool is_power_of_two(const integer& a) {
+    return a.sign() > 0 && a.num_bits() == 1 + a.num_trailing_zeros();
+}
+
 }
