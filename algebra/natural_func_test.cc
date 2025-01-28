@@ -3,6 +3,97 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <chrono>
 
+TEST_CASE("round_to_zero") {
+    natural a;
+    round_to_zero(10.1, a);
+    REQUIRE(a == 10);
+    round_to_zero(10.9, a);
+    REQUIRE(a == 10);
+    round_to_zero(-7.1, a);
+    REQUIRE(a == 7);
+    round_to_zero(-7.9, a);
+    REQUIRE(a == 7);
+}
+
+TEST_CASE("iroot 2") {
+    const auto a = 3213123_n;
+    REQUIRE(isqrt(a) == iroot(a, 2));
+    const auto b = 88888888888_n;
+    REQUIRE(isqrt(b) == iroot(b, 2));
+}
+
+TEST_CASE("iroot 3 small") {
+    std::mt19937_64 rng(3);
+    int n = 3;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(4, 63)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
+TEST_CASE("iroot 3") {
+    std::mt19937_64 rng(3);
+    int n = 3;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(64, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
+TEST_CASE("iroot 4") {
+    std::mt19937_64 rng(4);
+    int n = 4;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(64, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
+TEST_CASE("iroot 5") {
+    std::mt19937_64 rng(5);
+    int n = 5;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(64, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
+TEST_CASE("iroot 6") {
+    std::mt19937_64 rng(6);
+    int n = 5;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(64, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
+TEST_CASE("iroot 7") {
+    std::mt19937_64 rng(7);
+    int n = 5;
+    for (int i = 0; i < 10'000; i++) {
+        int bits = std::uniform_int_distribution<int>(64, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        natural r = iroot(x, n);
+        REQUIRE(pow(r, n) <= x);
+        REQUIRE(pow(r + 1, n) > x);
+    }
+}
+
 #if 0
 TEST_CASE("factorize") {
     natural a = pow(2_n, 128);
@@ -146,6 +237,7 @@ natural diff(const natural& a, const natural& b) {
     return (a > b) ? a - b : (b - a);
 }
 
+#if 0
 TEST_CASE("__slow_isqrt stress") {
     long i = 0;
     std::mt19937_64 rng(0);
@@ -165,6 +257,7 @@ TEST_CASE("__slow_isqrt stress") {
             print("{} mil, bits_max {}\n", i / 1'000'000, bits_max);
     }
 }
+#endif
 
 #if 0
 TEST_CASE("isqrt benchmark") {
@@ -174,8 +267,9 @@ TEST_CASE("isqrt benchmark") {
     a = pow(10_n, N); \
     print("1e" #N " bits {}\n", a.num_bits()); \
     BENCHMARK("isqrt() " #N) { return isqrt(a); }; \
-    BENCHMARK("__slow_isqrt() " #N) { return __slow_isqrt(a); }; \
-    BENCHMARK("fast_isqrt() " #N) { return fast_isqrt(a); }; \
+    BENCHMARK("iroot() " #N) { return iroot(a, 2); }; \
+    //BENCHMARK("__slow_isqrt() " #N) { return __slow_isqrt(a); }; \
+    //BENCHMARK("fast_isqrt() " #N) { return fast_isqrt(a); }; \
     BENCHMARK("std::sqrt() " #N) { return sqrt(static_cast<double>(a)); };
 
     BENCH_DIGITS(10);

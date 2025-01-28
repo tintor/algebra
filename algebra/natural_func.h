@@ -313,6 +313,106 @@ constexpr natural isqrt(const natural& x) {
     return __slow_isqrt(x);
 }
 
+template<std::floating_point T>
+constexpr void round_to_zero(const T& a, natural& b) {
+    int exponent;
+    auto mantissa = std::frexp(a, &exponent);
+
+    const int bits = std::numeric_limits<T>::digits;
+    auto m = std::ldexp(mantissa, bits);
+    exponent -= bits;
+
+    if (m < 0)
+        m = -m;
+
+    b = static_cast<uint64_t>(m);
+    b <<= exponent;
+}
+
+constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
+    if (a <= 1 || n == 1)
+        return a;
+    if (n == 0)
+        return 1;
+    if (n == 2)
+        return isqrt(a);
+
+    natural left = 1;
+    natural right = a;
+
+    natural m, mn, t, t2;
+    if (faster) {
+        // narrow initial guess using floating point
+        round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
+        left = m;
+        right = m;
+        left -= m >> 30;
+        right += m >> 19;
+        right += 1;
+        if (left < 1)
+            left = 1;
+        if (right > a)
+            right = a;
+    }
+
+    while (left < right) {
+        m = right;
+        m -= left;
+        ++m;
+        m >>= 1;
+        m += left;
+
+        // mn = pow(m, n)
+        if (n == 2)
+            mul(m, m, mn);
+        else if (n == 3) {
+            mul(m, m, mn);
+            mn *= m;
+        } else if (n == 4) {
+            mul(m, m, t);
+            mul(t, t, mn);
+        } else if (n == 5) {
+            mul(m, m, t);
+            mul(t, t, mn);
+            mn *= m;
+        } else if (n == 6) {
+            mul(m, m, t);
+            t *= m;
+            mul(t, t, mn);
+        } else {
+            int c = n;
+            mn = 1;
+            if (c & 1)
+                mn = m;
+            t = m;
+            c >>= 1;
+            while (c) {
+                mul(t, t, t2);
+                std::swap(t, t2); // t = t * t
+                if (c & 1)
+                    mn *= t;
+                c >>= 1;
+            }
+        }
+
+        if (mn > a) {
+            if (right < m)
+                throw std::runtime_error("inf loop");
+            --m;
+            right = m;
+            continue;
+        }
+        if (mn < a) {
+            if (left >= m)
+                throw std::runtime_error("inf loop");
+            left = m;
+            continue;
+        }
+        return m;
+    }
+    return left;
+}
+
 // returns (a ** n) mod p
 constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
     uint64_t b = 1;
