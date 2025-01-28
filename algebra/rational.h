@@ -358,7 +358,7 @@ constexpr rational operator/(const rational& a, const rational& b) { return {a.n
 constexpr rational operator/(const rational& a, const integral auto& b) { return {a.num, a.den * b}; }
 constexpr rational operator/(const integral auto& a, const rational& b) { return {b.den * a, b.num}; }
 
-static_assert(sizeof(rational) == 32);
+//static_assert(sizeof(rational) == 32);
 
 constexpr rational operator%(const rational& a, const rational& b) { return a - (a.num * b.den) / (a.den * b.num) * b; }
 constexpr rational operator%(const rational& a, const integral auto& b) { return a - a.num / (a.den * b) * b; }

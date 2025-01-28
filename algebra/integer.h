@@ -6,38 +6,24 @@ namespace algebra {
 struct integer;
 template<> struct IsNumberClass<integer> : std::true_type {};
 
-#if 0
-struct neg_integer {
-    const integer* a;
-};
-#endif
-
 struct integer {
     using size_type = natural::size_type;
 
     natural abs;
+    integer_backend words;
 
     constexpr integer() {}
-    constexpr integer(std_int auto a) : abs(abs_unsigned(a)) { if (a < 0) negate(); }
-    constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
-    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); }
-    constexpr integer(const integer& o) : abs(o.abs) { }
-    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); }
+    constexpr integer(std_int auto a) : abs(abs_unsigned(a)), words(a) { if (a < 0) negate(); }
+    constexpr integer(integer&& o) : abs(std::move(o.abs)) { words = abs.words; }
+    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); words = abs.words; }
+    constexpr integer(const integer& o) : abs(o.abs), words(o.words) { }
+    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); words = abs.words; }
 
-#if 0
-    constexpr integer(const neg_integer& o) : integer(*o.a) { negate(); }
-    constexpr void operator=(const neg_integer& o) {
-        if (o.a != this)
-            operator=(*o.a);
-        negate();
-    }
-#endif
-
-    constexpr void operator=(std_int auto a) { abs.words = a; }
-    constexpr void operator=(integer&& o) { abs = std::move(o.abs); }
-    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); }
-    constexpr void operator=(const integer& o) { abs = o.abs; }
-    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); }
+    constexpr void operator=(std_int auto a) { abs.words = a; words = a; }
+    constexpr void operator=(integer&& o) { abs = std::move(o.abs); words = abs.words; }
+    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); words = abs.words; }
+    constexpr void operator=(const integer& o) { abs = o.abs; words = o.words; }
+    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); words = o.words; }
 
     constexpr size_type sign() const { return abs.words.sign(); }
     constexpr bool is_negative() const { return sign() < 0; }
@@ -105,6 +91,7 @@ struct integer {
     constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s) {
         if (s.size() && s[0] == '-')
             abs.words.negate();
+        words = abs.words;
     }
     constexpr integer(const char* s, unsigned base = 10) : integer(std::string_view(s), base) {}
 
@@ -171,6 +158,7 @@ struct integer {
 
     constexpr operator bool() const { return sign(); }
 
+    // TODO update words
     constexpr integer& operator++() {
         if (!is_negative())
             abs += uint64_t(1);
@@ -179,6 +167,7 @@ struct integer {
         return *this;
     }
 
+    // TODO update words
     constexpr integer& operator--() {
         if (is_negative())
             abs += uint64_t(1);
@@ -202,7 +191,7 @@ struct integer {
         return (sign() < 0) ? -a : a;
     }
 
-    constexpr void swap(integer& o) { abs.swap(o.abs); }
+    constexpr void swap(integer& o) { abs.swap(o.abs); words.swap(o.words); }
 
     constexpr uint64_t mod2() const {
         return abs.mod2();
@@ -231,61 +220,9 @@ struct integer {
 };
 
 constexpr void negate(integer& a) { a.negate(); }
-
-#if 0
-constexpr neg_integer operator-(const integer& a) { return {&a}; }
-#else
 constexpr integer operator-(integer a) { a.negate(); return a; }
-#endif
 
-constexpr void add(const integer& a, const integer& b, integer& c) {
-    if (a.is_negative() == b.is_negative()) {
-        c.abs = a.abs + b.abs;
-        return;
-    }
-    if (b.abs < a.abs) {
-        c.abs = a.abs - b.abs;
-        c.abs.words.set_negative(a.is_negative());
-        return;
-    }
-    c.abs = b.abs - a.abs;
-    c.abs.words.set_negative(b.is_negative());
-}
-
-constexpr void sub(const integer& a, const integer& b, integer& c) {
-    if (a.is_negative() != b.is_negative()) {
-        c.abs = a.abs + b.abs;
-        c.abs.words.set_negative(a.is_negative());
-        return;
-    }
-    if (b.abs < a.abs) {
-        c.abs = a.abs - b.abs;
-        c.abs.words.set_negative(a.is_negative());
-        return;
-    }
-    c.abs = b.abs - a.abs;
-    c.abs.words.set_negative(b.is_negative());
-    c.negate();
-}
-
-constexpr integer operator+(const integer& a, const integer& b) {
-    integer c;
-    add(a, b, c);
-    return c;
-}
-
-constexpr integer operator-(const integer& a, const integer& b) {
-    integer c;
-    sub(a, b, c);
-    return c;
-}
-
-constexpr integer operator+(integer a, std_int auto b) { return a += b; }
-constexpr integer operator+(std_int auto a, integer b) { return b += a; }
-
-constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
-constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
-
+// TODO update words
 constexpr integer& operator+=(integer& a, const integer& b) {
     if (a.is_negative() == b.is_negative()) {
         a.abs += b.abs;
@@ -300,6 +237,7 @@ constexpr integer& operator+=(integer& a, const integer& b) {
     return a;
 }
 
+// TODO update words
 constexpr integer& operator-=(integer& a, const integer& b) {
     if (a.is_negative() != b.is_negative()) {
         a.abs += b.abs;
@@ -352,6 +290,14 @@ constexpr integer& operator-=(integer& a, std_int auto b) {
     a.negate();
     return a;
 }
+
+constexpr integer operator+(integer a, std_int auto b) { return a += b; }
+constexpr integer operator+(std_int auto a, integer b) { return b += a; }
+constexpr integer operator+(integer a, const integer& b) { return a += b; }
+
+constexpr integer operator-(integer a, const integer& b) { return a -= b; }
+constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
+constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
 
 constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
 
@@ -585,7 +531,7 @@ constexpr void operator<<=(integer& a, int64_t i) {
 
 ALGEBRA_SHIFT_OP(integer)
 
-static_assert(sizeof(integer) == 16);
+//static_assert(sizeof(integer) == 16);
 
 }
 
