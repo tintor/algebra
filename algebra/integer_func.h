@@ -10,6 +10,11 @@ constexpr integer abs(integer a) {
     return a;
 }
 
+// returns abs(a) > abs(b), minimizing memory allocation
+constexpr bool abs_greater(const integer& a, const integer& b) {
+    return a.abs > b.abs;
+}
+
 constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
     integer max_min = max - min;
     if (max_min.sign() < 0)
@@ -155,6 +160,24 @@ constexpr int signum(const integer& a) {
 
 constexpr bool is_power_of_two(const integer& a) {
     return a.sign() > 0 && a.num_bits() == 1 + a.num_trailing_zeros();
+}
+
+// reduce vector's length, without changing vector's direction
+constexpr void simplify(integer& x, integer& y) {
+    integer a = gcd(x, y);
+    if (a != 1) {
+        x /= a;
+        y /= a;
+    }
+}
+
+constexpr void simplify(integer& x, integer& y, integer& z) {
+    integer a = gcd(gcd(x, y), z);
+    if (a != 1) {
+        x /= a;
+        y /= a;
+        z /= a;
+    }
 }
 
 }

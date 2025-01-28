@@ -99,9 +99,9 @@ constexpr xrational& operator-=(xrational& a, const xrational& b) {
 constexpr xrational& operator-=(xrational& a, const rational_like auto& b) { a.base -= b; return a; }
 
 constexpr xrational sqr(const xrational& a) {
-    natural num, den;
-    mul(a.base.num.abs, a.base.num.abs, num);
-    mul(a.base.den.abs, a.base.den.abs, den);
+    integer num, den;
+    mul(a.base.num, a.base.num, num);
+    mul(a.base.den, a.base.den, den);
     mul(num, a.root);
     return {rational{num, den}};
 }
@@ -113,14 +113,14 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
         return {a.base * b.base * integer(a.root)};
 
     // TODO maybe use gcd(a.root, b.root) to avoid difficult factorization
-    natural whole = a.base.num.abs * b.base.num.abs;
+    natural whole = abs(a.base.num * b.base.num);
     natural root = 1;
     exact_sqrt(a.root, whole, root);
     exact_sqrt(b.root, whole, root);
     integer w = whole;
     if ((a.base.sign() < 0) != (b.base.sign() < 0))
         w.negate();
-    return {rational{std::move(w), a.base.den.abs * b.base.den.abs}, std::move(root)};
+    return {rational{std::move(w), a.base.den * b.base.den}, std::move(root)};
 }
 
 constexpr xrational operator*(const xrational& a, const rational_like auto& b) { return {a.base * b, a.root}; }
@@ -179,14 +179,14 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     if (a.root == b.root)
         return a.base == b.base;
 
-    natural p = a.base.num.abs * a.base.num.abs;
+    integer p = a.base.num * a.base.num;
     p *= a.root;
-    p *= b.base.den.abs;
-    p *= b.base.den.abs;
-    natural q = b.base.num.abs * b.base.num.abs;
+    p *= b.base.den;
+    p *= b.base.den;
+    integer q = b.base.num * b.base.num;
     q *= b.root;
-    q *= a.base.den.abs;
-    q *= a.base.den.abs;
+    q *= a.base.den;
+    q *= a.base.den;
     return p == q;
 }
 
@@ -202,14 +202,14 @@ constexpr bool operator<(const xrational& a, const xrational& b) {
         return a.root < b.root;
 
     // TODO could use interval arithmetic with doubles first to find bounds for p and q
-    natural p = a.base.num.abs * a.base.num.abs;
+    integer p = a.base.num * a.base.num;
     p *= a.root;
-    p *= b.base.den.abs;
-    p *= b.base.den.abs;
-    natural q = b.base.num.abs * b.base.num.abs;
+    p *= b.base.den;
+    p *= b.base.den;
+    integer q = b.base.num * b.base.num;
     q *= b.root;
-    q *= a.base.den.abs;
-    q *= a.base.den.abs;
+    q *= a.base.den;
+    q *= a.base.den;
     return p < q;
 }
 
@@ -222,8 +222,8 @@ constexpr xrational sqrt(const xrational& a) {
     if (a.root != 1)
         throw std::runtime_error("sqrt of xrational with root");
     natural whole = 1, root = 1;
-    exact_sqrt(a.base.num.abs, whole, root);
-    exact_sqrt(a.base.den.abs, whole, root);
+    exact_sqrt(a.base.num, whole, root);
+    exact_sqrt(a.base.den, whole, root);
     return {rational{whole, a.base.den}, root};
 }
 
