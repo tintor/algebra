@@ -489,9 +489,12 @@ constexpr expr_ptr pow(expr_ptr a, const rational& b) {
         return make_sum(std::vector<expr_ptr>{pow(p, 2), make_product(std::vector<expr_ptr>{2_e, p, q}), pow(q, 2)});
     }
     if (is_integer(a) && b == 1/2_q && !integer_value(a).is_negative()) {
-        const natural m = isqrt(integer_value(a).abs);
-        if (m * m == integer_value(a).abs)
-            return make_integer(m);
+        const natural v = integer_value(a);
+        if (is_possible_square(v)) {
+            const natural m = isqrt(v);
+            if (m * m == v)
+                return make_integer(m);
+        }
     }
     if (is_rational(a) && b.is_integer())
         return make_rational(pow(rational_value(a), b.num));

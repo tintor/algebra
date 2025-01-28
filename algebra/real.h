@@ -73,7 +73,7 @@ constexpr real<Base>::real(const rational& s) {
         int twos = a.num_trailing_zeros();
         a >>= twos;
         int fives = 0;
-        while (a > 1 && a.abs.mod5() == 0) {
+        while (a > 1 && a.mod5() == 0) {
             a /= 5;
             fives += 1;
         }
@@ -88,7 +88,7 @@ constexpr real<Base>::real(const rational& s) {
     } else {
         const auto base_factors = factorize(Base);
         // Check if s.den has any prime factors not in base
-        natural a = s.den.abs, q;
+        natural a = abs(s.den), q;
         for (auto [factor, count] : base_factors)
             while (a > 1) {
                 if (div(a, factor, q))
@@ -263,9 +263,9 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
                 for (int i = 0; i < a.exp; i++)
                     *it++ = '0';
             } else {
-                auto s = a.num.abs.str();
                 if (a.num.sign() < 0)
                     *it++ = '-';
+                auto s = abs(a.num).str();
                 if (s.size() <= -a.exp) {
                     *it++ = '0';
                     *it++ = '.';

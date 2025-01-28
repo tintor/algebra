@@ -203,6 +203,31 @@ struct integer {
     }
 
     constexpr void swap(integer& o) { abs.swap(o.abs); }
+
+    constexpr uint64_t mod2() const {
+        return abs.mod2();
+    }
+
+    constexpr uint64_t mod3() const {
+        uint64_t m = abs.mod3();
+        if (is_negative())
+            m = (m * 2) % 3;
+        return m;
+    }
+
+    constexpr uint64_t mod4() const {
+        uint64_t m = abs.mod4();
+        if (is_negative())
+            m = (m * 3) % 4;
+        return m;
+    }
+
+    constexpr uint64_t mod5() const {
+        uint64_t m = abs.mod5();
+        if (is_negative())
+            m = (m * 4) % 5;
+        return m;
+    }
 };
 
 constexpr void negate(integer& a) { a.negate(); }
