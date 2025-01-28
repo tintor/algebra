@@ -183,7 +183,7 @@ constexpr bool segment_segment_intersection_single_point(const Vec2<T>& a, const
 // 1 - intersection is single point
 // 2 - intersection is non-degenerate line segment
 template<typename T>
-int segment_vs_segment_intersects(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
+int segment_segment_intersects(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
     return segment_segment_intersection(a, b, c, d).index();
 }
 
