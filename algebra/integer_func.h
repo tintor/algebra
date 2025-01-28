@@ -103,10 +103,10 @@ constexpr integer pow(integer base, const natural& exp) {
     return result;
 }
 
-// returns x such that (a * x) mod n == 1, (or false if such number doesn't exist)
-constexpr bool mod_inverse(const natural& a, const natural& n, natural& out) {
+// returns x such that (a * x) mod m == 1, (or false if such number doesn't exist)
+constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
     integer t = 0;
-    integer r = n;
+    integer r = m;
     integer new_t = 1;
     integer new_r = a;
     integer e, q;
@@ -129,15 +129,15 @@ constexpr bool mod_inverse(const natural& a, const natural& n, natural& out) {
     if (r > 1)
         return false;
     if (t.sign() < 0)
-        t += n;
+        t += m;
     if (t.sign() < 0)
         t.negate();
     out = t;
     return true;
 }
 
-// returns (n k) mod p
-constexpr void binominal_mod(const natural& n, uint64_t k, const natural& p, natural& out) {
+// returns (n k) mod m
+constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, natural& out) {
     out = 1;
     natural e, inv;
     for (uint64_t i = 0; i < k; i++) {
@@ -147,20 +147,14 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& p, nat
 
         e = i;
         e += 1;
-        mod_inverse(e, p, inv);
+        inverse_mod(e, m, inv);
 
-        out *= inv;
-        out %= p;
+        __mul_mod(out, inv, m);
     }
 }
 
-constexpr int signum(const integer& a) {
-    return (a.sign() > 0) - (a.sign() < 0);
-}
-
-constexpr bool is_power_of_two(const integer& a) {
-    return a.sign() > 0 && a.num_bits() == 1 + a.num_trailing_zeros();
-}
+constexpr int signum(const integer& a) { return (a.sign() > 0) - (a.sign() < 0); }
+constexpr bool is_power_of_two(const integer& a) { return a.sign() > 0 && a.num_bits() == 1 + a.num_trailing_zeros(); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {

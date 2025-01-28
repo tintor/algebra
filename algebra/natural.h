@@ -52,6 +52,7 @@ constexpr uint128_t add_mod(uint128_t a, uint128_t b, uint128_t m) {
     return (b >= m - a) ? (a + b - m) : (a + b);
 }
 
+// TODO this seems to be buggy!
 // assumes both A and B are in [0, M) range
 constexpr uint128_t mul_mod(uint128_t a, uint128_t b, uint128_t m) {
     if (a == 0 || b == 0)
@@ -73,6 +74,19 @@ constexpr uint128_t mul_mod(uint128_t a, uint128_t b, uint128_t m) {
         b >>= 1;
     }
     return result;
+}
+
+// returns (a ** n) mod p
+constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
+    uint64_t b = 1;
+    a %= p;
+        while (n) {
+        if (n & 1)
+            b = (static_cast<__uint128_t>(b) * a) % p;
+        n >>= 1;
+        a = (static_cast<__uint128_t>(a) * a) % p;
+    }
+    return b;
 }
 
 // TODO test cases for operator float()

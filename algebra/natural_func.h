@@ -413,43 +413,88 @@ constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
     return left;
 }
 
-// returns (a ** n) mod p
-constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
-    uint64_t b = 1;
-    a %= p;
-        while (n) {
-        if (n & 1)
-            b = (static_cast<__uint128_t>(b) * a) % p;
-        n >>= 1;
-        a = (static_cast<__uint128_t>(a) * a) % p;
-    }
-    return b;
+// assumes are a and b are in [0, m-1] range
+// a = (a + b) % m
+constexpr void add_mod(natural& a, const natural& b, const natural& m) {
+    a += b;
+    if (a >= m)
+        a -= m;
+}
+
+// assumes are a and b are in [0, m-1] range
+// a = (a - b) % m
+constexpr void sub_mod(natural& a, const natural& b, const natural& m) {
+    if (b > a)
+        a += m;
+    a -= b;
 }
 
 // assumes are a and b are in [0, m-1] range
 // a = (a * b) % m
-constexpr void mul_mod(natural& a, const natural& b, const natural& m) {
-    // TODO optimize
+constexpr void __mul_mod(natural& a, const natural& b, const natural& m) {
+    // This is simple and slow implementation, for testing.
     a *= b;
     if (a >= m)
         a %= m;
 }
 
-// returns (a**n) mod p
-constexpr void pow_mod(natural a, natural n, const natural& p, natural& out) {
-    out = 1;
-    if (a >= p)
-        a %= p;
-    for (size_t i = 0; i < n.num_bits(); i++) {
-        if (n.bit(i))
-            mul_mod(out, a, p);
-        mul_mod(a, a, p);
+constexpr void mul_mod(const natural& a, const natural& b, const natural& m, natural& out) {
+    if (a == 1 || b == 0) {
+        out = b;
+        return;
+    }
+    if (b == 1 || a == 0) {
+        out = a;
+        return;
+    }
+    if (a.is_uint128() && b.is_uint128() && m.is_uint128()) {
+        out = mul_mod(static_cast<uint128_t>(a), static_cast<uint128_t>(b), static_cast<uint128_t>(m));
+        return;
+    }
+
+    if (a.num_bits() + b.num_bits() <= m.num_bits()) {
+        out = a;
+        out *= b;
+        if (a.num_bits() + b.num_bits() == m.num_bits() && out >= m)
+            out -= m;
+        return;
+    }
+
+    out = 0;
+    natural aa = a, bb = b;
+    while (aa && bb) {
+        if (aa < bb)
+            std::swap(aa, bb);
+        if (bb == 1) {
+            add_mod(out, aa, m); // result = (result + aa) % m
+            return;
+        }
+        if (bb.is_even())
+            add_mod(out, aa, m); // result = (result + aa) % m
+        add_mod(aa, aa, m); // aa = (aa + aa) % m
+        bb >>= 1;
     }
 }
 
-constexpr natural pow_mod(natural a, natural n, natural p) {
+// Note: there is bool inverse_mod() in integer_func.h!
+
+// returns (a**b) mod m
+constexpr void pow_mod(natural a, const natural& b, const natural& m, natural& out) {
+    out = 1;
+    if (a >= m)
+        a %= m;
+    for (size_t i = 0; i < b.num_bits(); i++) {
+        if (b.bit(i))
+            __mul_mod(out, a, m);
+        if (i == b.num_bits() - 1)
+            break;
+        __mul_mod(a, a, m);
+    }
+}
+
+constexpr natural pow_mod(natural a, const natural& b, const natural& m) {
     natural out;
-    pow_mod(a, n, p, /*out*/out);
+    pow_mod(std::move(a), b, m, /*out*/out);
     return out;
 }
 
@@ -515,7 +560,7 @@ constexpr bool is_likely_prime(const natural& n, int rounds) {
 
         int r = 1;
         for (; r < s; r++) {
-            mul_mod(x, x, n); // x = (x * x) % n
+            __mul_mod(x, x, n); // x = (x * x) % n
             if (x == n_minus_1)
                 break;
         }
