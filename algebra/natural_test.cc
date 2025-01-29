@@ -30,7 +30,7 @@ natural rand_natural(int size, Random& rng) {
     return a;
 }
 
-#if 1
+#if 0
 TEST_CASE("mul benchmark") {
     Random rng(0);
     natural a, b;
@@ -75,15 +75,30 @@ TEST_CASE("mul benchmark") {
     BENCHMARK("a * b 512") { return a * b; };
     BENCHMARK("karatsuba 512") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(5120, rng);
-    b = rand_natural(5120, rng);
-    BENCHMARK("a * b 5120") { return a * b; };
-    BENCHMARK("karatsuba 5120") { return mul_karatsuba(a, b); };
+    a = rand_natural(1024, rng);
+    b = rand_natural(1024, rng);
+    BENCHMARK("a * b 1024") { return a * b; };
+    BENCHMARK("karatsuba 1024") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(5120*2, rng);
-    b = rand_natural(5120*2, rng);
-    BENCHMARK("a * b 5120*2") { return a * b; };
-    BENCHMARK("karatsuba 5120*2") { return mul_karatsuba(a, b); };
+    a = rand_natural(2048, rng);
+    b = rand_natural(2048, rng);
+    BENCHMARK("a * b 2048") { return a * b; };
+    BENCHMARK("karatsuba 2048") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(4096, rng);
+    b = rand_natural(4096, rng);
+    BENCHMARK("a * b 4096") { return a * b; };
+    BENCHMARK("karatsuba 4096") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(8192, rng);
+    b = rand_natural(8192, rng);
+    BENCHMARK("a * b 8192") { return a * b; };
+    BENCHMARK("karatsuba 8192") { return mul_karatsuba(a, b); };
+
+    a = rand_natural(16384, rng);
+    b = rand_natural(16384, rng);
+    BENCHMARK("a * b 16384") { return a * b; };
+    BENCHMARK("karatsuba 16384") { return mul_karatsuba(a, b); };
 }
 #endif
 
@@ -103,11 +118,91 @@ TEST_CASE("mul_karatsuba easy") {
     REQUIRE(a * b == mul_karatsuba(a, b));
 }
 
-TEST_CASE("mul_karatsuba") {
+TEST_CASE("mul_karatsuba ones") {
+    std::vector<natural> p;
+    natural a = 1;
+    for (int i = 0; i < 256; i++) {
+        p.push_back(a);
+        a <<= 1;
+    }
     Random rng(0);
-    for (int i = 0; i < 1000'000; i++) {
-        natural a = rand_natural(rng.Uniform<int>(0, 4), rng);
-        natural b = rand_natural(rng.Uniform<int>(0, 4), rng);
+    for (int i = 0; i < 256; i++) {
+        for (int j = 0; j < 256; j++) {
+            const natural& a = p.at(i);
+            const natural& b = p.at(j);
+            REQUIRE(a * b == mul_karatsuba(a, b));
+        }
+    }
+}
+
+TEST_CASE("mul_karatsuba 4") {
+    Random rng(0);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(4, rng);
+        natural b = rand_natural(4, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 8") {
+    Random rng(0);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(8, rng);
+        natural b = rand_natural(8, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 16") {
+    Random rng(0);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(16, rng);
+        natural b = rand_natural(16, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 32") {
+    Random rng(0);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(32, rng);
+        natural b = rand_natural(32, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 64") {
+    Random rng(0);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(64, rng);
+        natural b = rand_natural(64, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 128") {
+    Random rng(0);
+    for (int i = 0; i < 5'000'000; i++) {
+        natural a = rand_natural(128, rng);
+        natural b = rand_natural(128, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba 256") {
+    Random rng(0);
+    for (int i = 0; i < 2'500'000; i++) {
+        natural a = rand_natural(256, rng);
+        natural b = rand_natural(256, rng);
+        REQUIRE(a * b == mul_karatsuba(a, b));
+    }
+}
+
+TEST_CASE("mul_karatsuba general") {
+    Random rng(0);
+    for (int i = 0; i < 1'000'000; i++) {
+        natural a = rand_natural(rng.Uniform<int>(0, 512), rng);
+        natural b = rand_natural(rng.Uniform<int>(0, 512), rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }

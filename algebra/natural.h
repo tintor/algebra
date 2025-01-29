@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <print>
 #include <vector>
+#include <source_location>
 
 namespace algebra {
 
@@ -618,15 +619,7 @@ constexpr void __mul(const uint64_t* a, const int A, const uint64_t* b, const in
 }
 
 // shift must be >= 0
-constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int shift = 0) {
-    //std::print("_add a");
-    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
-    //std::print("\n");
-
-    //std::print("     b");
-    //for (int i = 0; i < B; i++) std::print(" {}", b[i]);
-    //std::print(" [shift {}]\n", shift);
-
+constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int shift) {
     while (A < B + shift)
         a[A++] = 0;
 
@@ -644,22 +637,15 @@ constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int sh
     }
     if (acc)
         a[A++] = acc;
+}
 
-    //std::print("_add result");
-    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
-    //std::print("\n");
+constexpr void Check(bool value, std::source_location loc = std::source_location::current()) {
+    if (!value)
+        throw std::runtime_error(std::format("Check failed at {}:{} in {}", loc.file_name(), loc.line(), loc.function_name()));
 }
 
 // assuming a >= b
 constexpr void __sub(uint64_t* a, int& A, const uint64_t* b, const int B) {
-    //std::print("_sub a");
-    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
-    //std::print("\n");
-
-    //std::print("     b");
-    //for (int i = 0; i < B; i++) std::print(" {}", b[i]);
-    //std::print("\n");
-
     uint64_t borrow = 0;
     for (int i = 0; i < B; ++i) {
         int128_t diff = (int128_t)a[i] - b[i] - borrow;
@@ -683,115 +669,194 @@ constexpr void __sub(uint64_t* a, int& A, const uint64_t* b, const int B) {
     }
     while (A && !a[A - 1])
         A -= 1;
-    //std::print("_sub result");
-    //for (int i = 0; i < A; i++) std::print(" {}", a[i]);
-    //std::print("\n");
 }
 
+constexpr size_t num_bits(const uint64_t* a, const size_t A) { return A ? 64 * A - std::countl_zero(a[A - 1]) : 0; }
+
+constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
+    return (A && B) ? A + B - 1 + (127 - std::countl_zero(a[A - 1]) - std::countl_zero(b[B - 1])) / 64 : 0;
+}
+
+constexpr int KARATSUBA_LIMIT = 32;
+
+// karatsuba 16384 with 8 limit takes 118ms
+// karatsuba 16384 with 16 limit takes 66ms
+// karatsuba 16384 with 32 limit takes 35ms
+// karatsuba 16384 with 64 limit takes 32ms
+
 // assuming a.size >= b.size
-constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q) {
+constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q, uint64_t* w, const uint64_t* we) {
     if (A < B) {
         std::swap(a, b);
         std::swap(A, B);
     }
-    if (A < 4) {
+    if (A < KARATSUBA_LIMIT) {
         __mul(a, A, b, B, q, Q);
         return;
     }
 
     const int m = (A + 1) / 2; // m >= 2
 
-    const uint64_t* a0 = a;
-    const int A0 = m;
+    // AA and BB are stored in Q, while R and P are stored in W
     const uint64_t* a1 = a + m;
     const int A1 = A - m;
 
-    uint64_t* aa = new uint64_t[std::max(A0, A1) + 1];
-    std::copy(a0, a0 + A0, aa);
-    int AA = A0;
-    __add(aa, AA, a1, A1); // aa = a_low + a_high
-
-    uint64_t* r;
     int R;
     if (B <= m) {
-        r = new uint64_t[AA + B];
-        __mul_karatsuba_rec(aa, AA, b, B, r, R); // r = aa * b
-        delete[] aa;
-
-        __mul_karatsuba_rec(a0, A0, b, B, q, Q);
-        __sub(r, R, q, Q);
-        __add(q, Q, r, R, m);
-        delete[] r;
+        auto r = w;
+        w += A1 + B;
+        Check(w <= we);
+        __mul_karatsuba_rec(a1, A1, b, B, r, R, w, we); // r = a1 * b
+        __mul_karatsuba_rec(a, m, b, B, q, Q, w, we); // q = a0 * b
+        __add(q, Q, r, R, m); // q = a * b
     } else {
-        const uint64_t* b0 = b;
-        const int B0 = m;
+        uint64_t* aa = q;
+        std::copy(a, a + m, aa);
+        int AA = m;
+        __add(aa, AA, a1, A1, 0); // aa = a0 + a1
+
         const uint64_t* b1 = b + m;
         const int B1 = B - m;
 
-        uint64_t* bb = new uint64_t[std::max(B0, B1) + 1];
-        int BB = B0;
-        std::copy(b0, b0 + B0, bb);
-        __add(bb, BB, b1, B1); // bb = b_low + b_high
+        uint64_t* bb = aa + AA;
+        int BB = m;
+        std::copy(b, b + m, bb);
+        __add(bb, BB, b1, B1, 0); // bb = b0 + b1
+        Check(AA + BB <= mul_max_size(a, A, b, B));
 
-        r = new uint64_t[AA + BB];
-        __mul_karatsuba_rec(aa, AA, bb, BB, r, R); // r = aa * bb
-        delete[] aa;
-        delete[] bb;
+        auto r = w;
+        w += AA + BB + 1;
+        //w += mul_max_size(aa, AA, bb, BB);
+        Check(w <= we);
+        __mul_karatsuba_rec(aa, AA, bb, BB, r, R, w, we); // r = aa * bb
+        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them?
 
-        // TODO reuse aa as p
-        uint64_t* p = new uint64_t[A1 + B1];
+        uint64_t* p = w;
+        w += A1 + B1;
+        Check(w <= we);
         int P;
-        __mul_karatsuba_rec(a1, A1, b1, B1, p, P);
-        __mul_karatsuba_rec(a0, A0, b0, B0, q, Q);
+        __mul_karatsuba_rec(a1, A1, b1, B1, p, P, w, we);
+        __mul_karatsuba_rec(a, m, b, m, q, Q, w, we);
 
         __sub(r, R, p, P);
         __sub(r, R, q, Q);
         __add(q, Q, p, P, m * 2);
         __add(q, Q, r, R, m);
-        delete[] p;
-        delete[] r;
     }
 }
 
-constexpr void mul_karatsuba(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q) {
-    if (A < B) {
-        std::swap(A, B);
-        std::swap(a, b);
-    }
-    if (B == 0) {
-        Q = 0;
-        return;
-    }
-    if (B == 1) {
-        if (A == 1) {
-            auto acc = __mulq(*a, *b);
-            *q = acc;
+// `Q` must be initialized to buffer capacity
+// `q` must be all zero
+constexpr void __mini_mul(const uint64_t* a, const int A, const uint64_t* b, const int B, uint64_t* q, int& Q) {
+    for (int i = A; i-- > 0;) {
+        const uint64_t w = a[i];
+        if (w == 0)
+            continue;
+
+        uint64_t* qi = q + i;
+        auto acc = __mulq(w, *b);
+        *qi = acc;
+        acc >>= 64;
+        int j = 1;
+
+        while (j < B) {
+            acc += __mulq(w, b[j]);
+            acc += qi[j];
+            qi[j] = acc;
+            acc >>= 64;
+            j += 1;
+        }
+
+        if (acc) {
+            acc += qi[j];
+            qi[j] = acc;
             acc >>= 64;
             if (acc) {
-                q[1] = acc;
-                Q = 2;
-            } else {
-                Q = 1;
+                j += 1;
+                acc += qi[j];
+                qi[j] = acc;
             }
-            return;
         }
-        __mul(b, 1, a, A, q, Q);
-        return;
     }
-    if (B <= 2) {
-        __mul(b, B, a, A, q, Q);
-        return;
-    }
-    num_alloc = 0;
-    __mul_karatsuba_rec(a, A, b, B, q, Q);
+    while (Q && !q[Q - 1])
+        Q -= 1;
 }
 
+constexpr bool is_power_of_two(const natural& a) {
+    if (a.words.empty())
+        return false;
+    auto w = a.words.data();
+    auto e = w + a.words.size() - 1;
+    if (*e & (*e - 1))
+        return false;
+    while (e >= w)
+        if (*e--)
+            return false;
+    return true;
+}
+
+constexpr natural& operator<<=(natural& a, int64_t b);
+
+// no support for &a == &q
 constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
     auto A = a.words.size();
     auto B = b.words.size();
-    q.words.reset(A + B, /*init*/false);
-    int Q;
-    mul_karatsuba(a.words.data(), A, b.words.data(), B, q.words.data(), Q);
+    // TODO this case will disappear when a.words.empty() is removed!
+    if (A == 0 || B == 0) {
+        q.set_zero();
+        return;
+    }
+    if (A == 1) {
+        if (B == 1) {
+            q = __mulq(a.words[0], b.words[0]);
+            return;
+        }
+        if (a.words[0] == 1) {
+            q = b;
+            return;
+        }
+    }
+    if (b.words[0] == 1 && B == 1) {
+        q = a;
+        return;
+    }
+
+    if (is_power_of_two(a)) {
+        const size_t z = (A - 1) * 64 + std::countr_zero(a.words[A - 1]); // = a.num_trailing_zeros() but O(1)
+        const size_t bits = b.num_bits() + z;
+        const size_t words = (bits + 63) / 64;
+        q.words.reset(words, /*init*/false); // preallocates memory!
+        // TODO this can be done directly without moving
+        q = b;
+        q <<= z;
+        return;
+    }
+    if (is_power_of_two(b)) {
+        const size_t z = (B - 1) * 64 + std::countr_zero(a.words[B - 1]); // = b.num_trailing_zeros() but O(1)
+        const size_t bits = a.num_bits() + z;
+        const size_t words = (bits + 63) / 64;
+        q.words.reset(words, /*init*/false); // preallocates memory!
+        // TODO this can be done directly without moving
+        q = a;
+        q <<= z;
+        return;
+    }
+
+    int Q = mul_max_size(a.words.data(), A, b.words.data(), B);
+    q.words.reset(Q);
+    if (std::min(A, B) <= 2 || std::max(A, B) < KARATSUBA_LIMIT) {
+        __mini_mul(a.words.data(), A, b.words.data(), B, q.words.data(), Q);
+    } else {
+        const int W = 4 * std::max(A, B);
+        if (W <= 1024) {
+            uint64_t w[1024];
+            __mul_karatsuba_rec(a.words.data(), A, b.words.data(), B, q.words.data(), Q, w, w + W);
+        } else {
+            auto w = new uint64_t[W];
+            __mul_karatsuba_rec(a.words.data(), A, b.words.data(), B, q.words.data(), Q, w, w + W);
+            delete[] w;
+        }
+    }
     q.words.resize(Q);
 }
 
