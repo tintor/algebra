@@ -21,16 +21,13 @@ template<typename T>
 auto signum(T a) { return (a > 0) - (a < 0); }
 
 class integer_backend {
-public:
-    using size_type = int;
-
 private:
     union {
         uint64_t* _words; // least significant first
         uint64_t _single_word;
     };
-    size_type _size; // negative value for negative number
-    size_type _capacity;
+    int _size; // negative value for negative number
+    int _capacity;
 
 public:
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
@@ -69,7 +66,7 @@ public:
         if (o.size() >= 2) {
             _capacity = o.size();
             _words = new uint64_t[_capacity];
-            for (size_type i = 0; i < _capacity; i++)
+            for (int i = 0; i < _capacity; i++)
                 _words[i] = o._words[i];
         } else {
             _capacity = 0;
@@ -119,7 +116,7 @@ public:
         if (this == &o)
             return;
         reset(o._size, /*initialize*/false);
-        for (size_type i = 0; i < size(); i++)
+        for (int i = 0; i < size(); i++)
             operator[](i) = o.operator[](i);
     }
 
@@ -131,7 +128,7 @@ public:
         }
         _size = 2;
     }
-    constexpr void reset(size_type size, bool initialize = true);
+    constexpr void reset(int size, bool initialize = true);
     constexpr void push_back(uint64_t a);
 
     constexpr void pop_back() {
@@ -143,13 +140,13 @@ public:
         operator[](0) = 0;
     }
 
-    constexpr size_type size() const { return std::abs(_size); }
+    constexpr int size() const { return std::abs(_size); }
     constexpr bool empty() const { return _size == 0; }
     constexpr bool allocated() const { return _capacity; }
     constexpr const uint64_t* data() const { return _capacity ? _words : &_single_word; }
     constexpr uint64_t* data() { return _capacity ? _words : &_single_word; }
-    constexpr uint64_t operator[](size_type i) const { return _capacity ? _words[i] : _single_word; }
-    constexpr uint64_t& operator[](size_type i) { return _capacity ? _words[i] : _single_word; }
+    constexpr uint64_t operator[](int i) const { return _capacity ? _words[i] : _single_word; }
+    constexpr uint64_t& operator[](int i) { return _capacity ? _words[i] : _single_word; }
     constexpr uint64_t back() const { return operator[](size() - 1); }
     constexpr uint64_t& back() { return operator[](size() - 1); }
 
@@ -159,11 +156,11 @@ public:
         std::swap(_capacity, o._capacity);
     }
 
-    constexpr void erase_first_n_words(size_type n);
-    constexpr void reserve(size_type capacity);
-    constexpr void resize(size_type size);
+    constexpr void erase_first_n_words(int n);
+    constexpr void reserve(int capacity);
+    constexpr void resize(int size);
 
-    constexpr void insert_first_n_words(size_type n);
+    constexpr void insert_first_n_words(int n);
     constexpr void insert_first_word(uint64_t a);
 
     constexpr void normalize() {
@@ -185,7 +182,7 @@ public:
     // not accessible to class natural
     constexpr void negate() { _size = -_size; }
     constexpr void set_negative(bool a) { _size = a ? -size() : size(); }
-    constexpr size_type sign() const { return _size; }
+    constexpr int sign() const { return _size; }
 
     static constexpr uint64_t hash_fn_64bit(uint64_t k) {
         k ^= k >> 33;
@@ -194,8 +191,8 @@ public:
     }
 };
 
-constexpr void integer_backend::reset(size_type size, bool initialize) {
-    const size_type abs_size = std::abs(size);
+constexpr void integer_backend::reset(int size, bool initialize) {
+    const int abs_size = std::abs(size);
     if (_capacity) {
         // heap
         if (abs_size > _capacity) {
@@ -222,7 +219,7 @@ constexpr void integer_backend::reset(size_type size, bool initialize) {
     _size = size;
 
     if (initialize && _capacity)
-        for (size_type i = 0; i < abs_size; i++)
+        for (int i = 0; i < abs_size; i++)
             _words[i] = 0;
 }
 
@@ -231,9 +228,9 @@ constexpr void integer_backend::push_back(uint64_t a) {
         if (size() == _capacity) {
             // heap -> heap x2
             auto w = new uint64_t[_capacity * 2];
-            for (size_type i = 0; i < _capacity; i++)
+            for (int i = 0; i < _capacity; i++)
                 w[i] = _words[i];
-            for (size_type i = 0; i < _capacity; i++)
+            for (int i = 0; i < _capacity; i++)
                 w[_capacity + i] = 0;
             delete[] _words;
             _words = w;
@@ -264,20 +261,20 @@ constexpr void integer_backend::push_back(uint64_t a) {
     }
 }
 
-constexpr void integer_backend::erase_first_n_words(size_type n) {
+constexpr void integer_backend::erase_first_n_words(int n) {
     if (n > 0) {
-        for (size_type i = n; i < size(); i++)
+        for (int i = n; i < size(); i++)
             operator[](i - n) = operator[](i);
         _size += (_size >= 0) ? -n : n;
     }
 }
 
-constexpr void integer_backend::reserve(size_type capacity) {
+constexpr void integer_backend::reserve(int capacity) {
     if (capacity <= _capacity || capacity == 1)
         return;
     capacity = std::max(_capacity * 2, capacity);
     auto words = new uint64_t[capacity];
-    for (size_type i = 0; i < size(); i++)
+    for (int i = 0; i < size(); i++)
         words[i] = operator[](i);
     if (_capacity)
         delete[] _words;
@@ -285,29 +282,29 @@ constexpr void integer_backend::reserve(size_type capacity) {
     _capacity = capacity;
 }
 
-constexpr void integer_backend::resize(size_type size) {
+constexpr void integer_backend::resize(int size) {
     reserve(size);
     if (_capacity)
-        for (size_type i = this->size(); i < size; i++)
+        for (int i = this->size(); i < size; i++)
             _words[i] = 0;
     _size = (_size >= 0) ? size : -size;
 }
 
-constexpr void integer_backend::insert_first_n_words(size_type n) {
+constexpr void integer_backend::insert_first_n_words(int n) {
     if (n == 0)
         return;
 
     reserve(size() + n);
-    for (size_type i = size(); i-- > 0; )
+    for (int i = size(); i-- > 0; )
         operator[](i + n) = operator[](i);
-    for (size_type i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
         operator[](i) = 0;
     _size += (_size >= 0) ? n : -n;
 }
 
 constexpr void integer_backend::insert_first_word(uint64_t a) {
     reserve(size() + 1);
-    for (size_type i = size(); i-- > 0; )
+    for (int i = size(); i-- > 0; )
         operator[](i + 1) = operator[](i);
     operator[](0) = a;
     _size += (_size >= 0) ? 1 : -1;
@@ -319,7 +316,7 @@ template<>
 struct std::hash<algebra::integer_backend> {
     constexpr size_t operator()(const algebra::integer_backend& a) const {
         uint64_t seed = algebra::integer_backend::hash_fn_64bit(a.sign());
-        for (algebra::integer_backend::size_type i = 0; i < a.size(); i++)
+        for (int i = 0; i < a.size(); i++)
             seed = algebra::integer_backend::hash_fn_64bit(seed ^ a[i]);
         return seed;
     }

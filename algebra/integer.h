@@ -7,8 +7,6 @@ struct integer;
 template<> struct IsNumberClass<integer> : std::true_type {};
 
 struct integer {
-    using size_type = natural::size_type;
-
     natural abs;
     integer_backend words;
 
@@ -25,7 +23,7 @@ struct integer {
     constexpr void operator=(const integer& o) { abs = o.abs; words = o.words; }
     constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); words = o.words; }
 
-    constexpr size_type sign() const { return abs.words.sign(); }
+    constexpr auto sign() const { return abs.words.sign(); }
     constexpr bool is_negative() const { return sign() < 0; }
     constexpr bool is_even() const { return abs.is_even(); }
     constexpr bool is_odd() const { return abs.is_odd(); }
@@ -146,7 +144,7 @@ struct integer {
 
         size_t c = 0;
         uint64_t carry = 1;
-        for (size_type i = 0; i < abs.words.size(); i++) {
+        for (int i = 0; i < abs.words.size(); i++) {
             uint128_t w = (uint128_t)abs.words[i] + carry;
             carry = w >> 64;
             c += std::popcount(~static_cast<uint64_t>(w));
@@ -437,7 +435,7 @@ constexpr int64_t operator%(const integer& a, int64_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
     uint128_t acc = 0;
-    for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
+    for (auto i = a.abs.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= a.abs.words[i];
         acc %= abs_unsigned(b);
@@ -449,41 +447,29 @@ constexpr int operator%(const integer& a, int b) { return a % (int64_t)b; }
 constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)b; }
 
 constexpr integer operator%(const integer& a, uint64_t b) {
-    if (b == 0)
-        throw std::runtime_error("division by zero");
-    uint128_t acc = 0;
-    for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
-        acc <<= 64;
-        acc |= a.abs.words[i];
-        acc %= b;
-    }
-    return acc;
+    integer c = a.abs % b;
+    if (a.is_negative())
+        c.negate();
+    return c;
 }
 
 constexpr uint64_t mod(const integer& a, uint64_t b) {
-    if (b == 0)
-        throw std::runtime_error("division by zero");
-    uint128_t acc = 0;
-    for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
-        acc <<= 64;
-        acc |= a.abs.words[i];
-        acc %= b;
-    }
-    if (a.is_negative()) {
-        acc *= b - 1;
-        acc %= b;
-    }
-    return acc;
+    uint64_t rem = a.abs % b;
+    if (!a.is_negative())
+        return rem;
+    return (static_cast<uint128_t>(rem) * (b - 1)) % b;
 }
 
-constexpr unsigned mod(const integer& a, unsigned b) {
+// TODO this version doesn't use uint128_t %, is it faster?
+// TODO if it is, move it to natural.h instead, it doesn't belong here
+constexpr unsigned mod(const integer& a, uint32_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
     uint64_t m = (uint64_t(1) << 32) % b;
     m = (m * m) % b;
 
     uint64_t acc = 0;
-    for (integer::size_type i = a.abs.words.size(); i-- > 0;) {
+    for (auto i = a.abs.words.size(); i-- > 0;) {
         acc *= m;
         acc += a.abs.words[i] % b;
         acc %= b;

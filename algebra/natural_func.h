@@ -83,7 +83,7 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
         return;
     }
 
-    const natural::size_type n = (b + 64 - 1) / 64;
+    const auto n = (b + 64 - 1) / 64;
     if (b == 64 * n) {
         // Note: power of two case is handled above!
         // mq = pow(2_n, 64 * n) / count
@@ -790,10 +790,6 @@ constexpr std::vector<std::pair<natural, int>> factorize(natural a) {
     return out;
 }
 
-constexpr bool is_power_of_two(const natural& a) {
-    return a.num_bits() == 1 + a.num_trailing_zeros();
-}
-
 constexpr uint64_t log_lower(natural a, uint64_t base) {
     uint64_t count = 0;
     if (!a)
@@ -902,6 +898,27 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
         } else
             root *= a;
     }
+}
+
+constexpr bool is_power_of_three(natural a) {
+    if (a.words.empty())
+        return false;
+    natural m;
+    while (a > 1) {
+        again:
+        if (a.mod3())
+            return false;
+        if (is_possible_square(a)) {
+            natural s = isqrt(a);
+            mul(s, s, m);
+            if (m == a) {
+                a = std::move(s);
+                goto again;
+            }
+        }
+        a /= 3u;
+    }
+    return true;
 }
 
 }

@@ -391,6 +391,7 @@ TEST_CASE("is_prime") {
 }
 
 TEST_CASE("is_power_of_two") {
+    REQUIRE(is_power_of_two(1_n));
     REQUIRE(is_power_of_two(1));
     REQUIRE(is_power_of_two(2));
     REQUIRE(!is_power_of_two(3));

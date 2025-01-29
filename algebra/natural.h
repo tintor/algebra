@@ -16,6 +16,15 @@ constexpr void Check(bool value, std::source_location loc = std::source_location
         throw std::runtime_error(std::format("Check failed at {}:{} in {}", loc.file_name(), loc.line(), loc.function_name()));
 }
 
+constexpr void Check(bool value, const char* message, std::source_location loc = std::source_location::current()) {
+    if (!value)
+        throw std::runtime_error(std::format("Check failed at {}:{} in {} with message: {}", loc.file_name(), loc.line(), loc.function_name(), message));
+}
+
+[[noreturn]] constexpr void Fail(const char* message, std::source_location loc = std::source_location::current()) {
+    throw std::runtime_error(std::format("Failed at {}:{} in {} with message: {}", loc.file_name(), loc.line(), loc.function_name(), message));
+}
+
 template<typename T> struct IsNumberClass : std::false_type {};
 template<typename T> concept __ncsi = IsNumberClass<T>::value || std_int<T>;
 
@@ -32,6 +41,61 @@ struct natural;
 template<> struct IsNumberClass<natural> : std::true_type {};
 
 constexpr uint128_t __mulq(uint64_t a, uint64_t b) { return uint128_t(a) * b; }
+
+#if defined(__x86_64__) && !defined(__ILP32__)
+constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
+    uint64_t hi = a >> 64;
+    uint64_t lo = a;
+    __asm__ (
+        "divq %[divisor]"
+        : "+a" (lo),  // Input: lo in RAX, Output: quotient in RAX
+            "=d" (r)    // Input: hi in RDX, Output: remainder in RDX
+        : [divisor] "r" (b),
+            "d" (hi)
+        : "cc"
+    );
+    q = lo;
+}
+#else
+constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
+    q = a / b;
+    m = a % b;
+}
+#endif
+
+#if defined(__x86_64__) && !defined(__ILP32__)
+constexpr uint64_t __divq(uint128_t a, uint64_t b) {
+    uint64_t hi = a >> 64;
+    uint64_t lo = a;
+    // Assembly clobbers hi (RDX) but we don't need it anymore
+    __asm__ (
+        "divq %[divisor]"
+        : "+a" (lo)      // Input: lo in RAX, Output: quotient in RAX
+        : [divisor] "r" (b),
+          "d" (hi)       // High bits in RDX (implicitly clobbered)
+        : "cc"           // Clobbers condition codes
+    );
+    return lo;
+}
+#else
+constexpr uint64_t __divq(uint128_t a, uint64_t b) { return a / b; }
+#endif
+
+#if defined(__x86_64__) && !defined(__ILP32__)
+constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) {
+    uint64_t hi = a >> 64;
+    uint64_t lo = a;
+    uint64_t m;
+    __asm__ (
+        "divq %[divisor]"
+        : "=d" (m), "+a" (lo)
+        : [divisor] "r" (b), "d" (hi)
+    );
+    return m;
+}
+#else
+constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) { return a % b; }
+#endif
 
 constexpr uint64_t pow(uint64_t base, unsigned exp) {
     if (base == 2)
@@ -82,29 +146,26 @@ constexpr uint128_t mul_mod(uint128_t a, uint128_t b, uint128_t m) {
     return result;
 }
 
-// returns (a ** n) mod p
-constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t p) {
+// returns (A ** N) mod M
+// assumes A is in [0, M) range
+constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t m) {
     uint64_t b = 1;
-    a %= p;
-        while (n) {
+    while (n) {
         if (n & 1)
-            b = (static_cast<__uint128_t>(b) * a) % p;
+            b = __divq_mod(__mulq(b, a), m);
         n >>= 1;
-        a = (static_cast<__uint128_t>(a) * a) % p;
+        a = __divq_mod(__mulq(a, a), m);
     }
     return b;
 }
 
 // TODO test cases for operator float()
 struct natural {
-    using size_type = integer_backend::size_type;
-
     integer_backend words;
 
     constexpr natural() {}
     constexpr natural(std_int auto a) : words(a) {
-        if (a < 0)
-            throw std::runtime_error("assigning negative number to natural");
+        Check(a >= 0, "assigning negative number to natural");
     }
     constexpr natural(natural&& o) : words(std::move(o.words)) { }
     constexpr natural(const natural& o) : words(o.words) { }
@@ -125,36 +186,30 @@ struct natural {
     constexpr bool is_uint128() const { return words.size() <= 2; }
 
     constexpr operator uint8_t() const {
-        if (!is_uint8())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint8(), "integer is too large to fit in uint8");
         return words[0];
     }
     constexpr operator uint16_t() const {
-        if (!is_uint16())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint16(), "integer is too large to fit in uint16");
         return words[0];
     }
     constexpr operator uint32_t() const {
-        if (!is_uint32())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint32(), "integer is too large to fit in uint32");
         return words[0];
     }
     constexpr operator unsigned long() const {
         static_assert(sizeof(unsigned long) == 8);
-        if (!is_uint64())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint64(), "integer is too large to fit in uint64");
         return words[0];
     }
     constexpr operator unsigned long long() const {
         static_assert(sizeof(unsigned long long) == 8);
-        if (!is_uint64())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint64(), "integer is too large to fit in uint64");
         return words[0];
     }
 
     constexpr operator uint128_t() const {
-        if (!is_uint128())
-            throw std::runtime_error("cast overflow");
+        Check(is_uint128(), "integer is too large to fit in uint128");
         uint128_t a = words[0];
         if (words.size() >= 2)
             a |= static_cast<uint128_t>(words[1]) << 64;
@@ -163,7 +218,7 @@ struct natural {
 
     constexpr size_t num_trailing_zeros() const {
         size_t a = 0;
-        for (size_type i = 0; i < words.size(); i++) {
+        for (int i = 0; i < words.size(); i++) {
             if (words[i])
                 return a + std::countr_zero(words[i]);
             a += 64;
@@ -171,7 +226,7 @@ struct natural {
         return a;
     }
 
-    constexpr void __add(uint64_t b, size_type i) {
+    constexpr void __add(uint64_t b, int i) {
         while (true) {
             if (b == 0)
                 return;
@@ -207,7 +262,7 @@ struct natural {
                 words.push_back(0);
         }
         uint128_t acc = 0;
-        for (size_type i = 0; i < words.size(); ++i) {
+        for (int i = 0; i < words.size(); ++i) {
             acc += words[i];
             if (i < b.words.size())
                 acc += b.words[i];
@@ -221,16 +276,14 @@ struct natural {
 
     constexpr natural& operator-=(uint64_t b) {
         if (!words.allocated()) {
-            if (words[0] < b)
-                throw std::runtime_error("natural can't be negative");
+            Check(words[0] >= b, "natural can't be negative");
             words[0] -= b;
             if (words[0] == 0)
                 words.pop_back();
             return *this;
         }
 
-        if (words[0] < b && words.size() < 2)
-            throw std::runtime_error("natural can't be negative");
+        Check(words[0] >= b || words.size() >= 2, "natural can't be negative");
 
         if (words[0] > b) {
             words[0] -= b;
@@ -238,7 +291,7 @@ struct natural {
         }
 
         words[0] -= b;
-        for (size_type i = 1; i < words.size(); ++i)
+        for (int i = 1; i < words.size(); ++i)
             if (words[i]--)
                 break;
         if (words.back() == 0)
@@ -252,22 +305,20 @@ struct natural {
             return operator-=(static_cast<uint64_t>(b));
 
         // subtract low part of b
-        if (words[0] < uint64_t(b) && words.size() < 2)
-            throw std::runtime_error("natural can't be negative");
+        Check(words[0] >= uint64_t(b) || words.size() >= 2, "natural can't be negative");
 
         words[0] -= uint64_t(b);
-        for (size_type i = 1; i < words.size(); ++i)
+        for (int i = 1; i < words.size(); ++i)
             if (words[i]--)
                 break;
         if (words.back() == 0)
             words.pop_back();
 
         // subtract high part of b
-        if (words.size() < 3 && words[1] < uint64_t(b >> 64))
-            throw std::runtime_error("natural can't be negative");
+        Check(words.size() >= 3 || words[1] >= uint64_t(b >> 64), "natural can't be negative");
 
         words[1] -= uint64_t(b >> 64);
-        for (size_type i = 2; i < words.size(); ++i)
+        for (int i = 2; i < words.size(); ++i)
             if (words[i]--)
                 break;
         if (words.back() == 0)
@@ -278,7 +329,7 @@ struct natural {
 
     constexpr natural& operator-=(const natural& b) {
         uint64_t borrow = 0;
-        for (size_type i = 0; i < b.words.size(); ++i) {
+        for (int i = 0; i < b.words.size(); ++i) {
             int128_t diff = (int128_t)words[i] - b.words[i] - borrow;
             if (diff < 0) {
                 words[i] = diff + ((uint128_t)1 << 64);
@@ -298,8 +349,7 @@ struct natural {
                 borrow = 0;
             }
         }
-        if (borrow)
-            throw std::format_error("natural subtraction out of domain");
+        Check(!borrow, "natural subtraction out of domain");
         words.normalize();
         return *this;
     }
@@ -311,7 +361,7 @@ struct natural {
                 words.push_back(carry);
             return;
         }
-        for (size_type i = 0; i < words.size(); ++i) {
+        for (int i = 0; i < words.size(); ++i) {
             uint128_t acc = (uint128_t)words[i] * a + carry;
             words[i] = acc;
             carry = acc >> 64;
@@ -323,13 +373,15 @@ struct natural {
 
     constexpr uint64_t operator%(std_int auto b) const {
         static_assert(sizeof(b) <= 8);
-        if (b <= 0)
-            throw std::runtime_error((b == 0) ? "division by zero" : "division of natural by negative number");
+        if (b <= 0) {
+            Check(b != 0, "division by zero");
+            Fail("division of natural by negative number");
+        }
         uint128_t acc = 0;
-        for (size_type i = words.size(); i-- > 0;) {
+        for (int i = words.size(); i-- > 0;) {
             acc <<= 64;
             acc |= words[i];
-            acc %= static_cast<uint64_t>(b);
+            acc = __divq_mod(acc, static_cast<uint64_t>(b));
         }
         return acc;
     }
@@ -337,8 +389,7 @@ struct natural {
     constexpr uint128_t operator%(const uint128_t b) const {
         if (b <= UINT64_MAX)
             return operator%(static_cast<uint64_t>(b));
-        if (b == 0)
-            throw std::runtime_error("division by zero");
+        Check(b != 0, "division by zero");
 
         // compute m = (2**128) % b
         uint128_t m = UINT128_MAX % b;
@@ -347,7 +398,7 @@ struct natural {
             m = 0;
 
         uint128_t res = 0;
-        for (size_type i = 0; i < words.size(); i += 2) {
+        for (int i = 0; i < words.size(); i += 2) {
             res = mul_mod(res, m, b);
             uint128_t acc = words[i];
             if (i + 1 < words.size())
@@ -361,7 +412,7 @@ struct natural {
 
     constexpr uint64_t mod3() const {
         uint64_t acc = 0;
-        for (size_type i = words.size(); i-- > 0;)
+        for (int i = words.size(); i-- > 0;)
             acc += words[i] % 3;
         return acc % 3;
     }
@@ -372,14 +423,14 @@ struct natural {
     constexpr uint64_t mod5() const {
         uint64_t acc = 0;
         if (words.size() > UINT64_MAX / 4) {
-            for (size_type i = words.size(); i-- > 0;) {
+            for (int i = words.size(); i-- > 0;) {
                 acc += words[i] % 5;
                 if ((i % 65536) == 0)
                     acc %= 5;
             }
         } else {
             // (2**64) mod 5 == 1
-            for (size_type i = words.size(); i-- > 0;)
+            for (int i = words.size(); i-- > 0;)
                 acc += words[i] % 5;
         }
         return acc % 5;
@@ -394,8 +445,8 @@ struct natural {
         words.swap(o.words);
     }
 
-    constexpr size_type str_size_upper_bound(uint32_t base = 10) const;
-    constexpr size_type str(char* buffer, int buffer_size, uint32_t base = 10, bool upper = true) const;
+    constexpr int str_size_upper_bound(uint32_t base = 10) const;
+    constexpr int str(char* buffer, int buffer_size, uint32_t base = 10, bool upper = true) const;
     constexpr std::string str(uint32_t base = 10, bool upper = true) const {
         std::string s;
         s.resize(str_size_upper_bound(base));
@@ -413,7 +464,7 @@ struct natural {
 
     constexpr size_t popcount() const {
         size_t c = 0;
-        for (size_type i = 0; i < words.size(); i++)
+        for (int i = 0; i < words.size(); i++)
             c += std::popcount(words[i]);
         return c;
     }
@@ -435,9 +486,8 @@ struct natural {
 constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - std::countl_zero(a); }
 
 constexpr natural operator-(const natural& a) {
-    if (a.words.size() == 0)
-        return 0;
-    throw std::runtime_error("natural can't be negative");
+    Check(a.words.size() == 0, "natural can't be negative");
+    return 0;
 }
 
 constexpr natural operator+(const natural& a, const natural& b) { natural c = a; return c += b; }
@@ -472,20 +522,17 @@ constexpr natural operator-(const natural& a, const natural& b) { natural c = a;
 constexpr natural operator-(natural a, const std_unsigned_int auto b) {
     if (b <= UINT64_MAX)
         return a -= uint64_t(b);
-    if (a < b)
-        throw std::runtime_error("natural can't be negative");
+    Check(a >= b, "natural can't be negative");
     static_assert(sizeof(b) <= 16);
     return a -= static_cast<uint128_t>(b);
 }
 
 constexpr natural operator-(const std_unsigned_int auto a, natural b) {
     if (a <= UINT64_MAX) {
-        if (b.words.size() > 1 || uint64_t(a) < b.words[0])
-            throw std::runtime_error("natural can't be negative");
+        Check(b.words.size() <= 1 && uint64_t(a) >= b.words[0], "natural can't be negative");
         return uint64_t(a) - b.words[0];
     }
-    if (a > b)
-        throw std::runtime_error("natural can't be negative");
+    Check(a <= b, "natural can't be negative");
     return a - static_cast<uint128_t>(b);
 }
 
@@ -496,8 +543,7 @@ constexpr natural operator-(natural a, const std_signed_int auto b) {
 }
 
 constexpr natural operator-(const std_signed_int auto a, natural b) {
-    if (a < 0)
-        throw std::runtime_error("natural can't be negative");
+    Check(a >= 0, "natural can't be negative");
     return make_unsigned(a) - b;
 }
 
@@ -785,8 +831,8 @@ constexpr bool is_power_of_two(const natural& a) {
     auto e = w + a.words.size() - 1;
     if (*e & (*e - 1))
         return false;
-    while (e >= w)
-        if (*e--)
+    while (--e >= w)
+        if (*e)
             return false;
     return true;
 }
@@ -864,7 +910,7 @@ constexpr natural mul_karatsuba(const natural& a, const natural& b) {
 
 // supports &a == &q
 constexpr void __mul(const natural& a, const natural& b, natural& q) {
-    natural::size_type Q;
+    int Q;
     if (&a != &q)
         q.set_zero();
     auto A = a.words.size();
@@ -921,7 +967,7 @@ constexpr void __mul(const natural& a, uint64_t b, uint64_t carry, natural& out)
     }
     if (&a != &out)
         out.words.reset(a.words.size(), /*initialize*/false);
-    for (natural::size_type i = 0; i < a.words.size(); ++i) {
+    for (int i = 0; i < a.words.size(); ++i) {
         auto acc = __mulq(a.words[i], b) + carry;
         out.words[i] = acc;
         carry = acc >> 64;
@@ -979,8 +1025,8 @@ constexpr void __square(natural& a) {
     for (auto k = (n - 1) << 1; k >= 0; k--) {
         auto w = a.words[k];
         a.words[k] = 0;
-        auto i_min = std::max<natural::size_type>(0, k - n + 1);
-        auto i_max = std::min<natural::size_type>(n - 1, k);
+        auto i_min = std::max<int>(0, k - n + 1);
+        auto i_max = std::min<int>(n - 1, k);
         for (auto i = i_min; i <= i_max; i++) {
             auto j = k - i;
             const auto ai = (i < k) ? a.words[i] : w;
@@ -1069,8 +1115,7 @@ constexpr void mul(natural& a, const natural& b) {
 constexpr natural operator*(const natural& a, const natural& b) { natural c; mul(a, b, /*out*/c); return c; }
 constexpr natural operator*(natural a, std_unsigned_int auto b) { return a *= b; }
 constexpr natural operator*(natural a, std_signed_int auto b) {
-    if (b < 0)
-        throw std::runtime_error("multiplication of natural with negative number");
+    Check(b >= 0, "multiplication of natural with negative number");
     return std::move(a) * make_unsigned(b);
 }
 constexpr natural operator*(std_int auto a, natural b) { return std::move(b) * a; }
@@ -1085,8 +1130,7 @@ constexpr natural& operator*=(natural& a, std_unsigned_int auto b) {
     return a;
 }
 constexpr natural& operator*=(natural& a, std_signed_int auto b) {
-    if (b < 0)
-        throw std::runtime_error("multiplication of natural with negative number");
+    Check(b >= 0, "multiplication of natural with negative number");
     return a *= make_unsigned(b);
 }
 
@@ -1097,7 +1141,7 @@ constexpr void add_product(natural& acc, const natural& a, const natural& b) {
     // TODO figure out how to choose A B order based on sizes of A and B
     for (size_t i = 0; i < a.words.size(); i++) {
         uint128_t carry = 0;
-        for (natural::size_type j = 0; j < b.words.size(); j++) {
+        for (int j = 0; j < b.words.size(); j++) {
             carry += __mulq(a.words[i], b.words[j]);
             carry += acc.words[i + j];
             acc.words[i + j] = carry;
@@ -1154,16 +1198,16 @@ constexpr void sub_product(natural& acc, const natural& a, const uint64_t b) {
 }
 
 constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quotient) {
-    if (divisor == 0)
-        throw std::runtime_error("division by zero");
+    Check(divisor != 0, "division by zero");
     if (&dividend != &quotient)
         quotient.words.reset(dividend.words.size());
     uint128_t acc = 0;
     for (auto i = dividend.words.size(); i-- > 0;) {
         acc <<= 64;
         acc |= dividend.words[i];
-        quotient.words[i] = acc / divisor;
-        acc %= divisor;
+        uint64_t r;
+        __divq(acc, divisor, quotient.words[i], r);
+        acc = r;
     }
     quotient.words.normalize();
     return acc;
@@ -1229,8 +1273,7 @@ constexpr void div(const natural& dividend, const natural& divisor, natural& quo
         remainder = div(dividend, static_cast<uint64_t>(divisor), quotient);
         return;
     }
-    if (divisor.words.size() == 0)
-        throw std::runtime_error("division by zero");
+    Check(!divisor.words.empty(), "division by zero");
     if (&dividend != &quotient)
         quotient.words.reset(dividend.words.size());
     remainder.words.set_zero();
@@ -1249,8 +1292,7 @@ constexpr void mod(const natural& dividend, const natural& divisor, natural& rem
         remainder = dividend % static_cast<uint64_t>(divisor);
         return;
     }
-    if (divisor.words.size() == 0)
-        throw std::runtime_error("division by zero");
+    Check(!divisor.words.empty(), "division by zero");
     remainder.words.set_zero();
     for (auto i = dividend.words.size(); i-- > 0;) {
         if (remainder.words.size() || dividend.words[i])
@@ -1266,8 +1308,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
 
     const char A = (upper ? 'A' : 'a') - 10;
     if (words.size() == 0) {
-        if (p >= end)
-            throw new std::runtime_error("buffer too small");
+        Check(p < end, "buffer too small");
         *p++ = '0';
     } else if (words.size() == 1) {
         auto a = operator uint64_t();
@@ -1286,8 +1327,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
         } else {
             while (a) {
                 const int c = a % base;
-                if (p >= end)
-                    throw new std::runtime_error("buffer too small");
+                Check(p < end, "buffer too small");
                 *p++ = (c < 10) ? ('0' + c) : (A + c);
                 a /= base;
             }
@@ -1318,8 +1358,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
             natural n = *this;
             while (n) {
                 const int c = div(n, static_cast<uint64_t>(base), /*out*/n);
-                if (p >= end)
-                    throw new std::runtime_error("buffer too small");
+                Check(p < end, "buffer too small");
                 *p++ = (c < 10) ? ('0' + c) : (A + c);
             }
         }
@@ -1330,8 +1369,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
 
 constexpr natural operator/(const natural& a, const natural& b) { natural quot, rem; div(a, b, /*out*/quot, /*out*/rem); return quot; }
 constexpr natural operator/(const natural& a, std_int auto b) {
-    if (b < 0)
-        throw std::runtime_error("division of natural with negative number");
+    Check(b >= 0, "division of natural with negative number");
     natural q;
     div(a, static_cast<uint64_t>(b), q);
     return q;
@@ -1339,8 +1377,7 @@ constexpr natural operator/(const natural& a, std_int auto b) {
 
 constexpr natural& operator/=(natural& a, const natural &b) { natural rem; div(a, b, /*out*/a, /*out*/rem); return a; }
 constexpr natural& operator/=(natural& a, std_int auto b) {
-    if (b < 0)
-        throw std::runtime_error("division of natural with negative number");
+    Check(b >= 0, "division of natural with negative number");
     div(a, static_cast<uint64_t>(b), a);
     return a;
 }
@@ -1357,7 +1394,7 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
 
         if (bit_shift) {
             uint64_t carry = 0;
-            for (natural::size_type i = 0; i < a.words.size(); ++i) {
+            for (int i = 0; i < a.words.size(); ++i) {
                 auto current = a.words[i];
                 a.words[i] = (current << bit_shift) | carry;
                 carry = current >> (64 - bit_shift);
@@ -1426,7 +1463,7 @@ constexpr natural& operator|=(natural& a, const natural& b) {
     auto bs = b.words.size();
     if (bs > a.words.size())
         a.words.resize(bs);
-    for (natural::size_type i = 0; i < bs; i++)
+    for (int i = 0; i < bs; i++)
         a.words[i] |= b.words[i];
     a.words.normalize();
     return a;
@@ -1540,8 +1577,7 @@ struct std::formatter<algebra::natural, char> {
                 upper = (*it++ == 'X');
             }
         }
-        if (it == ctx.end() || *it != '}')
-            throw std::format_error("Invalid format specifier for natural.");
+        algebra::Check(it != ctx.end() && *it == '}', "Invalid format specifier for natural.");
         return it;
     }
 
@@ -1617,8 +1653,7 @@ constexpr int natural::str_size_upper_bound(unsigned base) const {
 template<std::floating_point T>
 constexpr natural::operator T() const {
     const int exponent = static_cast<int>(num_bits()) - std::numeric_limits<T>::digits;
-    if (exponent >= std::numeric_limits<T>::max_exponent)
-        throw std::runtime_error("natural is too large for float");
+    Check(exponent < std::numeric_limits<T>::max_exponent, "natural is too large for floating point type");
     if (exponent <= 0)
         return words[0];
     const auto m = extract_64bits(*this, exponent);
@@ -1630,8 +1665,7 @@ static_assert(sizeof(natural) == 16);
 constexpr natural::natural(std::string_view s, unsigned base) {
     const char* p = s.data();
     const char* end = s.data() + s.size();
-    if (p >= end)
-        throw std::runtime_error("expecting digit instead of end of string");
+    Check(p < end, "expecting digit instead of end of string");
 
     uint64_t acc = 0;
     unsigned count = 0;
@@ -1642,8 +1676,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
                 continue;
             }
             char c = *p++;
-            if ('0' > c || c > '9')
-                throw std::runtime_error("expecting 0-9 for base 10");
+            Check('0' <= c && c <= '9', "expecting 0-9 for base 10");
             acc = acc * 10 + c - '0';
             count += 1;
             if (count == 19) {
@@ -1666,8 +1699,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
                 continue;
             }
             char c = *p++;
-            if (c != '0' && c != '1')
-                throw std::runtime_error("expecting 0-1 for base 2");
+            Check(c == '0' || c == '1', "expecting 0-1 for base 2");
             acc = acc * 2 + c - '0';
             count += 1;
             if (count == 64) {
@@ -1683,8 +1715,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
                 continue;
             }
             char c = *p++;
-            if ('0' > c || c > '7')
-                throw std::runtime_error("expecting 0-7 for base 8");
+            Check('0' <= c && c <= '7', "expecting 0-7 for base 8");
             acc = acc * 8 + c - '0';
             count += 3;
             if (count == 63) {
@@ -1708,7 +1739,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
             else if ('A' <= c && c <= 'F')
                 d = c - 'A' + 10;
             else
-                throw std::runtime_error("expecting 0-9 or A-F for base 16");
+                Fail("expecting 0-9 or A-F for base 16");
             acc = acc * 16 + d;
             count += 4;
             if (count == 64) {
@@ -1718,7 +1749,7 @@ constexpr natural::natural(std::string_view s, unsigned base) {
             }
         }
     } else
-        throw std::runtime_error("unsupported base");
+        Fail("unsupported base");
     if (count) {
         *this <<= count;
         if (words.size() == 0)
