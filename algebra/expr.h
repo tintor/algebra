@@ -1,6 +1,6 @@
 #pragma once
 #include "algebra/rational_func.h"
-#include "algebra/natural_func.h"
+#include "algebra/natural.h"
 #include <memory>
 
 namespace algebra {

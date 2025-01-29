@@ -1,4 +1,4 @@
-#include "algebra/natural_func.h"
+#include "algebra/natural.h"
 #include "algebra/__test.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <chrono>

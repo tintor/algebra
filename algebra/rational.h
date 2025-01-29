@@ -1,7 +1,6 @@
 #pragma once
 #include "algebra/integer.h"
 #include "algebra/integer_func.h"
-#include "algebra/natural_func.h"
 #include <regex>
 #include <charconv>
 #include <random>

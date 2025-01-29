@@ -900,6 +900,8 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
     }
 }
 
+constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(a.words.data(), a.words.size()); }
+
 constexpr bool is_power_of_three(natural a) {
     if (a.words.empty())
         return false;

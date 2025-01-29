@@ -1,5 +1,4 @@
 #include "algebra/integer.h"
-#include "algebra/natural_func.h"
 #include "algebra/__test.h"
 
 TEST_CASE("ctor") {

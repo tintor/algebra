@@ -487,9 +487,6 @@ constexpr void __add(natural& a, const uint64_t* b, const int B, int shift = 0) 
         a.words.push_back(acc);
 }
 
-// TODO move to natural_func.h
-constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(a.words.data(), a.words.size()); }
-
 constexpr natural& operator<<=(natural& a, int64_t b);
 
 // no support for &a == &q

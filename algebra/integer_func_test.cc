@@ -1,4 +1,4 @@
-#include "algebra/natural_func.h"
+#include "algebra/natural.h"
 #include "algebra/integer_func.h"
 #include "algebra/__test.h"
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "algebra/natural_class.h"
+#include "algebra/natural.h"
 
 namespace algebra {
 
