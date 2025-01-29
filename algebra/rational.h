@@ -188,9 +188,10 @@ constexpr rational::rational(T x) {
         num = -num;
 }
 
+constexpr bool is_power_of_two(uint64_t a) { return (a & (a - 1)) == 0; }
+
 constexpr void rational::simplify() {
-    if (den.is_zero())
-        throw std::runtime_error("rational with zero denominator");
+    Check(!den.is_zero(), "rational with zero denominator");
     if (den.is_one())
         return;
     if (num.is_zero()) {
@@ -202,7 +203,6 @@ constexpr void rational::simplify() {
         num.negate();
     }
 
-    // TODO optimize for small integers
     auto az = num.num_trailing_zeros();
     auto bz = den.num_trailing_zeros();
 
@@ -210,23 +210,44 @@ constexpr void rational::simplify() {
     num >>= z;
     den >>= z;
 
-    if (num.is_one() || den.is_one())
-        return;
+    if (den.abs.words.size() <= 1) {
+        if (is_power_of_two(den.abs.words[0]))
+            return;
+        if (num.abs.words.size() <= 1) {
+            // note that num can be negative here, but we only need its absolute value
+            if (is_power_of_two(num.abs.words[0]))
+                return;
+            uint64_t a = num.abs.words[0] >> (az - z);
+            uint64_t b = den.abs.words[0];
+            do {
+                b >>= std::countr_zero(b);
+                if (a > b)
+                    std::swap(a, b);
+                b -= a;
+            } while (b);
+            if (a != 1) {
+                num /= a;
+                den /= a;
+            }
+            return;
+        }
+    }
 
-    integer a = abs(num);
-    integer b = den;
-    a >>= az - z;
-    while (!b.is_zero()) {
+    // TODO allocate a and b on stack if they are small enough
+    natural a = num.abs >> (az - z);
+    natural b = den.abs;
+    do {
         b >>= b.num_trailing_zeros();
         if (a > b)
             std::swap(a, b);
         b -= a;
-    }
+    } while (b);
     if (!a.is_one()) {
         num /= a;
         den /= a;
     }
 }
+
 constexpr rational::operator float() const {
     const auto num_bits = den.num_bits();
     if (num_bits <= 50) return static_cast<float>(num) / static_cast<float>(den);
