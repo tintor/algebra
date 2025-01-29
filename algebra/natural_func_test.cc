@@ -411,6 +411,17 @@ TEST_CASE("is_power_of_two") {
     REQUIRE(is_power_of_two(1_n << 280));
 }
 
+TEST_CASE("is_power_of_three") {
+    REQUIRE(!is_power_of_three(0));
+    REQUIRE(is_power_of_three(1));
+    REQUIRE(!is_power_of_three(2));
+    REQUIRE(is_power_of_three(3));
+    REQUIRE(!is_power_of_three(4));
+    REQUIRE(is_power_of_three(9));
+    REQUIRE(is_power_of_three(pow(3_n, 30)));
+    REQUIRE(!is_power_of_three(pow(3_n, 30) - 1));
+}
+
 TEST_CASE("power_of_two") {
     REQUIRE(pow(2_n, 0) == 1_n);
     REQUIRE(pow(2_n, 3) == 8_n);
