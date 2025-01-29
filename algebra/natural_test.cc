@@ -32,7 +32,7 @@ natural rand_natural(int size, Random& rng) {
 
 #if 0
 TEST_CASE("mul benchmark") {
-    Random rng(0);
+    Random rng(1);
     natural a, b;
 
     a = rand_natural(4, rng);

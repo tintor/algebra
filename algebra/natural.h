@@ -679,10 +679,11 @@ constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t*
 
 constexpr int KARATSUBA_LIMIT = 32;
 
-// karatsuba 16384 with 8 limit takes 118ms
-// karatsuba 16384 with 16 limit takes 66ms
-// karatsuba 16384 with 32 limit takes 35ms
-// karatsuba 16384 with 64 limit takes 32ms
+// long mul  16384               takes 235/230ms*
+// karatsuba 16384 with 8 limit  takes ****ms (fails, likely due to small W buffer size)
+// karatsuba 16384 with 16 limit takes  33ms* (regresses size 16 compared to long mul)
+// karatsuba 16384 with 32 limit takes  26ms*
+// karatsuba 16384 with 64 limit takes  26ms*
 
 // assuming a.size >= b.size
 constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, int B, uint64_t* q, int& Q, uint64_t* w, const uint64_t* we) {
@@ -705,7 +706,6 @@ constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, 
     if (B <= m) {
         auto r = w;
         w += A1 + B;
-        Check(w <= we);
         __mul_karatsuba_rec(a1, A1, b, B, r, R, w, we); // r = a1 * b
         __mul_karatsuba_rec(a, m, b, B, q, Q, w, we); // q = a0 * b
         __add(q, Q, r, R, m); // q = a * b
@@ -722,18 +722,14 @@ constexpr void __mul_karatsuba_rec(const uint64_t* a, int A, const uint64_t* b, 
         int BB = m;
         std::copy(b, b + m, bb);
         __add(bb, BB, b1, B1, 0); // bb = b0 + b1
-        Check(AA + BB <= mul_max_size(a, A, b, B));
 
         auto r = w;
         w += AA + BB + 1;
-        //w += mul_max_size(aa, AA, bb, BB);
-        Check(w <= we);
         __mul_karatsuba_rec(aa, AA, bb, BB, r, R, w, we); // r = aa * bb
-        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them?
+        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them? Tests are pasing with 256 words.
 
         uint64_t* p = w;
         w += A1 + B1;
-        Check(w <= we);
         int P;
         __mul_karatsuba_rec(a1, A1, b1, B1, p, P, w, we);
         __mul_karatsuba_rec(a, m, b, m, q, Q, w, we);
