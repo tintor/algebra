@@ -11,6 +11,11 @@
 
 namespace algebra {
 
+constexpr void Check(bool value, std::source_location loc = std::source_location::current()) {
+    if (!value)
+        throw std::runtime_error(std::format("Check failed at {}:{} in {}", loc.file_name(), loc.line(), loc.function_name()));
+}
+
 template<typename T> struct IsNumberClass : std::false_type {};
 template<typename T> concept __ncsi = IsNumberClass<T>::value || std_int<T>;
 
@@ -574,6 +579,12 @@ constexpr bool operator==(const natural& a, const std_unsigned_int auto b) {
 }
 constexpr bool operator==(const natural& a, const std_signed_int auto b) { return b >= 0 && a == make_unsigned(b); }
 
+constexpr size_t num_bits(const uint64_t* a, const size_t A) { return A ? 64 * A - std::countl_zero(a[A - 1]) : 0; }
+
+constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
+    return (A && B) ? A + B - 1 + (127 - std::countl_zero(a[A - 1]) - std::countl_zero(b[B - 1])) / 64 : 0;
+}
+
 // `q` needs to have capacity of at least A + B!
 // supports q == a
 // b != q
@@ -639,11 +650,6 @@ constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int sh
         a[A++] = acc;
 }
 
-constexpr void Check(bool value, std::source_location loc = std::source_location::current()) {
-    if (!value)
-        throw std::runtime_error(std::format("Check failed at {}:{} in {}", loc.file_name(), loc.line(), loc.function_name()));
-}
-
 // assuming a >= b
 constexpr void __sub(uint64_t* a, int& A, const uint64_t* b, const int B) {
     uint64_t borrow = 0;
@@ -669,12 +675,6 @@ constexpr void __sub(uint64_t* a, int& A, const uint64_t* b, const int B) {
     }
     while (A && !a[A - 1])
         A -= 1;
-}
-
-constexpr size_t num_bits(const uint64_t* a, const size_t A) { return A ? 64 * A - std::countl_zero(a[A - 1]) : 0; }
-
-constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
-    return (A && B) ? A + B - 1 + (127 - std::countl_zero(a[A - 1]) - std::countl_zero(b[B - 1])) / 64 : 0;
 }
 
 constexpr int KARATSUBA_LIMIT = 32;
