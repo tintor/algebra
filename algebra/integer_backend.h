@@ -158,6 +158,7 @@ public:
 
     constexpr void erase_first_n_words(int n);
     constexpr void reserve(int capacity);
+    constexpr void reserve_and_set_zero(int capacity);
     constexpr void resize(int size);
 
     constexpr void insert_first_n_words(int n);
@@ -267,6 +268,18 @@ constexpr void integer_backend::erase_first_n_words(int n) {
             operator[](i - n) = operator[](i);
         _size += (_size >= 0) ? -n : n;
     }
+}
+
+constexpr void integer_backend::reserve_and_set_zero(int capacity) {
+    _size = 0;
+    if (capacity <= _capacity || capacity == 1) {
+        operator[](0) = 0;
+        return;
+    }
+    if (_capacity)
+        delete[] _words;
+    _capacity = std::max(_capacity * 2, capacity);
+    _words = new uint64_t[_capacity];
 }
 
 constexpr void integer_backend::reserve(int capacity) {

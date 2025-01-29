@@ -247,6 +247,7 @@ struct natural {
     }
 
     constexpr natural& operator+=(uint128_t b) {
+        // TODO this could be rewritten to do only one scan of A instead of two
         __add(static_cast<uint64_t>(b), 0);
         if (words.size() == 0)
             words.push_back(0);
@@ -254,18 +255,25 @@ struct natural {
         return *this;
     }
 
-    constexpr natural& operator+=(const natural& b) {
-        // TODO predict max possible n taking into account carry!
-        if (b.words.size() > words.size()) {
-            words.reserve(b.words.size());
-            while (words.size() < b.words.size())
+    constexpr natural& operator+=(const natural& _b) {
+        const uint64_t* b = _b.words.data();
+        const int B = _b.words.size();
+
+        if (B > words.size()) {
+            // Since we need to reallocate A anyway, add one more word if there is possibility of last carry
+            words.reserve((b[B - 1] == UINT64_MAX) ? B + 1 : B);
+            while (words.size() < B)
                 words.push_back(0);
         }
         uint128_t acc = 0;
         for (int i = 0; i < words.size(); ++i) {
+            if (i >= B) {
+                if (!acc)
+                    return *this;
+            } else {
+                acc += b[i];
+            }
             acc += words[i];
-            if (i < b.words.size())
-                acc += b.words[i];
             words[i] = acc;
             acc >>= 64;
         }
@@ -627,8 +635,24 @@ constexpr bool operator==(const natural& a, const std_signed_int auto b) { retur
 
 constexpr size_t num_bits(const uint64_t* a, const size_t A) { return A ? 64 * A - std::countl_zero(a[A - 1]) : 0; }
 
+constexpr bool can_overflow_with_carry(const uint64_t a, const uint64_t b) {
+    return (b == UINT64_MAX) || (a > UINT64_MAX - b - 1);
+}
+
+constexpr size_t add_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
+    if (A > B)
+        return (a[A - 1] == UINT64_MAX) ? A + 1 : A;
+    if (A < B)
+        return (b[B - 1] == UINT64_MAX) ? B + 1 : B;
+    return can_overflow_with_carry(a[A - 1], b[A - 1]) ? A + 1 : A;
+}
+
 constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
     return (A && B) ? A + B - 1 + (127 - std::countl_zero(a[A - 1]) - std::countl_zero(b[B - 1])) / 64 : 0;
+}
+
+constexpr size_t div_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
+    return (A >= B) ? 1 + 64 * (A - B) + std::countl_zero(b[B - 1]) - std::countl_zero(a[A - 1]) : 0;
 }
 
 // `q` needs to have capacity of at least A + B!
@@ -676,7 +700,7 @@ constexpr void __mul(const uint64_t* a, const int A, const uint64_t* b, const in
 }
 
 // shift must be >= 0
-constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int shift) {
+constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int shift = 0) {
     while (A < B + shift)
         a[A++] = 0;
 
@@ -694,6 +718,26 @@ constexpr void __add(uint64_t* a, int& A, const uint64_t* b, const int B, int sh
     }
     if (acc)
         a[A++] = acc;
+}
+
+constexpr void __add(natural& a, const uint64_t* b, const int B, int shift = 0) {
+    while (a.words.size() < B + shift)
+        a.words.push_back(0);
+
+    uint128_t acc = 0;
+    for (int i = 0; i < B; ++i) {
+        acc += a.words[shift + i];
+        acc += b[i];
+        a.words[shift + i] = acc;
+        acc >>= 64;
+    }
+    for (int i = shift + B; i < a.words.size(); ++i) {
+        acc += a.words[i];
+        a.words[i] = acc;
+        acc >>= 64;
+    }
+    if (acc)
+        a.words.push_back(acc);
 }
 
 // assuming a >= b
@@ -1197,20 +1241,30 @@ constexpr void sub_product(natural& acc, const natural& a, const uint64_t b) {
     acc -= temp;
 }
 
-constexpr uint64_t div(const natural& dividend, uint64_t divisor, natural& quotient) {
-    Check(divisor != 0, "division by zero");
-    if (&dividend != &quotient)
-        quotient.words.reset(dividend.words.size());
+// supports a == q
+constexpr uint64_t __div(const uint64_t* a, const int A, uint64_t b, uint64_t* q, int& Q) {
+    Check(b != 0, "division by zero");
+    Q = A;
     uint128_t acc = 0;
-    for (auto i = dividend.words.size(); i-- > 0;) {
+    for (auto i = A; i-- > 0;) {
         acc <<= 64;
-        acc |= dividend.words[i];
+        acc |= a[i];
         uint64_t r;
-        __divq(acc, divisor, quotient.words[i], r);
+        __divq(acc, b, q[i], r);
         acc = r;
     }
-    quotient.words.normalize();
+    while (Q > 0 && q[Q - 1] == 0)
+        Q -= 1;
     return acc;
+}
+
+constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
+    if (&a != &q)
+        q.words.reset(a.words.size());
+    int Q;
+    uint64_t r = __div(a.words.data(), a.words.size(), b, q.words.data(), Q);
+    q.words.resize(Q);
+    return r;
 }
 
 // returns static_cast<ucent>(a >> e) - without memory allocation
@@ -1268,23 +1322,29 @@ constexpr uint64_t __word_div(const natural& a, const natural& b) {
     return ((g - 1) * a <= b) ? (g - 1) : (g - 2);
 }
 
-constexpr void div(const natural& dividend, const natural& divisor, natural& quotient, natural& remainder) {
-    if (divisor.is_uint64()) {
-        remainder = div(dividend, static_cast<uint64_t>(divisor), quotient);
+constexpr void __div(const uint64_t* a, const int A, const natural& b, natural& q, natural& r) {
+    if (a != q.words.data())
+        q.words.reset(A);
+    if (b.words.size() <= 1) {
+        int Q;
+        r = __div(a, A, b.words[0], q.words.data(), Q);
+        q.words.resize(Q);
         return;
     }
-    Check(!divisor.words.empty(), "division by zero");
-    if (&dividend != &quotient)
-        quotient.words.reset(dividend.words.size());
-    remainder.words.set_zero();
-    for (auto i = dividend.words.size(); i-- > 0;) {
-        if (remainder.words.size() || dividend.words[i])
-            remainder.words.insert_first_word(dividend.words[i]);
-        const uint64_t q = __word_div(divisor, remainder);
-        quotient.words[i] = q;
-        sub_product(remainder, divisor, q); // remainder -= divisor * q
+    Check(!b.words.empty(), "division by zero");
+    r.words.set_zero();
+    for (int i = A; i-- > 0;) {
+        if (r.words.size() || a[i])
+            r.words.insert_first_word(a[i]);
+        const uint64_t w = __word_div(b, r);
+        q.words[i] = w;
+        sub_product(r, b, w); // r -= divisor * w
     }
-    quotient.words.normalize();
+    q.words.normalize();
+}
+
+constexpr void div(const natural& dividend, const natural& divisor, natural& quotient, natural& remainder) {
+    __div(dividend.words.data(), dividend.words.size(), divisor, quotient, remainder);
 }
 
 constexpr void mod(const natural& dividend, const natural& divisor, natural& remainder) {
@@ -1300,6 +1360,74 @@ constexpr void mod(const natural& dividend, const natural& divisor, natural& rem
         const uint64_t q = __word_div(divisor, remainder);
         sub_product(remainder, divisor, q); // remainder -= divisor * q
     }
+}
+
+constexpr natural& operator>>=(natural& a, int64_t b);
+
+const int BZ_BASE_CASE_SIZE = 2;
+
+// recursively divide A by D, and accumulate quotient into Q (with shift) and return remainder R
+// p is a stack of temporaries, one for each recursion depth
+void __divide_2n1n(const uint64_t* a, const int A, const natural& d, int n, natural& q, int q_shift, natural& r, natural* p) {
+    if (n <= BZ_BASE_CASE_SIZE) {
+        __div(a, A, d, *p, r);
+        __add(q, p->words.data(), p->words.size(), q_shift);
+        return;
+    }
+
+    const int an = std::min(n, A);
+    __divide_2n1n(a, an, d, n/2, q, q_shift + n, *p, p + 1);
+    p->words.insert_first_n_words(n);
+    __add(*p, a + an, A - an);
+    __divide_2n1n(p->words.data(), p->words.size(), d, n/2, q, q_shift, r, p + 1);
+}
+
+constexpr void __divide_bz(natural a, natural d, natural& q, natural& r) {
+    const auto D = d.words.size();
+    const auto A = a.words.size();
+
+    natural new_r;
+    q.words.reserve_and_set_zero(div_max_size(a.words.data(), A, d.words.data(), D));
+    r.words.reserve_and_set_zero(D);
+    new_r.words.reserve_and_set_zero(D);
+
+    const int shift = std::countl_zero(d.words.back());
+    a <<= shift;
+    d <<= shift;
+
+    const int target_size = ((A + 2*D - 1) / (2*D)) * 2*D;
+
+    static_assert(sizeof(decltype(A)) == 4);
+    // TODO even better: precompute total sizes of all p needed, and allocate into one contiguous work buffer instead of p_stack
+    natural p_stack[32]; // is enough for natural with at most UINT32_MAX words
+
+    for (int i = target_size; i > 0; i -= 2*D) {
+        r.words.insert_first_n_words(2*D); // TODO it might be possible to optimize this
+        const int start = (i >= 2*D) ? i - 2*D : 0;
+        const int end = std::min(i, A);
+        std::copy(a.words.data() + start, a.words.data() + end, r.words.data());
+
+        q.words.insert_first_n_words(2*D); // TODO it might be possible to optimize this with non-zero q_shift param below (q_shoft = i-2*D)
+        __divide_2n1n(r.words.data(), r.words.size(), d, D, q, 0, new_r, p_stack);
+        std::swap(r, new_r);
+    }
+
+    r >>= shift;
+}
+
+constexpr void divide_bz(const natural& a, const natural& d, natural& q, natural& r) {
+    Check(!d.words.empty(), "division by zero");
+    if (d > a) {
+        q.set_zero();
+        r = a;
+        return;
+    }
+    if (d == a) {
+        q = 1;
+        r.set_zero();
+        return;
+    }
+    __divide_bz(a, d, q, r);
 }
 
 constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const bool upper) const {
