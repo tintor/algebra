@@ -390,6 +390,7 @@ constexpr integer operator/(const integer& a, const integer& b) {
     return quot;
 }
 
+// TODO generalize for any std_int
 constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
     if (b == 1) {
         quot = a;
@@ -405,25 +406,23 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
     return a.is_negative() ? -rem : rem;
 }
 
-constexpr integer operator/(const integer& a, int64_t b) {
-    integer quot;
-    div(a, b, quot);
-    return quot;
+constexpr integer operator/(const integer& a, const std_int auto b) {
+    integer c = a.abs / b;
+    c.words.set_negative(a.is_negative() != (b < 0));
+    return c;
 }
 
-constexpr integer operator/(const integer& a, int b) { return a / (int64_t)b; }
-constexpr integer operator/(const integer& a, unsigned b) { return a / (int64_t)b; }
-// TODO ulong?
-
-constexpr void operator/=(integer& a, const integer& b) {
+constexpr integer& operator/=(integer& a, const integer& b) {
     integer rem;
     div(a, b, a, rem);
+    return a;
 }
-
-constexpr void operator/=(integer& a, int64_t b) { div(a, b, a); }
-constexpr void operator/=(integer& a, int b) { div(a, (long)b, a); }
-constexpr void operator/=(integer& a, unsigned b) { div(a, (long)b, a); }
-// TODO ulong?
+constexpr integer& operator/=(integer& a, const std_int auto b) {
+    const bool negative = a.is_negative();
+    a.abs /= b;
+    a.abs.words.set_negative(negative != (b < 0));
+    return a;
+}
 
 constexpr integer operator%(const integer& a, const integer& divisor) {
     integer quotient, remainder;
@@ -431,6 +430,7 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
     return remainder;
 }
 
+// TODO generalize for any std_int
 constexpr int64_t operator%(const integer& a, int64_t b) {
     if (b == 0)
         throw std::runtime_error("division by zero");
@@ -446,6 +446,7 @@ constexpr int64_t operator%(const integer& a, int64_t b) {
 constexpr int operator%(const integer& a, int b) { return a % (int64_t)b; }
 constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)b; }
 
+// Note: return type is integer instead of uint64_t, as it can be negative (can't fit into int64_t either)
 constexpr integer operator%(const integer& a, uint64_t b) {
     integer c = a.abs % b;
     if (a.is_negative())
@@ -482,7 +483,7 @@ constexpr unsigned mod(const integer& a, uint32_t b) {
 }
 
 constexpr integer& operator%=(integer& a, const integer& b) { a = a % b; return a; }
-
+// TODO issue temporary memory allocation for cent / ucent
 constexpr integer& operator%=(integer& a, std_int auto b) { a = a % integer(b); return a; }
 
 constexpr bool operator<(const integer& a, const integer& b) {
@@ -517,6 +518,7 @@ constexpr void operator<<=(integer& a, int64_t i) {
 
 ALGEBRA_SHIFT_OP(integer)
 
+// TODO uncommend once integer refactor is done, also in rational
 //static_assert(sizeof(integer) == 16);
 
 }
