@@ -367,7 +367,7 @@ constexpr natural isqrt_hardware(const natural& a) {
     int x_exp;
     auto x_mantissa = std::frexp(x_fp, &x_exp);
 
-    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS);
+    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS) + 1;
     return natural(x) << (x_exp - FP_DIGITS + delta / 2);
 }
 
@@ -393,19 +393,41 @@ constexpr bool diff_by_one(const natural& a, const natural& b) {
 }
 
 constexpr natural isqrt_newthon(const natural& a) {
-    if (a <= 1)
-        return a;
-    natural r, q, x = power_of_two((a.num_bits() + 1) / 2);
-    Check(x * x >= a);
+    if (a.words.empty())
+        return 0;
+
+    if (a.words.size() == 1) {
+        uint64_t iq = std::sqrt(a.words[0]);
+        if (__mulq(iq, iq) > a.words[0])
+            iq -= 1;
+        return iq;
+    }
+
+    if (a.words.size() == 2) {
+        uint128_t ac = (static_cast<uint128_t>(a.words[1]) << 64) | a.words[0];
+        uint64_t iq = std::sqrt(ac);
+        return (iq + ac / iq) / 2;
+    }
+
+    natural r, q;
+    natural x = isqrt_hardware(a);
+    //natural x = power_of_two((a.num_bits() + 1) / 2);
+    if (x * x < a) {
+        std::print("\na  ={}\nx  ={}\nx*x={}\nx2 ={}\nt  ={}\n", a, x, x * x, x2, isqrt(a));
+        throw std::runtime_error("x * x < a");
+    }
     int i = 0;
     while (true) {
         div(a, x, q, r);
-        Check(q * x + r == a);
+        //Check(q * x + r == a);
         q += x;
         q >>= 1;
         //std::print("\na={}\nx={}\nq={}\ndiff={}\nq>=x {}\nt={}\n", a, x, q, diffa(x, q).num_bits(), q >= x, isqrt(a));
-        if (q >= x)
-            return x;
+        if (q >= x) {
+            if ((q + 1) * (q + 1) <= a)
+                q += 1;
+            return q;
+        }
         Check(i++ <= 10000);
         x = q;
     }

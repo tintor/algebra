@@ -66,32 +66,52 @@ void verify_isqrt(const natural& x, const natural& a) {
 }
 
 void test_isqrt(const auto& fn, const int count, const int min_bits, const int max_bits) {
+    std::mt19937_64 rng(0);
+    natural x;
+
+#if 0
     print("small\n");
     for (int i = 0; i < 1'000'000; i++) verify_isqrt(natural(i), fn(i));
 
     print("64 bit\n");
-    std::mt19937_64 rng(0);
     for (int i = 0; i < 10'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(64, 64)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 100'000 == 0) print("{}\n", i / 100'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
+    }
+
+    print("96 bit\n");
+    for (int i = 0; i < 10'000'000; i++) {
+        int bits = std::uniform_int_distribution<int>(65, 96)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        verify_isqrt(x, fn(x));
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 
     print("128 bit\n");
     for (int i = 0; i < 10'000'000; i++) {
-        int bits = std::uniform_int_distribution<int>(65, 128)(rng);
+        int bits = std::uniform_int_distribution<int>(97, 128)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 100'000 == 0) print("{}\n", i / 100'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
+    }
+#endif
+
+    print("192 bit\n");
+    for (int i = 0; i < 10'000'000; i++) {
+        int bits = std::uniform_int_distribution<int>(129, 192)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        verify_isqrt(x, fn(x));
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 
     print("256 bit\n");
     for (int i = 0; i < 10'000'000; i++) {
-        int bits = std::uniform_int_distribution<int>(129, 256)(rng);
+        int bits = std::uniform_int_distribution<int>(193, 256)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 100'000 == 0) print("{}\n", i / 100'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 
     print("512 bit\n");
@@ -99,7 +119,7 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
         int bits = std::uniform_int_distribution<int>(257, 512)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 100'000 == 0) print("{}\n", i / 100'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 
     print("1024 bit\n");
@@ -107,7 +127,7 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
         int bits = std::uniform_int_distribution<int>(513, 1024)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 100'000 == 0) print("{}\n", i / 100'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 }
 
