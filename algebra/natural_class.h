@@ -856,13 +856,21 @@ constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
     return r;
 }
 
-// returns static_cast<ucent>(a >> e) - without memory allocation
-constexpr uint128_t extract_128bits(const natural& a, int e) {
+// returns static_cast<ucent>((a >> e) & UINT128_MAX) - without memory allocation
+constexpr uint128_t extract_128bits(const natural& a, int64_t e) {
+    Check(e >= 0);
     const auto word_shift = e / 64;
     const auto bit_shift = e % 64;
 
     if (word_shift >= a.words.size())
         return 0;
+    if (bit_shift == 0) {
+        uint128_t res = a.words[word_shift];
+        if (word_shift + 1 >= a.words.size())
+            return res;
+        res |= static_cast<uint128_t>(a.words[word_shift + 1]) << 64;
+        return res;
+    }
 
     uint128_t res = a.words[word_shift] >> bit_shift;
     if (word_shift + 1 >= a.words.size())
@@ -874,18 +882,21 @@ constexpr uint128_t extract_128bits(const natural& a, int e) {
     return res;
 }
 
-// returns static_cast<ulong>(a >> e) - without memory allocation
-constexpr uint64_t extract_64bits(const natural& a, int e) {
+// returns (a >> e).words[0] - without memory allocation
+constexpr uint64_t extract_64bits(const natural& a, int64_t e) {
+    Check(e >= 0);
     const auto word_shift = e / 64;
     const auto bit_shift = e % 64;
 
     if (word_shift >= a.words.size())
         return 0;
+    if (bit_shift == 0)
+        return a.words[word_shift];
 
     uint64_t res = a.words[word_shift] >> bit_shift;
     if (word_shift + 1 >= a.words.size())
         return res;
-    res |= static_cast<uint64_t>(a.words[word_shift + 1]) << (64 - bit_shift);
+    res |= a.words[word_shift + 1] << (64 - bit_shift);
     return res;
 }
 
@@ -1166,6 +1177,9 @@ constexpr natural operator|(const natural& a, const natural& b) {
     return c;
 }
 
+constexpr natural& operator|=(natural& a, uint64_t b);
+constexpr natural operator|(natural a, uint64_t b) { return a |= b; }
+
 constexpr natural& operator|=(natural& a, const natural& b) {
     auto bs = b.words.size();
     if (bs > a.words.size())
@@ -1198,6 +1212,9 @@ constexpr natural operator&(const natural& a, const natural& b) {
     return c;
 }
 
+constexpr natural& operator&=(natural& a, uint64_t b);
+constexpr natural operator&(natural a, uint64_t b) { return a &= b; }
+
 constexpr natural& operator&=(natural& a, const natural& b) {
     size_t bs = b.words.size();
     if (bs > a.words.size())
@@ -1226,6 +1243,9 @@ constexpr natural operator^(const natural& a, const natural& b) {
     c.words.normalize();
     return c;
 }
+
+constexpr natural& operator^=(natural& a, uint64_t b);
+constexpr natural operator^(natural a, uint64_t b) { return a ^= b; }
 
 constexpr natural& operator^=(natural& a, const natural& b) {
     size_t bs = b.words.size();

@@ -570,13 +570,49 @@ constexpr bool is_likely_prime(const natural& n, int rounds) {
     return true;
 }
 
+constexpr std::pair<int, int> mod63_65(const natural& a) {
+    int m63 = 0;
+    int m65 = 0;
+    int i = 0;
+    while (i < a.num_bits()) {
+        uint64_t b = extract_64bits(a, i);
+
+        m63 += b % 64;
+        if (m63 >= 63)
+            m63 -= 63;
+
+        m65 += b % 64;
+        if (m65 >= 65)
+            m65 -= 65;
+
+        b >>= 6;
+        m63 += b % 64;
+        if (m63 >= 63)
+            m63 -= 63;
+
+        m65 -= b % 64;
+        if (m65 < 0)
+            m65 += 65;
+        i += 12;
+    }
+    return {m63, m65};
+}
+
+constexpr bool is_one_of(int a, std::initializer_list<int> b) {
+    for (int p : b)
+        if (a == p)
+            return true;
+    return false;
+}
+
+// rejects ~98% of all numbers
 constexpr bool is_possible_square(const natural& a) {
-    auto w = a.words[0] % 128;
-    if (w > 57)
+    if (!is_one_of(a.words[0] % 16, {0,1,4,9}))
         return false;
-    if (w < 25)
-        return w == 0 || w == 1 || w == 4 || w == 9 || w == 16 || w == 17;
-    return w == 25 || w == 33 || w == 36 || w == 41 || w == 49 || w == 57;
+
+    auto [m63, m65] = mod63_65(a);
+    return is_one_of(m63, {0,1,4,7,9,16,18,22,25,28,36,37,43,46,49,58})
+        && is_one_of(m65, {0,1,4,9,10,14,16,25,26,29,30,35,36,39,40,49,51,55,56,61,64});
 }
 
 uint64_t try_fermat_factorize(uint64_t n) {

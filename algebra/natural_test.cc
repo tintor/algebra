@@ -3,6 +3,49 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <chrono>
 
+TEST_CASE("extract_64bits") {
+    std::mt19937_64 rng(233);
+    for (int i = 0; i < 1000; i++) {
+        int bits = std::uniform_int_distribution<int>(32, 256)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+
+        REQUIRE(extract_64bits(x, x.num_bits()) == 0);
+        for (int j = 0; j < x.num_bits(); j++) {
+            REQUIRE(extract_64bits(x, j) == (x >> j).words[0]);
+        }
+    }
+}
+
+TEST_CASE("mod63_65") {
+    REQUIRE(mod63_65(1_n) == std::pair{1, 1});
+    REQUIRE(mod63_65(63_n) == std::pair{0, 63});
+    REQUIRE(mod63_65(66_n) == std::pair{3, 1});
+    REQUIRE(mod63_65(130_n) == std::pair{4, 0});
+    REQUIRE(mod63_65(natural(UINT64_MAX)) == std::pair{15, 15});
+    REQUIRE(mod63_65(natural(UINT128_MAX)) == std::pair{3, 60});
+
+    std::mt19937_64 rng(234);
+    for (int i = 0; i < 1000; i++) {
+        int bits = std::uniform_int_distribution<int>(32, 1024)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        auto [m63, m65] = mod63_65(x);
+        REQUIRE(m63 == x % 63);
+        REQUIRE(m65 == x % 65);
+    }
+}
+
+TEST_CASE("is_possible_square") {
+    std::mt19937_64 rng(233);
+    for (int i = 0; i < 1000; i++) {
+        int bits = std::uniform_int_distribution<int>(32, 256)(rng);
+        natural x = uniform_sample_bits(bits, rng);
+        if (!is_possible_square(x)) {
+            natural a = isqrt(x);
+            REQUIRE(a * a != x);
+        }
+    }
+}
+
 TEST_CASE("round_to_zero") {
     natural a;
     round_to_zero(10.1, a);
