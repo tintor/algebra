@@ -4,6 +4,7 @@
 #include <print>
 #include <stdexcept>
 #include <bit>
+#include <algorithm>
 
 namespace algebra {
 
@@ -424,5 +425,25 @@ constexpr CLASS& operator<<=(CLASS& a, T b) { a <<= (int64_t)b; return a; } \
 constexpr CLASS& operator>>=(CLASS& a, std_int auto b) { a >>= (int64_t)b; return a; } \
 constexpr CLASS operator<<(const CLASS& a, std_int auto b) { return a << (int64_t)b; } \
 constexpr CLASS operator>>(const CLASS& a, std_int auto b) { return a >> (int64_t)b; }
+
+constexpr std::string str(uint64_t* a, int A) {
+    if (A == 0)
+        return "0";
+    std::string s;
+    while (A)
+        s += '0' + __div(a, A, 10, a, A);
+    std::reverse(s.begin(), s.end());
+    return s;
+}
+
+struct bit_range {
+    uint64_t min, max;
+    constexpr bit_range(uint64_t min, uint64_t max) : min(min), max(max) { }
+    constexpr bit_range(uint64_t a) { min = max = a; }
+};
+
+constexpr bit_range operator*(bit_range a, bit_range b) { return {a.min + b.min - 1, a.max + b.max}; }
+constexpr bit_range operator+(bit_range a, bit_range b) { return {std::min(a.min, b.min), std::max(a.max, b.max) + 1}; }
+constexpr bool operator<(bit_range a, bit_range b) { return a.max < b.min; }
 
 }
