@@ -1,4 +1,5 @@
 #pragma once
+#include "algebra/natural.h"
 #include "algebra/rational.h"
 #include "algebra/integer_func.h"
 
@@ -14,7 +15,7 @@ template<typename T> concept xrational_like = rational_like<T> || std::same_as<T
 //
 struct xrational {
     rational base;
-    natural root; // must be positive!
+    natural root; // must be positive! Note: root is not fully simplified! It might have some square factors! Full factorization is expensive.
 
     xrational() : base(0), root(1) { }
     xrational(const xrational& a) : base(a.base), root(a.root) { }
@@ -42,11 +43,39 @@ struct xrational {
             root = 1;
             return;
         }
-        natural w = 1, r = 1;
-        exact_sqrt(root, w, r);
-        if (w != 1)
-            base *= integer(w);
-        root = std::move(r);
+
+        // Remove all squares of 2 from root
+        bool simplify = false;
+        auto z = root.num_trailing_zeros();
+        if (z > 1) {
+            root >>= z;
+            base.num <<= z / 2;
+            simplify = true;
+        }
+
+        // Remove all squares of 3 from root
+        // first test is with mod9() as div(root, 9, q) will allocate memory for q!
+        natural q;
+        if (root > 1 && root.mod9() == 0) {
+            do {
+                if (div(root, 9, root))
+                    break;
+                std::swap(root, q);
+                if (base.den.mod3() == 0)
+                    base.den /= 3;
+                else
+                    base.num *= 3;
+            } while (root > 1);
+        }
+
+        if (root > 1 && exact_sqrt(root, q)) {
+            base.num *= q;
+            root = 1;
+            simplify = true;
+        }
+
+        if (simplify)
+            base.simplify();
     }
 
     void negate() { base.negate(); }
@@ -59,6 +88,7 @@ struct xrational {
 };
 
 constexpr void negate(xrational& a) { a.negate(); }
+constexpr auto signum(const xrational& a) { return signum(a.base); }
 
 constexpr xrational operator-(const xrational& a) { return {-a.base, a.root}; }
 
@@ -158,62 +188,78 @@ constexpr xrational& operator/=(xrational& a, const rational_like auto& b) {
     return b;
 }
 
-struct bit_range {
-    uint64_t min, max;
-    constexpr bit_range(uint64_t min, uint64_t max) : min(min), max(max) { }
-    constexpr bit_range(const natural& a) { min = max = a.num_bits(); }
-};
-
-constexpr bit_range operator*(bit_range a, bit_range b) {
-    return {a.min + b.min - 1, a.max + b.max};
-}
-
-constexpr bit_range operator+(bit_range a, bit_range b) {
-    return {std::min(a.min, b.min), std::max(a.max, b.max) + 1};
-}
-
 constexpr bool operator==(const xrational& a, const xrational& b) {
-    if (signum(a.base.num) != signum(b.base.num))
+    if (signum(a) != signum(b))
         return false;
     if (a.root == b.root)
         return a.base == b.base;
 
-    integer p = a.base.num * a.base.num;
-    p *= a.root;
-    p *= b.base.den;
-    p *= b.base.den;
-    integer q = b.base.num * b.base.num;
-    q *= b.root;
-    q *= a.base.den;
-    q *= a.base.den;
-    return p == q;
+    natural e = gcd(a.root, b.root);
+    if (e == 1)
+        return false;
+
+    natural as, bs, ae, be;
+
+    div(a.root, e, ae, /*dummy*/as);
+    if (!__exact_sqrt1(ae, as))
+        return false;
+    div(b.root, e, be, /*dummy*/bs);
+    if (!exact_sqrt(be, bs) || !__exact_sqrt2(ae, as))
+        return false;
+
+    bit_range ra = bit_range(as.num_bits()) * bit_range(b.base.den.num_bits()) * bit_range(a.base.num.num_bits());
+    bit_range rb = bit_range(bs.num_bits()) * bit_range(a.base.den.num_bits()) * bit_range(b.base.num.num_bits());
+    if (ra < rb || rb < ra)
+        return false;
+
+    as.words.reserve_bits(ra.max);
+    bs.words.reserve_bits(rb.max);
+
+    as *= b.base.den.abs;
+    as *= a.base.num.abs;
+    bs *= a.base.den.abs;
+    bs *= a.base.num.abs;
+    return as == bs;
 }
 
 constexpr bool operator==(const xrational& a, const rational_like auto& b) { return a.root == 1 && a.base == b; }
 constexpr bool operator==(const rational_like auto& a, const xrational& b) { return b.root == 1 && a == b.base; }
 
-constexpr bool operator<(const xrational& a, const xrational& b) {
-    if (signum(a.base.num) != signum(b.base.num))
-        return signum(a.base.num) < signum(b.base.num);
+constexpr bool __less_abs(const xrational& a, const xrational& b) {
     if (a.root == b.root)
         return a.base < b.base;
     if (a.base == b.base)
         return a.root < b.root;
 
-    // TODO could use interval arithmetic with doubles first to find bounds for p and q
-    integer p = a.base.num * a.base.num;
-    p *= a.root;
-    p *= b.base.den;
-    p *= b.base.den;
-    integer q = b.base.num * b.base.num;
-    q *= b.root;
-    q *= a.base.den;
-    q *= a.base.den;
-    return p < q;
+    natural aa, bb;
+    aa.words.reserve_bits((a.base.num.num_bits() + b.base.den.num_bits()) * 2 + a.root.num_bits());
+    bb.words.reserve_bits((b.base.num.num_bits() + a.base.den.num_bits()) * 2 + b.root.num_bits());
+
+    mul(a.base.num.abs, b.base.den.abs, aa);
+    mul(b.base.num.abs, a.base.den.abs, bb);
+
+    aa *= aa;
+    aa *= a.root;
+
+    bb *= bb;
+    bb *= b.root;
+    return aa < bb;
 }
 
-constexpr bool operator<(const xrational& a, const rational_like auto& b) { return a < xrational(b); }
-constexpr bool operator<(const rational_like auto& a, const xrational& b) { return xrational(a) < b; }
+constexpr bool operator<(const xrational& a, const xrational& b) {
+    if (signum(a) != signum(b))
+        return signum(a) < signum(b);
+    return (a > 0) ? __less_abs(a, b) : __less_abs(b, a);
+}
+
+constexpr bool operator<(const xrational& a, const rational_like auto& b) {
+    // TODO optimize this allocation
+    return a.root.is_one() ? a.base < b : a < xrational(b);
+}
+constexpr bool operator<(const rational_like auto& a, const xrational& b) {
+    // TODO optimize this allocation
+    return b.root.is_one() ? a < b.base : xrational(a) < b;
+}
 
 constexpr xrational sqrt(const xrational& a) {
     if (a.base.sign() < 0)
