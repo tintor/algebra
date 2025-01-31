@@ -367,6 +367,40 @@ constexpr natural isqrt_hardware(const natural& a) {
     int x_exp;
     auto x_mantissa = std::frexp(x_fp, &x_exp);
 
+    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS);
+    return natural(x) << (x_exp - FP_DIGITS + delta / 2);
+}
+
+constexpr natural isqrt_hardware2(const natural& a) {
+    if (a <= 1)
+        return a;
+
+    const int FP_DIGITS = std::numeric_limits<double>::digits;
+
+    int a_exp = static_cast<int>(a.num_bits()) - FP_DIGITS;
+    int delta = 0;
+    if (a_exp >= std::numeric_limits<double>::max_exponent) {
+        delta = a_exp - (std::numeric_limits<double>::max_exponent - 1);
+        delta += delta % 2;
+        a_exp -= delta;
+    }
+
+    Check(a_exp < std::numeric_limits<double>::max_exponent);
+    Check(delta % 2 == 0);
+
+    double a_fp;
+    if (a_exp <= 0) {
+        a_fp = a.words[0];
+    } else {
+        const uint64_t m = extract_64bits(a, a_exp);
+        a_fp = std::ldexp(static_cast<double>(m), a_exp);
+    }
+
+    const double x_fp = std::sqrt(a_fp);
+
+    int x_exp;
+    auto x_mantissa = std::frexp(x_fp, &x_exp);
+
     const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS) + 1;
     return natural(x) << (x_exp - FP_DIGITS + delta / 2);
 }
@@ -409,26 +443,54 @@ constexpr natural isqrt_newthon(const natural& a) {
         return (iq + ac / iq) / 2;
     }
 
-    natural r, q;
-    natural x = isqrt_hardware(a);
-    //natural x = power_of_two((a.num_bits() + 1) / 2);
-    if (x * x < a) {
-        std::print("\na  ={}\nx  ={}\nx*x={}\nx2 ={}\nt  ={}\n", a, x, x * x, x2, isqrt(a));
-        throw std::runtime_error("x * x < a");
+    if (a.words.size() == 3) {
+        natural r, q;
+        natural x = power_of_two((a.num_bits() + 1) / 2);
+        while (true) {
+            div(a, x, q, r);
+            q += x;
+            q >>= 1;
+            if (q >= x) {
+                q += 1;
+                mul(q, q, x);
+                if (x <= a)
+                    return q;
+                q -= 1;
+                return q;
+            }
+            x = q;
+        }
     }
+
+    natural r, q;
+    natural x = power_of_two((a.num_bits() + 1) / 2); // isqrt_hardware2(a);
+    //natural x1 = isqrt_hardware(a);
+    //natural x2 = power_of_two((a.num_bits() + 1) / 2);
+    /*if (x * x < a) {
+        std::print("\n");
+        std::print("a  ={}\n", a);
+        std::print("x  ={}\n", x);
+        std::print("x*x={}\n", x * x);
+        std::print("x1 ={}\n", x1);
+        std::print("x2 ={}\n", x2);
+        std::print("t  ={}\n", isqrt(a));
+        throw std::runtime_error("x * x < a");
+    }*/
     int i = 0;
     while (true) {
         div(a, x, q, r);
-        //Check(q * x + r == a);
         q += x;
         q >>= 1;
         //std::print("\na={}\nx={}\nq={}\ndiff={}\nq>=x {}\nt={}\n", a, x, q, diffa(x, q).num_bits(), q >= x, isqrt(a));
         if (q >= x) {
-            if ((q + 1) * (q + 1) <= a)
-                q += 1;
+            q += 1;
+            mul(q, q, x);
+            if (x <= a)
+                return q;
+            q -= 1;
             return q;
         }
-        Check(i++ <= 10000);
+        Check(i++ <= 50'000);
         x = q;
     }
 }
