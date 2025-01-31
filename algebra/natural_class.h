@@ -275,23 +275,68 @@ struct natural {
         return acc % 3;
     }
 
-    // 1180591620717411302909 = 30101795611 * 39219973319 in 294820 ms
     constexpr uint64_t mod4() const { return words[0] % 4; }
 
     constexpr uint64_t mod5() const {
         uint64_t acc = 0;
-        if (words.size() > UINT64_MAX / 4) {
-            for (int i = words.size(); i-- > 0;) {
-                acc += words[i] % 5;
-                if ((i % 65536) == 0)
-                    acc %= 5;
-            }
-        } else {
-            // (2**64) mod 5 == 1
-            for (int i = words.size(); i-- > 0;)
-                acc += words[i] % 5;
-        }
+        // acc overflow is not possible since 4 * UINT32_MAX < UINT64_MAX
+        static_assert(sizeof(words.size()) == 4);
+        // (2**64) mod 5 == 1
+        for (int i = words.size(); i-- > 0;)
+            acc += words[i] % 5;
         return acc % 5;
+    }
+
+    constexpr uint64_t mod6() const {
+        uint64_t m = 0;
+        int i = words.size();
+        while (i > 0) {
+            m = m * 4 + words[--i] % 6;
+            m %= 6;
+        }
+        return m;
+    }
+
+    constexpr uint64_t mod7() const {
+        uint64_t m = 0;
+        int i = 0;
+        while (i + 2 < words.size()) {
+            m += words[i++] % 7;
+            m += words[i++] % 7 * 2;
+            m += words[i++] % 7 * 4;
+        }
+        if (i < words.size())
+            m += words[i++] % 7;
+        if (i < words.size())
+            m += words[i] % 7 * 2;
+        return m % 7;
+    }
+
+    constexpr uint64_t mod8() const { return words[0] % 8; }
+
+    constexpr uint64_t mod9() const {
+        uint64_t m = 0;
+        int i = 0;
+        while (i + 2 < words.size()) {
+            m += words[i++] % 9;
+            m += (words[i++] % 9) * 7;
+            m += (words[i++] % 9) * 4;
+        }
+        if (i < words.size())
+            m += words[i++] % 9;
+        if (i < words.size())
+            m += words[i] % 9 * 7;
+        return m % 9;
+    }
+
+    constexpr uint64_t mod10() const {
+        uint64_t m = 0;
+        int i = words.size();
+        while (i > 0) {
+            m = m * 6 + words[--i] % 10;
+            m %= 10;
+        }
+        return m;
     }
 
     constexpr natural& operator%=(std_int auto b) { *this = operator%(b); return *this; }
@@ -340,6 +385,8 @@ struct natural {
     template<std::floating_point T>
     constexpr operator T() const;
 };
+
+constexpr std::string str(natural a) { return str(a.words.data(), a.words.size()); }
 
 constexpr natural operator-(const natural& a) {
     Check(a.words.size() == 0, "natural can't be negative");
@@ -913,13 +960,17 @@ constexpr uint64_t __word_div(const natural& a, const natural& b) {
 
     const int e = b.num_bits() - 128;
     const uint128_t q = extract_128bits(b, e) / std::max<uint128_t>(1, extract_128bits(a, e));
-    if (q > UINT64_MAX)
-        return UINT64_MAX;
+    if (q > UINT64_MAX) {
+        uint64_t g = UINT64_MAX;
+        return (g * a <= b) ? g : (g - 1);
+    }
 
     uint64_t g = q;
-    if (g * a <= b)
+    natural m = g * a;
+    if (m <= b)
         return g;
-    return ((g - 1) * a <= b) ? (g - 1) : (g - 2);
+    m -= a;
+    return (m * a <= b) ? (g - 1) : (g - 2);
 }
 
 constexpr void __div(const uint64_t* a, const int A, const natural& b, natural& q, natural& r) {
@@ -938,7 +989,7 @@ constexpr void __div(const uint64_t* a, const int A, const natural& b, natural& 
             r.words.insert_first_word(a[i]);
         const uint64_t w = __word_div(b, r);
         q.words[i] = w;
-        sub_product(r, b, w); // r -= divisor * w
+        sub_product(r, b, w); // r -= b * w
     }
     q.words.normalize();
 }

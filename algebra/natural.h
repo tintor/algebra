@@ -4,15 +4,18 @@
 
 namespace algebra {
 
+constexpr natural power_of_two(size_t e) {
+    natural x;
+    x.words.reset((e + 64) / 64);
+    x.words.back() = uint64_t(1) << (e % 64);
+    return x;
+}
+
 constexpr natural pow(natural base, std_int auto exp) {
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(natural, ...)");
-    if (base == 2) {
-        natural out;
-        out.words.reset((exp + 64) / 64);
-        out.words.back() = uint64_t(1) << (exp % 64);
-        return out;
-    }
+    if (base == 2)
+        return power_of_two(exp);
 
     if (exp == 0)
         return 1;
@@ -327,6 +330,129 @@ constexpr void round_to_zero(const T& a, natural& b) {
 
     b = static_cast<uint64_t>(m);
     b <<= exponent;
+}
+
+constexpr natural isqrt_digits(const natural& a) {
+    return __slow_isqrt(a);
+}
+
+// very fast, but only approximate for large A
+constexpr natural isqrt_hardware(const natural& a) {
+    if (a <= 1)
+        return a;
+
+    const int FP_DIGITS = std::numeric_limits<double>::digits;
+
+    int a_exp = static_cast<int>(a.num_bits()) - FP_DIGITS;
+    int delta = 0;
+    if (a_exp >= std::numeric_limits<double>::max_exponent) {
+        delta = a_exp - (std::numeric_limits<double>::max_exponent - 1);
+        delta += delta % 2;
+        a_exp -= delta;
+    }
+
+    Check(a_exp < std::numeric_limits<double>::max_exponent);
+    Check(delta % 2 == 0);
+
+    double a_fp;
+    if (a_exp <= 0) {
+        a_fp = a.words[0];
+    } else {
+        const uint64_t m = extract_64bits(a, a_exp);
+        a_fp = std::ldexp(static_cast<double>(m), a_exp);
+    }
+
+    const double x_fp = std::sqrt(a_fp);
+
+    int x_exp;
+    auto x_mantissa = std::frexp(x_fp, &x_exp);
+
+    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS);
+    return natural(x) << (x_exp - FP_DIGITS + delta / 2);
+}
+
+constexpr natural diffa(const natural& a, const natural& b) { return (a > b) ? a - b : (b - a); }
+
+constexpr bool diff_by_one(const uint64_t a, const uint64_t b) { return a + 1 == b || b + 1 == a; }
+
+// TODO optimize
+constexpr bool diff_by_one(const natural& a, const natural& b) {
+    if (!diff_by_one(a, b))
+        return false;
+    auto ai = a.num_bits();
+    auto bi = b.num_bits();
+    if (ai > bi)
+        return a.popcount() == 1 && b.popcount() == bi;
+    if (bi > ai)
+        return b.popcount() == 1 && a.popcount() == ai;
+
+    for (int i = 1; i < a.words.size(); i++)
+        if (a.words[i] != b.words[i])
+            return false;
+    return true;
+}
+
+constexpr natural isqrt_newthon(const natural& a) {
+    if (a <= 1)
+        return a;
+    natural r, q, x = power_of_two((a.num_bits() + 1) / 2);
+    Check(x * x >= a);
+    int i = 0;
+    while (true) {
+        div(a, x, q, r);
+        Check(q * x + r == a);
+        q += x;
+        q >>= 1;
+        //std::print("\na={}\nx={}\nq={}\ndiff={}\nq>=x {}\nt={}\n", a, x, q, diffa(x, q).num_bits(), q >= x, isqrt(a));
+        if (q >= x)
+            return x;
+        Check(i++ <= 10000);
+        x = q;
+    }
+}
+
+constexpr natural isqrt_binary_search(const natural& a) {
+    if (a <= 1)
+        return a;
+
+    natural m2;
+    natural m = isqrt_hardware(a);
+    //round_to_zero(std::sqrt(static_cast<double>(a)), m);
+    natural left = m;
+    natural right = m;
+    left -= m >> 30;
+    right += m >> 19;
+    right += 1;
+    /*if (left < 1)
+        left = 1;
+    if (right > a)
+        right = a;*/
+
+    while (left < right) {
+        m = right;
+        m -= left;
+        ++m;
+        m >>= 1;
+        m += left;
+
+        mul(m, m, m2);
+
+        if (m2 > a) {
+            if (right < m)
+                throw std::runtime_error("inf loop");
+            --m;
+            right = m;
+            continue;
+        }
+        if (m2 < a) {
+            if (left >= m)
+                throw std::runtime_error("inf loop");
+            left = m;
+            continue;
+        }
+        return m; // a is perfect square!
+    }
+    return left;
 }
 
 constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
@@ -858,6 +984,30 @@ constexpr void binominal(const natural& n, uint64_t k, natural& out) {
         out /= i + 1;
     }
 }
+
+constexpr bool __exact_sqrt1(const natural& a, natural& b) {
+    auto z = a.num_trailing_zeros();
+    if (z & 1)
+        return false;
+
+    b = a;
+    b >>= z / 2;
+    return is_possible_square(b);
+}
+
+constexpr bool __exact_sqrt2(const natural& a, natural& b) {
+    // option 1) try to factorize with small factors (fast, but doesn't work for all numbers)
+    // option 2) isqrt_nr() -> it detects if number is perfect square
+
+    natural s = isqrt(a);
+    mul(s, s, b);
+    if (b != a)
+        return false;
+    b = std::move(s);
+    return true;
+}
+
+constexpr bool exact_sqrt(const natural& a, natural& b) { return __exact_sqrt1(a, b) && __exact_sqrt2(a, b); }
 
 // assumes that whole and root are already initialized
 constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
