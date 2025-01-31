@@ -159,6 +159,7 @@ public:
     constexpr void erase_first_n_words(int n);
     constexpr void reserve(int capacity);
     constexpr void reserve_and_set_zero(int capacity);
+    constexpr void reserve_bits(size_t bits) { return reserve((bits + 63) / 64); }
     constexpr void resize(int size);
 
     constexpr void insert_first_n_words(int n);
