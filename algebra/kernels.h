@@ -1,6 +1,7 @@
 #pragma once
 #include "algebra/util.h"
 #include <string>
+#include <vector>
 
 namespace algebra {
 
@@ -406,6 +407,15 @@ constexpr std::string str(uint64_t* a, int A) {
         s += '0' + __div(a, A, 10, a, A);
     std::reverse(s.begin(), s.end());
     return s;
+}
+
+constexpr std::string str(const uint64_t* a, int A) {
+    if (A == 0)
+        return "0";
+    std::vector<uint64_t> aa;
+    aa.resize(A);
+    std::copy(a, a + A, aa.data());
+    return str(aa.data(), A);
 }
 
 }
