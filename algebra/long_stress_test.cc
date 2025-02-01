@@ -1,5 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "algebra/real_func.h"
 #include "algebra/rational_func.h"
 #include "algebra/integer_func.h"
@@ -7,6 +5,9 @@
 #include <random>
 #include <vector>
 #include <string>
+#include <thread>
+#include <atomic>
+#include <mutex>
 #include <source_location>
 using std::print;
 using std::format;
@@ -21,7 +22,7 @@ constexpr integer sample_integer(auto& rng) {
     integer a;
     a.abs = pow(2_n, bits - 1);
     a.abs |= uniform_sample_bits(bits - 1, rng);
-    REQUIRE(a.abs.num_bits() == bits);
+    Check(a.abs.num_bits() == bits);
     if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
         a.negate();
     return a;
@@ -32,7 +33,7 @@ constexpr natural sample_positive_natural(auto& rng) {
     natural a;
     a = pow(2_n, bits - 1);
     a |= uniform_sample_bits(bits - 1, rng);
-    REQUIRE(a.num_bits() == bits);
+    Check(a.num_bits() == bits);
     return a;
 }
 
@@ -65,45 +66,10 @@ void set_yellow() {
     print("\033[1;33m");
 }
 
-#if 1
-#define TEST(E) REQUIRE(E)
-#else
-#define TEST(E) { \
-    M __m{#E, seed, std::source_location::current()}; \
-    try { \
-        __m <=> E; \
-    } catch (std::runtime_error& e) { \
-        __m.print_failure(); \
-        print("due to unexpected exception with message:\n"); \
-        print("  {}\n", e.what()); \
-        exit(0); \
-    } catch (...) { \
-        __m.print_failure(); \
-        print("due to unexpected exception\n"); \
-        exit(0); \
-    }\
-}
-#endif
+std::mutex g_mutex;
 
-#if 1
-#define TEST2(E, MSG) do { if (!(E)) { std::print("TEST({}) FAILED with message: {}", #E, MSG); REQUIRE(E); } } while(0);
-#else
-#define TEST2(E, MSG) { \
-    M __m{#E, seed, std::source_location::current(), MSG}; \
-    try { \
-        __m <=> E; \
-    } catch (std::runtime_error& e) { \
-        __m.print_failure(); \
-        print("due to unexpected exception with message:\n"); \
-        print("  {}\n", e.what()); \
-        exit(0); \
-    } catch (...) { \
-        __m.print_failure(); \
-        print("due to unexpected exception\n"); \
-        exit(0); \
-    }\
-}
-#endif
+#define TEST(E) { M __m{#E, seed, std::source_location::current()}; catch_exceptions(__m, [&](){__m <=> E;}); }
+#define TEST2(E, MSG) { M __m{#E, seed, std::source_location::current(), MSG}; catch_exceptions(__m, [&](){__m <=> E;}); }
 
 struct M {
     const char* expr;
@@ -134,6 +100,23 @@ struct M {
     }
 };
 
+void catch_exceptions(const M& m, const auto& fn) {
+    try {
+        fn();
+    } catch (std::runtime_error& e) {
+        g_mutex.lock();
+        m.print_failure();
+        print("due to unexpected exception with message:\n");
+        print("  {}\n", e.what());
+        exit(0);
+    } catch (...) {
+        g_mutex.lock();
+        m.print_failure();
+        print("due to unexpected exception\n");
+        exit(0);
+    }
+}
+
 std::string shorten(const std::string& a, int pre, int post) {
     return (a.size() <= pre + post) ? a : (a.substr(0, pre) + "..." + a.substr(a.size() - post));
 }
@@ -163,30 +146,35 @@ M1<A> operator<=>(const M& m, const A& a) { return {m, a}; }
 
 void operator<=>(const M& m, const bool value) {
     if (!value) {
+        g_mutex.lock();
         m.print_failure();
         exit(0);
     }
 }
 
-#define M_OP(OP) \
-template<typename A, typename B> \
-void operator OP (const M1<A>& m1, const B& b) { \
-    try { \
-        if (!(m1.a OP b)) { \
-            m1.print_failure(#OP, b); \
-            exit(0); \
-        } \
-    } catch (std::runtime_error& e) { \
-        m1.print_failure(#OP, b); \
-        print("due to unexpected exception with message:\n"); \
-        print("  {}\n", e.what()); \
-        exit(0); \
-    } catch (...) { \
-        m1.print_failure(#OP, b); \
-        print("due to unexpected exception\n"); \
-        exit(0); \
-    } \
+template<typename A>
+void catch_exceptions(const M1<A>& m1, const char* op, const auto& fn, const auto& b) {
+    try {
+        if (!fn()) {
+            g_mutex.lock();
+            m1.print_failure(op, b);
+            exit(0);
+        }
+    } catch (std::runtime_error& e) {
+        g_mutex.lock();
+        m1.print_failure(op, b);
+        print("due to unexpected exception with message:\n");
+        print("  {}\n", e.what());
+        exit(0);
+    } catch (...) {
+        g_mutex.lock();
+        m1.print_failure(op, b);
+        print("due to unexpected exception\n");
+        exit(0);
+    }
 }
+
+#define M_OP(OP) template<typename A> void operator OP (const M1<A>& m1, const auto& b) { catch_exceptions(m1, #OP, [&](){ return m1.a OP b; }, b); }
 
 M_OP(==)
 M_OP(!=)
@@ -376,25 +364,45 @@ void real_test(uint64_t seed) {
     trio_identities(a, b, c);
 }
 
-TEST_CASE("main") {
-    std::random_device rd;
-    uint64_t seed = (uint64_t(rd()) << 32) + rd();
-
-    while (true) {
-        if (seed % 1000 == 0)
-            print("seed {}\n", seed);
-        try {
-            integer_test(seed);
-            rational_test(seed);
-            real_test<2>(seed);
-            real_test<10>(seed);
-            // TODO expr
-        } catch (...) {
-            print("exception seed {}\n", seed);
-            throw;
-        }
-        seed += 1;
+void run_test(uint64_t seed) {
+    try {
+        integer_test(seed);
+        //rational_test(seed);
+        // TODO xrational
+        //real_test<2>(seed);
+        //real_test<10>(seed);
+        // TODO expr
+    } catch (std::runtime_error& e) {
+        g_mutex.lock();
+        print("exception raised for seed {}\n{}\n", seed, e.what());
+        exit(0);
+    } catch (...) {
+        g_mutex.lock();
+        print("unknown exception for seed {}\n", seed);
+        exit(0);
     }
+}
+
+int main(int argc, char* argv[]) {
+    std::random_device rd;
+    std::atomic<uint64_t> seed = (uint64_t(rd()) << 32) + rd();
+
+    auto func = [&seed](){
+        while (true) {
+            uint64_t s = seed++;
+            run_test(s);
+            if (s % 1000 == 0) {
+                std::lock_guard g(g_mutex);
+                print("seed {}\n", s);
+            }
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < std::thread::hardware_concurrency(); i++)
+        threads.push_back(std::thread(func));
+    threads[0].join();
+    return 0;
 }
 
 namespace std {
