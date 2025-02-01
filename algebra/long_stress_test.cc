@@ -1,16 +1,7 @@
 #include "algebra/real_func.h"
 #include "algebra/rational_func.h"
 #include "algebra/integer_func.h"
-#include <print>
-#include <random>
-#include <vector>
-#include <string>
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <source_location>
-using std::print;
-using std::format;
+#include "algebra/__stress_test.h"
 using namespace algebra;
 using namespace algebra::literals;
 
@@ -49,139 +40,6 @@ constexpr real<B> sample_real(auto& rng) {
     else throw std::runtime_error("unsupported base");
     return {sample_integer(rng), std::uniform_int_distribution<int>(-e, e)(rng)};
 }
-
-void reset_color() {
-    print("\033[1;0m");
-}
-
-void set_red() {
-    print("\033[1;31m");
-}
-
-void set_blue() {
-    print("\033[1;34m");
-}
-
-void set_yellow() {
-    print("\033[1;33m");
-}
-
-std::mutex g_mutex;
-
-#define TEST(E) { M __m{#E, seed, std::source_location::current()}; catch_exceptions(__m, [&](){__m <=> E;}); }
-#define TEST2(E, MSG) { M __m{#E, seed, std::source_location::current(), MSG}; catch_exceptions(__m, [&](){__m <=> E;}); }
-
-struct M {
-    const char* expr;
-    uint64_t seed;
-    std::source_location loc;
-    std::string msg;
-
-    void print_failure() const {
-        print("{}:{}: ", loc.file_name(), loc.line());
-        set_red();
-        print("FAILED:\n");
-        set_blue();
-        print("  TEST( {} )\n", expr);
-        if (msg.size()) {
-            reset_color();
-            print("with message:\n");
-            set_yellow();
-            std::stringstream ss(msg);
-            std::string line;
-            while (getline(ss, line, '\n'))
-                print("  {}\n", line);
-        }
-        reset_color();
-        print("with seed:\n");
-        set_yellow();
-        print("  {}\n\n", seed);
-        reset_color();
-    }
-};
-
-void catch_exceptions(const M& m, const auto& fn) {
-    try {
-        fn();
-    } catch (std::runtime_error& e) {
-        g_mutex.lock();
-        m.print_failure();
-        print("due to unexpected exception with message:\n");
-        print("  {}\n", e.what());
-        exit(0);
-    } catch (...) {
-        g_mutex.lock();
-        m.print_failure();
-        print("due to unexpected exception\n");
-        exit(0);
-    }
-}
-
-std::string shorten(const std::string& a, int pre, int post) {
-    return (a.size() <= pre + post) ? a : (a.substr(0, pre) + "..." + a.substr(a.size() - post));
-}
-
-template<typename A>
-struct M1 {
-    M m;
-    A a;
-
-    template<typename B>
-    void print_failure(const char* op, const B& b) const {
-        m.print_failure();
-        print("with expansion:\n");
-        set_yellow();
-        auto as = shorten(std::format("{}", a), 100, 100);
-        auto bs = shorten(std::format("{}", b), 100, 100);
-        if (as.size() >= 20 || bs.size() >= 20)
-            print("  {}\n  {}\n  {}\n", as, op, bs);
-        else
-            print("  {} {} {}\n", as, op, bs);
-        reset_color();
-    }
-};
-
-template<typename A>
-M1<A> operator<=>(const M& m, const A& a) { return {m, a}; }
-
-void operator<=>(const M& m, const bool value) {
-    if (!value) {
-        g_mutex.lock();
-        m.print_failure();
-        exit(0);
-    }
-}
-
-template<typename A>
-void catch_exceptions(const M1<A>& m1, const char* op, const auto& fn, const auto& b) {
-    try {
-        if (!fn()) {
-            g_mutex.lock();
-            m1.print_failure(op, b);
-            exit(0);
-        }
-    } catch (std::runtime_error& e) {
-        g_mutex.lock();
-        m1.print_failure(op, b);
-        print("due to unexpected exception with message:\n");
-        print("  {}\n", e.what());
-        exit(0);
-    } catch (...) {
-        g_mutex.lock();
-        m1.print_failure(op, b);
-        print("due to unexpected exception\n");
-        exit(0);
-    }
-}
-
-#define M_OP(OP) template<typename A> void operator OP (const M1<A>& m1, const auto& b) { catch_exceptions(m1, #OP, [&](){ return m1.a OP b; }, b); }
-
-M_OP(==)
-M_OP(!=)
-M_OP(<)
-M_OP(>)
-M_OP(<=)
-M_OP(>=)
 
 #define mono_zero_identities(a, z) \
     TEST(a + z == a); \
@@ -274,6 +132,8 @@ M_OP(>=)
         } \
     }
 
+#define STR(A) format(#A "={}\n", A)
+
 void integer_test(uint64_t seed) {
     std::mt19937_64 rng(seed);
     integer q, r;
@@ -299,7 +159,7 @@ void integer_test(uint64_t seed) {
         if (a > 0) TEST(r >= 0);
         if (a == 0) TEST(r == 0);
         if (a < 0) TEST(r <= 0);
-        TEST(a == b * q + r);
+        TEST2(a == b * q + r, STR(a) + STR(b) + STR(q) + STR(r));
 
         q = a; q /= b; TEST(q == a / b);
         q = a; q %= b; TEST(q == a % b);
@@ -364,49 +224,14 @@ void real_test(uint64_t seed) {
     trio_identities(a, b, c);
 }
 
-void run_test(uint64_t seed) {
-    try {
+int main(int argc, char* argv[]) {
+    stress_test([](uint64_t seed){
         integer_test(seed);
         //rational_test(seed);
         // TODO xrational
         //real_test<2>(seed);
         //real_test<10>(seed);
         // TODO expr
-    } catch (std::runtime_error& e) {
-        g_mutex.lock();
-        print("exception raised for seed {}\n{}\n", seed, e.what());
-        exit(0);
-    } catch (...) {
-        g_mutex.lock();
-        print("unknown exception for seed {}\n", seed);
-        exit(0);
-    }
-}
-
-int main(int argc, char* argv[]) {
-    std::random_device rd;
-    std::atomic<uint64_t> seed = (uint64_t(rd()) << 32) + rd();
-
-    auto func = [&seed](){
-        while (true) {
-            uint64_t s = seed++;
-            run_test(s);
-            if (s % 1000 == 0) {
-                std::lock_guard g(g_mutex);
-                print("seed {}\n", s);
-            }
-        }
-    };
-
-    std::vector<std::thread> threads;
-    for (int i = 0; i < std::thread::hardware_concurrency(); i++)
-        threads.push_back(std::thread(func));
-    threads[0].join();
+    });
     return 0;
-}
-
-namespace std {
-inline namespace __1 {
-bool __is_posix_terminal(__sFILE*) { return true; }
-}
 }
