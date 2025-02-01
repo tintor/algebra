@@ -17,7 +17,7 @@ constexpr size_t mul_max_size(const uint64_t* a, const size_t A, const uint64_t*
 }
 
 constexpr size_t div_max_size(const uint64_t* a, const size_t A, const uint64_t* b, const int B) {
-    return (A >= B) ? 1 + 64 * (A - B) + std::countl_zero(b[B - 1]) - std::countl_zero(a[A - 1]) : 0;
+    return (A >= B) ? A - B + (64 + std::countl_zero(b[B - 1]) - std::countl_zero(a[A - 1])) / 64 : 0;
 }
 
 constexpr size_t num_bits(const uint64_t* a, const size_t A) { return A ? 64 * A - std::countl_zero(a[A - 1]) : 0; }

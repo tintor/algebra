@@ -21,6 +21,8 @@ bool __is_posix_terminal(__sFILE*) { return true; }
 }
 }
 
+constexpr natural isqrt_default(const natural& x) { return isqrt(x); }
+
 static void test(const auto& fn, benchmark::State& state) {
     std::mt19937_64 rng(0);
     const int bits = state.range(0);
@@ -36,14 +38,12 @@ static void test(const auto& fn, benchmark::State& state) {
     }
 }
 
-#define BENCH_LOW(FUNCTION) \
-static void BM_LOW_ ## FUNCTION(benchmark::State& state) { test(FUNCTION, state); } \
-BENCHMARK(BM_LOW_ ## FUNCTION)->RangeMultiplier(2)->Range(16, 131072);
+#define BENCH(FUNCTION) \
+static void BM_ ## FUNCTION(benchmark::State& state) { test(FUNCTION, state); } \
+BENCHMARK(BM_ ## FUNCTION)->RangeMultiplier(2)->Range(32, 32 << 10);
 
-BENCH_LOW(isqrt2)
-BENCH_LOW(isqrt_simple)
-BENCH_LOW(isqrt_newthon)
-BENCH_LOW(isqrt_binary_search)
-BENCH_LOW(isqrt_digits)
+//BENCH(isqrt_default)
+BENCH(isqrt2)
+BENCH(isqrt3)
 
 BENCHMARK_MAIN();

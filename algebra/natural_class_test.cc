@@ -213,7 +213,7 @@ TEST_CASE("__word_div") {
     for (int i = 0; i < 1000'000; i++) {
         rand_natural(a, 1, 10, rng);
         rand_natural(b, 1, 10, rng);
-        const uint64_t q = __word_div(a, b);
+        const uint64_t q = __saturated_div(b, a);
         REQUIRE(a * q <= b);
         if (q != std::numeric_limits<uint64_t>::max())
             REQUIRE(a * (natural(q) + 1) > b);

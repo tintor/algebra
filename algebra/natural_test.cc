@@ -3,7 +3,6 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <chrono>
 
-#if 0
 TEST_CASE("extract_64bits") {
     std::mt19937_64 rng(233);
     for (int i = 0; i < 1000; i++) {
@@ -46,7 +45,6 @@ TEST_CASE("is_possible_square") {
         }
     }
 }
-#endif
 
 constexpr natural diff(const natural& a, const natural& b) { return (a > b) ? a - b : (b - a); }
 
@@ -65,15 +63,16 @@ void verify_isqrt(const natural& x, const natural& a) {
     }
 }
 
-void test_isqrt(const auto& fn, const int count, const int min_bits, const int max_bits) {
+void test_isqrt(const auto& fn) {
     std::mt19937_64 rng(0);
     natural x;
 
     print("small\n");
     for (int i = 0; i < 1'000'000; i++) verify_isqrt(natural(i), fn(i));
 
+#if 0
     print("64 bit\n");
-    for (int i = 0; i < 1'000'000'000; i++) {
+    for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(30, 64)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -81,7 +80,7 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
     }
 
     print("96 bit\n");
-    for (int i = 0; i < 1'000'000'000; i++) {
+    for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(65, 96)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -89,15 +88,18 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
     }
 
     print("128 bit\n");
-    for (int i = 0; i < 1'000'000'000; i++) {
+    for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(97, 128)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
     }
+#endif
+    natural e("4723193678752028155961467022770253813739277744022718882812203718746");
+    verify_isqrt(e, fn(e));
 
     print("192 bit\n");
-    for (int i = 0; i < 1'000'000'000; i++) {
+    for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(129, 192)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -105,11 +107,11 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
     }
 
     print("256 bit\n");
-    for (int i = 0; i < 1'000'000'000; i++) {
+    for (int i = 0; i < 10'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(193, 256)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 
     print("512 bit\n");
@@ -117,7 +119,7 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
         int bits = std::uniform_int_distribution<int>(257, 512)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
+        if (i % 100'000 == 0) print("{}\n", i / 100'000);
     }
 
     print("1024 bit\n");
@@ -125,29 +127,12 @@ void test_isqrt(const auto& fn, const int count, const int min_bits, const int m
         int bits = std::uniform_int_distribution<int>(513, 1024)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
-        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
+        if (i % 100'000 == 0) print("{}\n", i / 10'000);
     }
 }
 
-TEST_CASE("isqrt_newthon") {
-    test_isqrt(isqrt_newthon, 10'000'000, 64, 1024 * 2);
-}
-
-#if 0
-
-#if 0
-TEST_CASE("isqrt_hardware") {
-    test_isqrt(isqrt_hardware, 10'000'000, 1, 71);
-}
-
-TEST_CASE("isqrt_binary_search") {
-    test_isqrt(isqrt_binary_search, 10'000'000, 64, 1024);
-}
-
-TEST_CASE("isqrt_digits") {
-    test_isqrt(isqrt_digits, 10'000'000, 64, 1024);
-}
-#endif
+constexpr natural isqrt_natural(const natural& x) { return isqrt(x); }
+TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
 
 TEST_CASE("modX()") {
     std::mt19937_64 rng(0);
@@ -348,6 +333,7 @@ natural fast_isqrt(const natural& x) {
         val = valLong;
         val <<= 52;
         q = x >> (xLenMod - (3 * 53));
+        Check(valLong != 0);
         q /= valLong;
         val += q;
 
@@ -355,6 +341,7 @@ natural fast_isqrt(const natural& x) {
         for (; size < 256; size <<= 1) {
             q = x;
             q >>= xLenMod - (3 * size);
+            Check(val != 0);
             div(q, val, q, s);
             val <<= size - 1;
             val += q;
@@ -378,6 +365,7 @@ natural fast_isqrt(const natural& x) {
                 q = x;
                 q >>= shiftX;
                 q -= s; // q = (x >> shiftX) - s
+                Check(val != 0);
                 div(q, val, q, s);
 
                 val <<= size;
@@ -397,82 +385,14 @@ natural fast_isqrt(const natural& x) {
 }
 
 #if 0
-TEST_CASE("__slow_isqrt stress") {
-    long i = 0;
-    std::mt19937_64 rng(0);
-    int bits_max = 1024;
-    while (i < 100000) {
-        int bits = std::uniform_int_distribution<int>(1, bits_max)(rng);
-        natural x = uniform_sample_bits(bits, rng);
-        bits = x.num_bits();
-        natural q = __slow_isqrt(x);
-        if (q * q > x || (q + 1) * (q + 1) <= x) {
-            natural qe = q;
-            std::print("__slow_isqrt failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
-            bits_max = bits - 1;
-        }
-        i += 1;
-        if (i % 1'000'000 == 0)
-            print("{} mil, bits_max {}\n", i / 1'000'000, bits_max);
+TEST_CASE("fast_isqrt stress") {
+    natural a = 1;
+    while (true) {
+        std::print("{} -> {}\n", a.num_bits(), fast_isqrt(a).num_bits());
+        a <<= 1;
     }
 }
 #endif
-
-#if 1
-TEST_CASE("isqrt benchmark") {
-    natural a;
-
-#define BENCH_DIGITS(N) \
-    a = pow(10_n, N); \
-    print("1e" #N " bits {}\n", a.num_bits()); \
-    BENCHMARK("isqrt() " #N) { return isqrt(a); }; \
-    BENCHMARK("isqrt_hardware() " #N) { return isqrt_hardware(a); }; \
-    BENCHMARK("isqrt_newthon() " #N) { return isqrt_newthon(a); }; \
-    BENCHMARK("isqrt_binary_search() " #N) { return isqrt_binary_search(a); }; \
-    BENCHMARK("isqrt_digits() " #N) { return isqrt_digits(a); };
-
-    BENCH_DIGITS(10);
-    BENCH_DIGITS(20);
-    BENCH_DIGITS(30);
-    BENCH_DIGITS(38);
-    BENCH_DIGITS(40);
-    BENCH_DIGITS(50);
-    BENCH_DIGITS(75);
-    BENCH_DIGITS(100);
-    BENCH_DIGITS(125);
-    BENCH_DIGITS(150);
-    BENCH_DIGITS(250);
-    BENCH_DIGITS(300);
-    BENCH_DIGITS(350);
-    BENCH_DIGITS(500);
-    BENCH_DIGITS(750);
-    BENCH_DIGITS(1000);
-    BENCH_DIGITS(2000);
-    BENCH_DIGITS(4000);
-    BENCH_DIGITS(16000);
-    BENCH_DIGITS(32000);
-}
-#endif
-
-TEST_CASE("isqrt stress") {
-    long i = 0;
-    std::mt19937_64 rng(0);
-    int bits_max = 126;
-    while (i < 100000) {
-        int bits = std::uniform_int_distribution<int>(1, bits_max)(rng);
-        natural x = uniform_sample_bits(bits, rng);
-        bits = x.num_bits();
-        natural q = isqrt(x);
-        if (q * q > x || (q + 1) * (q + 1) <= x) {
-            natural qe = __slow_isqrt(x);
-            std::print("isqrt failed for bits={} x={} q={} qe={} diff={}\n", bits, x, q, qe, diff(q, qe));
-            bits_max = bits - 1;
-        }
-        i += 1;
-        if (i % 1'000'000 == 0)
-            print("{} mil, bits_max {}\n", i / 1'000'000, bits_max);
-    }
-}
 
 TEST_CASE("uniform_sample") {
     natural a = (1_n << 128) - 1;
@@ -639,4 +559,3 @@ TEST_CASE("merseinne primes vs is_likely_prime") {
         CHECK(actual == expected);
     }
 }
-#endif

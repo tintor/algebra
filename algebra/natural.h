@@ -150,9 +150,6 @@ constexpr T __gcd_inner(T a, T b) {
     return a;
 }
 
-template <typename A, typename B>
-using larger_type = std::conditional_t<(sizeof(A) >= sizeof(B)), A, B>;
-
 constexpr auto gcd(std_int auto a, std_int auto b) -> std::make_unsigned_t<larger_type<decltype(a), decltype(b)>> {
     using T = std::make_unsigned_t<larger_type<decltype(a), decltype(b)>>;
     T ua = abs_unsigned(a);
@@ -206,43 +203,6 @@ constexpr natural lcm(const natural& a, const natural& b) {
     return m;
 }
 
-constexpr natural __slow_isqrt(const natural& x) {
-    const auto b = x.num_bits();
-    if (b <= 1)
-        return x;
-
-    auto e = b + (b & 1);
-    natural q, a, a2, xe;
-    int i = 0;
-    uint64_t qi = 0;
-    while (true) {
-        xe = x;
-        xe >>= e;
-        if (i < 64) {
-            qi <<= 1;
-            if (xe.words.size() > 2 || static_cast<unsigned __int128>(qi | 1) * (qi | 1) <= xe)
-                qi |= 1;
-        } else {
-            if (i == 64) {
-                q = qi;
-            }
-            q <<= 1;
-            a = q;
-            a |= 1;
-            mul(a, a, a2);
-            if (a2 <= xe)
-                q |= 1;
-        }
-        if (e < 2)
-            break;
-        e -= 2;
-        i++;
-    }
-    if (i < 64)
-        q = qi;
-    return q;
-}
-
 constexpr uint64_t isqrt(const uint64_t x) {
     uint64_t q = static_cast<uint64_t>(std::sqrt(x));
     if (q * q > x)
@@ -250,6 +210,7 @@ constexpr uint64_t isqrt(const uint64_t x) {
     return q;
 }
 
+/*
 constexpr natural isqrt(const natural& x) {
     using u128 = unsigned __int128;
     using u64 = uint64_t;
@@ -285,36 +246,12 @@ constexpr natural isqrt(const natural& x) {
         return iq;
     }
 
-    /*if (bits <= 107) {
-        q = iq + 1;
-        mul(q, q, e);
-        if (e > x)
-            q -= 1;
-        mul(q, q, e);
-        if (e > x)
-            q -= 1;
-        return q;
-    }*/
-
     if (bits <= 126) {
         u128 cx = (static_cast<u128>(x.words[1]) << 64) | x.words[0];
         return (iq + static_cast<u64>(cx / iq)) / 2;
     }
-
-    natural q, e;
-    // this doesn't work for 129 bits!
-    /*natural rem;
-    div(x, q, e, rem);
-    q += e;
-    q >>= 1;
-
-    div(x, q, e, rem);
-    q += e;
-    q >>= 1;
-    return q;*/
-
-    return __slow_isqrt(x);
 }
+*/
 
 template<std::floating_point T>
 constexpr void round_to_zero(const T& a, natural& b) {
@@ -330,10 +267,6 @@ constexpr void round_to_zero(const T& a, natural& b) {
 
     b = static_cast<uint64_t>(m);
     b <<= exponent;
-}
-
-constexpr natural isqrt_digits(const natural& a) {
-    return __slow_isqrt(a);
 }
 
 // very fast, but only approximate for large A
@@ -371,66 +304,12 @@ constexpr natural isqrt_hardware(const natural& a) {
     return natural(x) << (x_exp - FP_DIGITS + delta / 2);
 }
 
-constexpr natural isqrt_hardware2(const natural& a) {
-    if (a <= 1)
-        return a;
-
-    const int FP_DIGITS = std::numeric_limits<double>::digits;
-
-    int a_exp = static_cast<int>(a.num_bits()) - FP_DIGITS;
-    int delta = 0;
-    if (a_exp >= std::numeric_limits<double>::max_exponent) {
-        delta = a_exp - (std::numeric_limits<double>::max_exponent - 1);
-        delta += delta % 2;
-        a_exp -= delta;
-    }
-
-    Check(a_exp < std::numeric_limits<double>::max_exponent);
-    Check(delta % 2 == 0);
-
-    double a_fp;
-    if (a_exp <= 0) {
-        a_fp = a.words[0];
-    } else {
-        const uint64_t m = extract_64bits(a, a_exp);
-        a_fp = std::ldexp(static_cast<double>(m), a_exp);
-    }
-
-    const double x_fp = std::sqrt(a_fp);
-
-    int x_exp;
-    auto x_mantissa = std::frexp(x_fp, &x_exp);
-
-    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS) + 1;
-    return natural(x) << (x_exp - FP_DIGITS + delta / 2);
+constexpr uint128_t concat(const uint64_t a, const uint64_t b) {
+    return (static_cast<uint128_t>(a) << 64) | b;
 }
 
-constexpr natural diffa(const natural& a, const natural& b) { return (a > b) ? a - b : (b - a); }
-
-constexpr bool diff_by_one(const uint64_t a, const uint64_t b) { return a + 1 == b || b + 1 == a; }
-
-// TODO optimize
-constexpr bool diff_by_one(const natural& a, const natural& b) {
-    if (!diff_by_one(a, b))
-        return false;
-    auto ai = a.num_bits();
-    auto bi = b.num_bits();
-    if (ai > bi)
-        return a.popcount() == 1 && b.popcount() == bi;
-    if (bi > ai)
-        return b.popcount() == 1 && a.popcount() == ai;
-
-    for (int i = 1; i < a.words.size(); i++)
-        if (a.words[i] != b.words[i])
-            return false;
-    return true;
-}
-
-constexpr natural isqrt_newthon(const natural& a) {
-    if (a.words.empty())
-        return 0;
-
-    if (a.words.size() == 1) {
+constexpr natural isqrt(const natural& a) {
+    if (a.words.size() <= 1) {
         uint64_t iq = std::sqrt(a.words[0]);
         if (__mulq(iq, iq) > a.words[0])
             iq -= 1;
@@ -438,108 +317,123 @@ constexpr natural isqrt_newthon(const natural& a) {
     }
 
     if (a.words.size() == 2) {
-        uint128_t ac = (static_cast<uint128_t>(a.words[1]) << 64) | a.words[0];
-        uint64_t iq = std::sqrt(ac);
-        return (iq + ac / iq) / 2;
+        const uint128_t ac = concat(a.words[1], a.words[0]);
+        const uint64_t iq = std::sqrt(ac);
+        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
     }
 
-    if (a.words.size() == 3) {
-        natural r, q;
-        natural x = power_of_two((a.num_bits() + 1) / 2);
-        while (true) {
-            div(a, x, q, r);
-            q += x;
-            q >>= 1;
-            if (q >= x) {
-                q += 1;
-                mul(q, q, x);
-                if (x <= a)
-                    return q;
-                q -= 1;
-                return q;
-            }
-            x = q;
-        }
-    }
+    natural y = power_of_two((a.num_bits() + 1) / 2);
+    natural x, r;
+    do {
+        x = y;
+        div(a, x, y, r);
+        y += x;
+        // TODO if (y.is_even() && r >= x/2) y += 1    | Would this 1) speed up iteration? 2) avoid mul() at the end?
+        y >>= 1;
+    } while (y < x);
 
-    natural r, q;
-    natural x = power_of_two((a.num_bits() + 1) / 2); // isqrt_hardware2(a);
-    //natural x1 = isqrt_hardware(a);
-    //natural x2 = power_of_two((a.num_bits() + 1) / 2);
-    /*if (x * x < a) {
-        std::print("\n");
-        std::print("a  ={}\n", a);
-        std::print("x  ={}\n", x);
-        std::print("x*x={}\n", x * x);
-        std::print("x1 ={}\n", x1);
-        std::print("x2 ={}\n", x2);
-        std::print("t  ={}\n", isqrt(a));
-        throw std::runtime_error("x * x < a");
-    }*/
-    int i = 0;
-    while (true) {
-        div(a, x, q, r);
-        q += x;
-        q >>= 1;
-        //std::print("\na={}\nx={}\nq={}\ndiff={}\nq>=x {}\nt={}\n", a, x, q, diffa(x, q).num_bits(), q >= x, isqrt(a));
-        if (q >= x) {
-            q += 1;
-            mul(q, q, x);
-            if (x <= a)
-                return q;
-            q -= 1;
-            return q;
-        }
-        Check(i++ <= 50'000);
-        x = q;
-    }
+    x += 1;
+    mul(x, x, r);
+    if (r <= a)
+        return x;
+    x -= 1;
+    return x;
 }
 
-constexpr natural isqrt_binary_search(const natural& a) {
-    if (a <= 1)
-        return a;
-
-    natural m2;
-    natural m = isqrt_hardware(a);
-    //round_to_zero(std::sqrt(static_cast<double>(a)), m);
-    natural left = m;
-    natural right = m;
-    left -= m >> 30;
-    right += m >> 19;
-    right += 1;
-    /*if (left < 1)
-        left = 1;
-    if (right > a)
-        right = a;*/
-
-    while (left < right) {
-        m = right;
-        m -= left;
-        ++m;
-        m >>= 1;
-        m += left;
-
-        mul(m, m, m2);
-
-        if (m2 > a) {
-            if (right < m)
-                throw std::runtime_error("inf loop");
-            --m;
-            right = m;
-            continue;
-        }
-        if (m2 < a) {
-            if (left >= m)
-                throw std::runtime_error("inf loop");
-            left = m;
-            continue;
-        }
-        return m; // a is perfect square!
+constexpr natural isqrt2(const natural& a) {
+    if (a.words.size() <= 1) {
+        uint64_t iq = std::sqrt(a.words[0]);
+        if (__mulq(iq, iq) > a.words[0])
+            iq -= 1;
+        return iq;
     }
-    return left;
+
+    if (a.words.size() == 2) {
+        const uint128_t ac = concat(a.words[1], a.words[0]);
+        const uint64_t iq = std::sqrt(ac);
+        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
+    }
+
+    natural x = power_of_two((a.num_bits() + 1) / 2);
+    natural v = x * x;
+    natural r;
+
+    //int i = 0;
+    while (v > a) {
+        //std::print("{}\n", x);
+        v -= a;
+        div(v, x, v, r); // v is much smaller than a, which makes this division cheaper!
+        v >>= 1;
+        if (v == 0) {
+            x -= 1;
+            return x;
+        }
+        x -= v;
+        mul(x, x, v);
+        //Check(++i <= 10000);
+    }
+
+    if (v == a)
+        return x;
+    v += x;
+    x += 1;
+    v += x;
+    if (v <= a)
+        return x;
+    x -= 1;
+    return x;
 }
 
-constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
+constexpr natural isqrt3(const natural& a) {
+    if (a.words.size() <= 1) {
+        uint64_t iq = std::sqrt(a.words[0]);
+        if (__mulq(iq, iq) > a.words[0])
+            iq -= 1;
+        return iq;
+    }
+
+    if (a.words.size() == 2) {
+        const uint128_t ac = concat(a.words[1], a.words[0]);
+        const uint64_t iq = std::sqrt(ac);
+        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
+    }
+
+    natural x = power_of_two((a.num_bits() + 1) / 2);
+    natural x2 = x * x;
+    natural r, v, m;
+
+    //int i = 0;
+    while (x2 > a) {
+        //std::print("{}\n", x);
+        v -= a;
+        div(x2, x, v, r); // v is much smaller than a, which makes this division cheaper!
+        v >>= 1;
+        if (v == 0) {
+            x -= 1;
+            return x;
+        }
+        m = x;
+        x -= v;
+        m += x;
+        m *= v;
+        Check(m <= x2);
+        x2 -= m;
+        //mul(x, x, x2);
+        //Check(++i <= 10000);
+    }
+
+    if (v == a)
+        return x;
+    v += x;
+    x += 1;
+    v += x;
+    if (v <= a)
+        return x;
+    x -= 1;
+    return x;
+}
+
+constexpr natural iroot(const natural& a, uint32_t n) {
     if (a <= 1 || n == 1)
         return a;
     if (n == 0)
@@ -551,19 +445,18 @@ constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
     natural right = a;
 
     natural m, mn, t, t2;
-    if (faster) {
-        // narrow initial guess using floating point
-        round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
-        left = m;
-        right = m;
-        left -= m >> 30;
-        right += m >> 19;
-        right += 1;
-        if (left < 1)
-            left = 1;
-        if (right > a)
-            right = a;
-    }
+
+    // narrow initial guess using floating point
+    round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
+    left = m;
+    right = m;
+    left -= m >> 30;
+    right += m >> 19;
+    right += 1;
+    if (left < 1)
+        left = 1;
+    if (right > a)
+        right = a;
 
     while (left < right) {
         m = right;
@@ -573,9 +466,7 @@ constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
         m += left;
 
         // mn = pow(m, n)
-        if (n == 2)
-            mul(m, m, mn);
-        else if (n == 3) {
+        if (n == 3) {
             mul(m, m, mn);
             mn *= m;
         } else if (n == 4) {
@@ -606,15 +497,11 @@ constexpr natural iroot(const natural& a, uint32_t n, bool faster = true) {
         }
 
         if (mn > a) {
-            if (right < m)
-                throw std::runtime_error("inf loop");
             --m;
             right = m;
             continue;
         }
         if (mn < a) {
-            if (left >= m)
-                throw std::runtime_error("inf loop");
             left = m;
             continue;
         }
