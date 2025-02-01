@@ -4,6 +4,8 @@
 
 namespace algebra {
 
+constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(a.abs); }
+
 constexpr integer abs(integer a) {
     if (a.is_negative())
         a.negate();
@@ -128,11 +130,9 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
     }
     if (r > 1)
         return false;
-    if (t.sign() < 0)
+    if (t.is_negative())
         t += m;
-    if (t.sign() < 0)
-        t.negate();
-    out = t;
+    out = t.abs;
     return true;
 }
 
@@ -153,8 +153,13 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, nat
     }
 }
 
-constexpr int signum(const integer& a) { return (a.sign() > 0) - (a.sign() < 0); }
-constexpr bool is_power_of_two(const integer& a) { return a.sign() > 0 && a.num_bits() == 1 + a.num_trailing_zeros(); }
+constexpr int signum(const integer& a) {
+    if (a.abs.words.empty())
+        return 0;
+    return a.is_negative() ? -1 : 1;
+}
+
+constexpr integer gcd(const integer& a, const integer& b) { return gcd(a.abs, b.abs); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {

@@ -30,12 +30,6 @@ struct integer {
     constexpr bool is_one() const { return abs.words.size() == 1 && abs.words[0] == 1 && sign() >= 0; }
     constexpr bool is_zero() const { return abs.words.size() == 0; }
 
-    constexpr operator natural() const {
-        if (is_negative())
-            throw std::runtime_error("can't assign negative to natural");
-        return abs;
-    }
-
     constexpr bool is_int8() const {
         if (abs.words.size() > 1)
             return false;
@@ -407,8 +401,8 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
 }
 
 constexpr integer operator/(const integer& a, const std_int auto b) {
-    integer c = a.abs / b;
-    c.words.set_negative(a.is_negative() != (b < 0));
+    integer c = a.abs / abs_unsigned(b);
+    c.abs.words.set_negative(a.is_negative() != (b < 0));
     return c;
 }
 
@@ -419,7 +413,7 @@ constexpr integer& operator/=(integer& a, const integer& b) {
 }
 constexpr integer& operator/=(integer& a, const std_int auto b) {
     const bool negative = a.is_negative();
-    a.abs /= b;
+    a.abs /= abs_unsigned(b);
     a.abs.words.set_negative(negative != (b < 0));
     return a;
 }
@@ -432,15 +426,8 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
 
 // TODO generalize for any std_int
 constexpr int64_t operator%(const integer& a, int64_t b) {
-    if (b == 0)
-        throw std::runtime_error("division by zero");
-    uint128_t acc = 0;
-    for (auto i = a.abs.words.size(); i-- > 0;) {
-        acc <<= 64;
-        acc |= a.abs.words[i];
-        acc %= abs_unsigned(b);
-    }
-    return (a.sign() >= 0) ? acc : -static_cast<int64_t>(acc);
+    uint64_t m = a.abs % abs_unsigned(b);
+    return (a.sign() >= 0) ? m : -static_cast<int64_t>(m);
 }
 
 constexpr int operator%(const integer& a, int b) { return a % (int64_t)b; }
