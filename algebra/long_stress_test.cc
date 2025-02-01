@@ -168,6 +168,29 @@ void integer_test(uint64_t seed) {
     const integer c = sample_integer(rng);
     trio_identities(a, b, c);
 
+    {
+        integer e = a;
+        add_product(e, b, c);
+        TEST(e == a + b * c);
+    }
+    {
+        integer e = a;
+        sub_product(e, b, c);
+        TEST(e == a - b * c);
+    }
+
+    uint64_t w = rng();
+    {
+        integer e = a;
+        add_product(e, b, w);
+        TEST(e == a + b * w);
+    }
+    {
+        integer e = a;
+        sub_product(e, b, w);
+        TEST(e == a - b * w);
+    }
+
     uint64_t m = rng();
     while (m == 0)
         m = rng();

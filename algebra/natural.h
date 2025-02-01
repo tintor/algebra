@@ -1080,4 +1080,10 @@ constexpr bool is_power_of_three(natural a) {
     return true;
 }
 
+constexpr void invert_bits(natural& a) {
+    for (int i = a.words.size(); --i > 0;)
+        a.words[i] = ~a.words[i];
+    a.words.normalize();
+}
+
 }
