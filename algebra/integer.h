@@ -350,15 +350,68 @@ constexpr integer& operator*=(integer& a, std_int auto b) {
     return a;
 }
 
-constexpr void add_product(integer& acc, const integer& a, const integer& b) {
-    // TODO optimize temporary allocation
-    acc += a * b;
+template<bool plus>
+constexpr void __add_product(integer& a, const integer& b, const integer& c) {
+    const bool a_negative = a.is_negative();
+    const bool bc_negative = b.is_negative() != c.is_negative();
+
+    if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
+        add_product(a.abs, b.abs, c.abs);
+        a.abs.words.set_negative(a_negative);
+    } else if (a.num_bits() > b.num_bits() + c.num_bits()) {
+        sub_product(a.abs, b.abs, c.abs);
+        a.abs.words.set_negative(a_negative);
+    } else {
+        const int m = mul_max_size(b.abs.words.data(), b.abs.words.size(), c.abs.words.data(), c.abs.words.size());
+        a.abs.words.resize(m + 1);
+        a.abs.words[m] = 1;
+        sub_product(a.abs, b.abs, c.abs);
+        if (a.abs.words.size() >= m) {
+            a.abs.words[m - 1] -= 1;
+            a.abs.words.normalize();
+        } else {
+            // TODO fuse invert_bits and ++
+            invert_bits(a.abs);
+            ++a.abs;
+            a.abs.words.set_negative(!a_negative);
+        }
+    }
 }
 
-constexpr void sub_product(integer& acc, const integer& a, const integer& b) {
-    // TODO optimize temporary allocation
-    acc -= a * b;
+constexpr void add_product(integer& a, const integer& b, const integer& c) { __add_product<true>(a, b, c); }
+constexpr void sub_product(integer& a, const integer& b, const integer& c) { __add_product<false>(a, b, c); }
+
+template<bool plus>
+constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
+    const bool a_negative = a.is_negative();
+    const bool bc_negative = b.is_negative() != (c < 0);
+    const auto cu = abs_unsigned(c);
+
+    if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
+        add_product(a.abs, b.abs, cu);
+        a.abs.words.set_negative(a_negative);
+    } else if (a.num_bits() > b.num_bits() + num_bits(abs_unsigned(c))) {
+        sub_product(a.abs, b.abs, cu);
+        a.abs.words.set_negative(a_negative);
+    } else {
+        const int m = mul_max_size(b.abs.words.data(), b.abs.words.size(), &cu, 1);
+        a.abs.words.resize(m + 1);
+        a.abs.words[m] = 1;
+        sub_product(a.abs, b.abs, cu);
+        if (a.abs.words.size() >= m) {
+            a.abs.words[m - 1] -= 1;
+            a.abs.words.normalize();
+        } else {
+            // TODO fuse invert_bits and ++
+            invert_bits(a.abs);
+            ++a.abs;
+            a.abs.words.set_negative(!a_negative);
+        }
+    }
 }
+
+constexpr void add_product(integer& a, const integer& b, const int64_t c) { __add_product<true>(a, b, c); }
+constexpr void sub_product(integer& a, const integer& b, const int64_t c) { __add_product<false>(a, b, c); }
 
 constexpr void div(const integer& a, const integer& b, integer& quot, integer& rem) {
     if (b == 1) {
