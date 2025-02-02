@@ -153,6 +153,16 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, nat
     }
 }
 
+constexpr void mod(integer& a, const integer& b) {
+    const bool negative = a.is_negative();
+    a.abs.words.set_negative(false);
+    mod(a.abs, b.abs);
+    if (negative) {
+        a.negate();
+        a += b;
+    }
+}
+
 constexpr int signum(const integer& a) {
     if (a.abs.words.empty())
         return 0;

@@ -2,10 +2,52 @@
 #include "algebra/__test.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 
+TEST_CASE("add_product") {
+    natural a = 1;
+    add_product(a, 2_n, 3_n);
+    REQUIRE(a == 7);
+}
+
+TEST_CASE("sub_product") {
+    natural a = 10;
+    sub_product(a, 2_n, 3_n);
+    REQUIRE(a == 4);
+}
+
+TEST_CASE("add_product scalar") {
+    natural a = 1;
+    add_product(a, 2_n, static_cast<uint64_t>(3));
+    REQUIRE(a == 7);
+}
+
+TEST_CASE("sub_product scalar") {
+    natural a = 10;
+    sub_product(a, 2_n, static_cast<uint64_t>(3));
+    REQUIRE(a == 4);
+}
+
 TEST_CASE("div 10") {
     natural a = 10;
     int b = 10;
     REQUIRE(div(a, b, a) == 0);
+}
+
+TEST_CASE("div test") {
+    natural a;
+    a.words.reset(2);
+    a.words[0] = 0;
+    a.words[1] = 1'000'000;
+
+    natural b;
+    b.words.reset(2);
+    b.words[0] = 0;
+    b.words[1] = 1;
+
+    natural q, r;
+    div(a, b, q, r);
+    REQUIRE(q > 0);
+    REQUIRE(b * q + r == a);
+    REQUIRE(r < b);
 }
 
 natural rand_natural(int min_size, int max_size, Random& rng) {

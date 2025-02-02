@@ -314,12 +314,9 @@ constexpr void __add_product(uint64_t* a, int& A, const uint64_t* b, const int B
         if (w == 0)
             continue;
 
+        uint128_t acc = 0;
         uint64_t* qi = a + i;
-        auto acc = __mulq(w, *c);
-        *qi = acc;
-        acc >>= 64;
-        int j = 1;
-
+        int j = 0;
         while (j < C) {
             acc += __mulq(w, c[j]);
             acc += qi[j];
@@ -354,6 +351,8 @@ constexpr void __add_product(uint64_t* a, int& A, const uint64_t* b, const int B
         a[i] = carry;
         carry >>= 64;
     }
+    if (carry == 0)
+        return;
     for (int i = B; i < A; i++) {
         carry += a[i];
         a[i] = carry;

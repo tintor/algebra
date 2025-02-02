@@ -350,6 +350,10 @@ constexpr integer& operator*=(integer& a, std_int auto b) {
     return a;
 }
 
+constexpr std::string str(const integer& a) {
+    return a.is_negative() ? "-" + str(a.abs) : str(a.abs);
+}
+
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const integer& c) {
     const bool a_negative = a.is_negative();
@@ -366,10 +370,11 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
         sub_product(a.abs, b.abs, c.abs);
-        if (a.abs.words.size() >= m) {
-            a.abs.words[m - 1] -= 1;
+        if (a.abs.words.size() > m) {
+            a.abs.words[m] -= 1;
             a.abs.words.normalize();
         } else {
+            a.abs.words.resize(m);
             // TODO fuse invert_bits and ++
             invert_bits(a.abs);
             ++a.abs;
@@ -398,10 +403,11 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
         sub_product(a.abs, b.abs, cu);
-        if (a.abs.words.size() >= m) {
-            a.abs.words[m - 1] -= 1;
+        if (a.abs.words.size() > m) {
+            a.abs.words[m] -= 1;
             a.abs.words.normalize();
         } else {
+            a.abs.words.resize(m);
             // TODO fuse invert_bits and ++
             invert_bits(a.abs);
             ++a.abs;
@@ -494,11 +500,18 @@ constexpr integer operator%(const integer& a, uint64_t b) {
     return c;
 }
 
+constexpr integer mod(const integer& a, const integer& b) {
+    integer m = mod(a.abs, b.abs);
+    if (a.is_negative()) {
+        m.negate();
+        m += b;
+    }
+    return m;
+}
+
 constexpr uint64_t mod(const integer& a, uint64_t b) {
-    uint64_t rem = a.abs % b;
-    if (!a.is_negative())
-        return rem;
-    return (static_cast<uint128_t>(rem) * (b - 1)) % b;
+    uint64_t m = a.abs % b;
+    return a.is_negative() ? b - m : m;
 }
 
 // TODO this version doesn't use uint128_t %, is it faster?

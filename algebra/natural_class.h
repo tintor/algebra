@@ -853,6 +853,7 @@ constexpr void add_product(natural& a, const natural& b, const uint64_t c) {
     a.words.resize(A);
     __add_product(a.words.data(), A, b.words.data(), B, c);
     a.words.resize(A);
+    a.words.normalize();
 }
 
 // Assumes A >= B * C
@@ -1013,7 +1014,7 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
         return;
     }
     if (__less(a, A, b, B)) {
-        r.words.reserve(A);
+        r.words.resize(A);
         std::copy(a, a + A, r.words.data());
         q.set_zero(); // update Q after R in case &A == &Q
         return;
@@ -1021,9 +1022,9 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
     Check(B != 0, "division by zero");
 
     // NOTE max word size of R is b.word.size + 1
-    const int Q = div_max_size(a, A, b, B);
+    const int Q = A; //std::min(A, A - B + 1); //div_max_size(a, A, b, B); TODO
     if (a != q.words.data())
-        q.words.reset(Q);
+        q.words.reset(Q, /*initialize*/false);
 
 #if 0
     if (Q == 1) {
@@ -1037,14 +1038,17 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
     }
 #endif
 
-    r.words.reset(A - Q, /*initialize*/false);
-    std::copy(a + Q, a + A, r.words.data());
+    r.set_zero();
+//    r.words.reset(A - Q, /*initialize*/false);
+//    std::copy(a + Q, a + A, r.words.data());
 
-    for (int i = Q; i-- > 0;) {
+    for (int i = A/*Q*/; i-- > 0;) {
         if (r.words.size() || a[i])
             r.words.insert_first_word(a[i]);
+
         const uint64_t w = __saturated_div(r, _b);
-        sub_product(r, _b, w);
+        r -= _b * w;
+        //sub_product(r, _b, w);
         q.words[i] = w;
     }
     q.words.resize(Q);
@@ -1100,7 +1104,8 @@ constexpr void mod(const natural& a, const natural& b, natural& r) {
         if (r.words.size() || a.words[i])
             r.words.insert_first_word(a.words[i]);
         const uint64_t q = __saturated_div(r, b);
-        sub_product(r, b, q); // r -= b * q
+        // sub_product(r, b, q); // r -= b * q TODO
+        r -= q * q;
     }
 }
 
@@ -1121,7 +1126,13 @@ constexpr void mod(natural& a, const natural& b) {
         r -= 1;
         R += 1;
         const uint64_t w = __saturated_div(r, R, b.words.data(), B);
-        __sub_product(r, R, b.words.data(), B, w); // r -= b * w
+        // TODO switch back to sub_product
+        std::vector<uint64_t> m;
+        m.resize(mul_max_size(b.words.data(), B, r, R));
+        int M;
+        __mul(b.words.data(), B, r, R, m.data(), M);
+        __sub(r, R, m.data(), M);
+        //__sub_product(r, R, b.words.data(), B, w); // r -= b * w
     }
     a.words.resize(R);
 }

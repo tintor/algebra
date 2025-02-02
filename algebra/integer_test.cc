@@ -1,6 +1,26 @@
 #include "algebra/integer.h"
 #include "algebra/__test.h"
 
+TEST_CASE("add_product") {
+    integer a;
+
+    a = 1;
+    add_product(a, 2_i, 3_i);
+    REQUIRE(a == 7);
+
+    a = -1;
+    add_product(a, 2_i, 3_i);
+    REQUIRE(a == 5);
+
+    a = 1;
+    add_product(a, -2_i, 3_i);
+    REQUIRE(a == -5);
+
+    a = -1;
+    add_product(a, -2_i, 3_i);
+    REQUIRE(a == -7);
+}
+
 TEST_CASE("ctor") {
     integer a = -1;
     integer b(a.abs);

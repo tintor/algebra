@@ -134,6 +134,9 @@ constexpr real<B> sample_real(auto& rng) {
 
 #define STR(A) format(#A "={}\n", A)
 
+const bool test_add_product = false;
+const bool test_sub_product = false;
+
 void integer_test(uint64_t seed) {
     std::mt19937_64 rng(seed);
     integer q, r;
@@ -145,6 +148,30 @@ void integer_test(uint64_t seed) {
 
     const integer b = sample_integer(rng);
     duo_identities(a, b);
+
+    if (b != 0 && a >= 0) { integer e = a; mod(e, b); TEST(e == a % b); }
+
+    if (test_add_product) {
+        { integer e = a; add_product(e, b, one); TEST2(e == a + b, STR(a) + STR(b)); }
+        { integer e = a; add_product(e, one, b); TEST(e == a + b); }
+        { integer e = a; add_product(e, b, zero); TEST(e == a); }
+        { integer e = a; add_product(e, zero, b); TEST(e == a); }
+        { integer e = a; add_product(e, b, 1); TEST(e == a + b); }
+        { integer e = a; add_product(e, 1, b); TEST(e == a + b); }
+        { integer e = a; add_product(e, b, 0); TEST(e == a); }
+        { integer e = a; add_product(e, 0, b); TEST(e == a); }
+    }
+
+    if (test_sub_product) {
+        { integer e = a; sub_product(e, b, one); TEST(e == a - b); }
+        { integer e = a; sub_product(e, one, b); TEST(e == a - b); }
+        { integer e = a; sub_product(e, b, zero); TEST(e == a); }
+        { integer e = a; sub_product(e, zero, b); TEST(e == a); }
+        { integer e = a; sub_product(e, b, 1); TEST(e == a - b); }
+        { integer e = a; sub_product(e, 1, b); TEST(e == a - b); }
+        { integer e = a; sub_product(e, b, 0); TEST(e == a); }
+        { integer e = a; sub_product(e, 0, b); TEST(e == a); }
+    }
 
     if (a != 0) {
         TEST(a * b / a == b);
@@ -168,28 +195,12 @@ void integer_test(uint64_t seed) {
     const integer c = sample_integer(rng);
     trio_identities(a, b, c);
 
-    {
-        integer e = a;
-        add_product(e, b, c);
-        TEST(e == a + b * c);
-    }
-    {
-        integer e = a;
-        sub_product(e, b, c);
-        TEST(e == a - b * c);
-    }
+    if (test_add_product) { integer e = a; add_product(e, b, c); TEST(e == a + b * c); }
+    if (test_sub_product) { integer e = a; sub_product(e, b, c); TEST(e == a - b * c); }
 
     uint64_t w = rng();
-    {
-        integer e = a;
-        add_product(e, b, w);
-        TEST(e == a + b * w);
-    }
-    {
-        integer e = a;
-        sub_product(e, b, w);
-        TEST(e == a - b * w);
-    }
+    if (test_add_product) { integer e = a; add_product(e, b, w); TEST(e == a + b * w); }
+    if (test_sub_product) { integer e = a; sub_product(e, b, w); TEST(e == a - b * w); }
 
     uint64_t m = rng();
     while (m == 0)
