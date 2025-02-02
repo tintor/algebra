@@ -39,5 +39,5 @@ cc_library(
     deps = [":natural", ":integer_func", ":rational_func", ":real_func", ":expr", ":geometry", ":rational_vector"],
 )
 
-cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer_func", ":rational_func", ":real_func"])
+cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer_func", ":rational_func", ":xrational", ":real_func"])
 cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":natural"])

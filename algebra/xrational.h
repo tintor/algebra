@@ -17,28 +17,28 @@ struct xrational {
     rational base;
     natural root; // must be positive! Note: root is not fully simplified! It might have some square factors! Full factorization is expensive.
 
-    xrational() : base(0), root(1) { }
-    xrational(const xrational& a) : base(a.base), root(a.root) { }
-    xrational(rational_like auto base) : base(std::move(base)), root(1) { }
-    xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
+    constexpr xrational() : base(0), root(1) { }
+    constexpr xrational(const xrational& a) : base(a.base), root(a.root) { }
+    constexpr xrational(rational_like auto base) : base(std::move(base)), root(1) { }
+    constexpr xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
         if (this->root == 0)
             throw std::runtime_error("root must be positive");
         simplify();
     }
 
-    xrational& operator=(const xrational& a) {
+    constexpr xrational& operator=(const xrational& a) {
         base = a.base;
         root = a.root;
         return *this;
     }
 
-    xrational& operator=(const rational_like auto& a) {
+    constexpr xrational& operator=(const rational_like auto& a) {
         base = a;
         root = 1;
         return *this;
     }
 
-    void simplify() {
+    constexpr void simplify() {
         if (base.num.sign() == 0) {
             root = 1;
             return;
@@ -78,9 +78,10 @@ struct xrational {
             base.simplify();
     }
 
-    void negate() { base.negate(); }
+    constexpr bool is_negative() const { return base.is_negative(); }
+    constexpr void negate() { base.negate(); }
 
-    void invert() {
+    constexpr void invert() {
         base.invert();
         if (root != 1)
             base /= root;
@@ -142,7 +143,7 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
         return {a.base * b.base * integer(a.root)};
 
     // TODO maybe use gcd(a.root, b.root) to avoid difficult factorization
-    natural whole = abs(a.base.num * b.base.num);
+    natural whole = abs(a.base.num * b.base.num).to_natural();
     natural root = 1;
     exact_sqrt(a.root, whole, root);
     exact_sqrt(b.root, whole, root);
@@ -267,8 +268,8 @@ constexpr xrational sqrt(const xrational& a) {
     if (a.root != 1)
         throw std::runtime_error("sqrt of xrational with root");
     natural whole = 1, root = 1;
-    exact_sqrt(a.base.num, whole, root);
-    exact_sqrt(a.base.den, whole, root);
+    exact_sqrt(a.base.num.to_natural(), whole, root);
+    exact_sqrt(a.base.den.to_natural(), whole, root);
     return {rational{whole, a.base.den}, root};
 }
 
@@ -319,3 +320,31 @@ struct std::hash<algebra::xrational> {
         return seed;
     }
 };
+
+namespace algebra {
+
+constexpr xrational abs(xrational a) {
+    if (a.base.is_negative())
+        a.negate();
+    return a;
+}
+
+constexpr xrational pow(const xrational& base, integer exp) {
+    if (exp == 0)
+        return 1;
+
+    const bool invert = exp < 0;
+    xrational result = 1;
+    xrational _base = base;
+    while (exp) {
+        if (exp % 2)
+            result *= _base;
+        _base *= _base;
+        exp >>= 1;
+    }
+    if (invert)
+        result.invert();
+    return result;
+}
+
+}

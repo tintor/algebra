@@ -30,6 +30,9 @@ struct integer {
     constexpr bool is_one() const { return abs.words.size() == 1 && abs.words[0] == 1 && sign() >= 0; }
     constexpr bool is_zero() const { return abs.words.size() == 0; }
 
+    // TODO remove this and deprecate natural
+    constexpr natural to_natural() const { return abs; }
+
     constexpr bool is_int8() const {
         if (abs.words.size() > 1)
             return false;

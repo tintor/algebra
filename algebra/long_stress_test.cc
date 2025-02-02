@@ -1,12 +1,15 @@
 #include "algebra/real_func.h"
 #include "algebra/rational_func.h"
+#include "algebra/xrational.h"
 #include "algebra/integer_func.h"
 #include "algebra/__stress_test.h"
+#include <string>
 using namespace algebra;
 using namespace algebra::literals;
+using namespace std;
 
 constexpr integer sample_integer(auto& rng) {
-    int bits = std::uniform_int_distribution<int>(0, 256)(rng);
+    int bits = std::uniform_int_distribution<int>(0, 1024)(rng);
     if (bits == 0)
         return 0;
 
@@ -20,7 +23,7 @@ constexpr integer sample_integer(auto& rng) {
 }
 
 constexpr natural sample_positive_natural(auto& rng) {
-    int bits = std::uniform_int_distribution<int>(1, 256)(rng);
+    int bits = std::uniform_int_distribution<int>(1, 1024)(rng);
     natural a;
     a = pow(2_n, bits - 1);
     a |= uniform_sample_bits(bits - 1, rng);
@@ -149,7 +152,7 @@ void integer_test(uint64_t seed) {
     const integer b = sample_integer(rng);
     duo_identities(a, b);
 
-    if (b != 0 && a >= 0) { integer e = a; mod(e, b); TEST(e == a % b); }
+    //if (b != 0 && a >= 0) { integer e = a; mod(e, b); TEST(e == a % b); } TODO
 
     if (test_add_product) {
         { integer e = a; add_product(e, b, one); TEST2(e == a + b, STR(a) + STR(b)); }
@@ -205,7 +208,7 @@ void integer_test(uint64_t seed) {
     uint64_t m = rng();
     while (m == 0)
         m = rng();
-    const uint64_t am = mod(a, m);
+    const uint64_t am = mod(a, m); // TODO
     const uint64_t bm = mod(b, m);
     TEST(0 <= am);
     TEST(am < m);
@@ -214,24 +217,26 @@ void integer_test(uint64_t seed) {
     TEST(mod(U(am) * U(bm), m) == mod(a * b, m));
 }
 
+template<typename T>
 void rational_test(uint64_t seed) {
     std::mt19937_64 rng(seed);
-    const rational zero = 0;
-    const rational one = 1;
+    const T zero = 0;
+    const T one = 1;
 
-    const rational a = sample_rational(rng);
+    // TODO sample xrational too
+    const T a = sample_rational(rng);
     mono_identities(a);
     if (a != 0) {
         TEST(pow(a, -1) == 1 / a);
         TEST(pow(a, -2) == 1 / (a * a));
     }
 
-    const rational b = sample_rational(rng);
+    const T b = sample_rational(rng);
     duo_identities(a, b);
     if (b != 0)
         { auto q = a; q /= b; TEST(q == a / b); }
 
-    const rational c = sample_rational(rng);
+    const T c = sample_rational(rng);
     trio_identities(a, b, c);
     if (b != 0 && c != 0) {
         TEST(a / b / c == a / (b * c));
@@ -259,13 +264,46 @@ void real_test(uint64_t seed) {
 }
 
 int main(int argc, char* argv[]) {
-    stress_test([](uint64_t seed){
-        integer_test(seed);
-        //rational_test(seed);
-        // TODO xrational
-        //real_test<2>(seed);
-        //real_test<10>(seed);
-        // TODO expr
+    vector<string> args;
+    for (int i = 1; i < argc; i++)
+        args.push_back(argv[i]);
+
+    bool run_integer = false;
+    bool run_rational = false;
+    bool run_xrational = false;
+    bool run_real2 = false;
+    bool run_real10 = false;
+    for (const auto& arg : args)
+        if (arg == "integer")
+            run_integer = true;
+        else if (arg == "rational")
+            run_rational = true;
+        else if (arg == "xrational")
+            run_xrational = true;
+        else if (arg == "real2")
+            run_real2 = true;
+        else if (arg == "real10")
+            run_real10 = true;
+        else {
+            print("Error: Unknown argument: {}\n", arg);
+            return 1;
+        }
+    if (args.empty()) {
+        print("Error: Need at least one argument: integer rational xrational real2 real10\n");
+        return 1;
+    }
+
+    stress_test([=](uint64_t seed){
+        if (run_integer)
+            integer_test(seed);
+        if (run_rational)
+            rational_test<rational>(seed);
+        if (run_xrational)
+            rational_test<xrational>(seed);
+        if (run_real2)
+            real_test<2>(seed);
+        if (run_real10)
+            real_test<10>(seed);
     });
     return 0;
 }

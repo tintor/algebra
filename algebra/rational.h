@@ -117,6 +117,7 @@ public:
     constexpr bool is_integer() const { return den.is_one(); }
     constexpr bool is_even() const { return is_integer() && num.is_even(); }
     constexpr bool is_odd() const { return is_integer() && num.is_odd(); }
+    constexpr bool is_negative() const { return num.is_negative(); }
 };
 
 constexpr void negate(rational& a) { a.negate(); }
