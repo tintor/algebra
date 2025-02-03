@@ -17,8 +17,8 @@ using int128_t = __int128;
 using uint128_t = unsigned __int128;
 static const auto UINT128_MAX = std::numeric_limits<uint128_t>::max();
 
-template<typename T>
-auto signum(T a) { return (a > 0) - (a < 0); }
+template<std::floating_point T> auto signum(T a) { return (a > 0) - (a < 0); }
+template<std_int T> auto signum(T a) { return (a > 0) - (a < 0); }
 
 class integer_backend {
 private:
@@ -30,6 +30,11 @@ private:
     int _capacity;
 
 public:
+    constexpr integer_backend(std::initializer_list<uint64_t> a) : _words(0), _size(0), _capacity(0) {
+        resize(a.size());
+        for (int i = 0; i < a.size(); i++)
+            operator[](i) = a.begin()[i];
+    }
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }
     constexpr integer_backend(std_int auto a) {
         const auto au = abs_unsigned(a);
@@ -130,6 +135,7 @@ public:
     }
     constexpr void reset(int size, bool initialize = true);
     constexpr void push_back(uint64_t a);
+    constexpr void push_back(uint64_t a, uint64_t b);
 
     constexpr void pop_back() {
         if (_size > 0) _size--; else if (_size < 0) _size++;
@@ -161,6 +167,7 @@ public:
     constexpr void reserve_and_set_zero(int capacity);
     constexpr void reserve_bits(size_t bits) { return reserve((bits + 63) / 64); }
     constexpr void resize(int size);
+    constexpr void downsize(int size);
 
     constexpr void insert_first_n_words(int n);
     constexpr void insert_first_word(uint64_t a);
@@ -263,6 +270,12 @@ constexpr void integer_backend::push_back(uint64_t a) {
     }
 }
 
+constexpr void integer_backend::push_back(uint64_t a, uint64_t b) {
+    // TODO optimize
+    push_back(a);
+    push_back(b);
+}
+
 constexpr void integer_backend::erase_first_n_words(int n) {
     if (n > 0) {
         for (int i = n; i < size(); i++)
@@ -301,6 +314,10 @@ constexpr void integer_backend::resize(int size) {
     if (_capacity)
         for (int i = this->size(); i < size; i++)
             _words[i] = 0;
+    _size = (_size >= 0) ? size : -size;
+}
+
+constexpr void integer_backend::downsize(int size) {
     _size = (_size >= 0) ? size : -size;
 }
 
