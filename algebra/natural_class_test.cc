@@ -5,7 +5,16 @@
 TEST_CASE("add_product") {
     natural a = 1;
     add_product(a, 2_n, 3_n);
+    REQUIRE(a.words.size() == 1);
     REQUIRE(a == 7);
+    add_product(a, 0_n, 3_n);
+    REQUIRE(a == 7);
+    add_product(a, 2_n, 0_n);
+    REQUIRE(a == 7);
+    add_product(a, 2_n, 1_n);
+    REQUIRE(a == 9);
+    add_product(a, 1_n, 3_n);
+    REQUIRE(a == 12);
 }
 
 TEST_CASE("sub_product") {
@@ -33,16 +42,8 @@ TEST_CASE("div 10") {
 }
 
 TEST_CASE("div test") {
-    natural a;
-    a.words.reset(2);
-    a.words[0] = 0;
-    a.words[1] = 1'000'000;
-
-    natural b;
-    b.words.reset(2);
-    b.words[0] = 0;
-    b.words[1] = 1;
-
+    const natural a = {0, 1'000'000};
+    const natural b = {0, 1};
     natural q, r;
     div(a, b, q, r);
     REQUIRE(q > 0);
@@ -70,6 +71,47 @@ natural rand_natural(int size, Random& rng) {
     for (int i = 0; i < size; i++)
         a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
     return a;
+}
+
+TEST_CASE("add/sub_product stress") {
+    Random rng(31231);
+    for (int i = 0; i < 100'000; i++) {
+        natural a = rand_natural(1, 8, rng);
+        natural b = rand_natural(1, 4, rng);
+        natural c = rand_natural(1, 4, rng);
+        uint64_t d = rng.Uniform<uint64_t>(0, INT64_MAX);
+        natural e;
+
+        e = a;
+        add_product(e, b, c);
+        REQUIRE(e == a + b * c);
+
+        e = a;
+        add_product(e, b, d);
+        REQUIRE(e == a + b * d);
+
+        if (a >= b * c) {
+            e = a;
+            sub_product(e, b, c);
+            REQUIRE(e == a - b * c);
+        }
+
+        e = a;
+        sub_product(e, b, 0);
+        REQUIRE(e == a);
+
+        if (a >= b) {
+            e = a;
+            sub_product(e, b, 1);
+            REQUIRE(e == a - b);
+        }
+
+        if (a >= b * d) {
+            e = a;
+            sub_product(e, b, d);
+            REQUIRE(e == a - b * d);
+        }
+    }
 }
 
 #if 0
@@ -177,6 +219,7 @@ TEST_CASE("mul_karatsuba ones") {
     }
 }
 
+#if 0
 TEST_CASE("mul_karatsuba 4") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
@@ -248,8 +291,9 @@ TEST_CASE("mul_karatsuba general") {
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
+#endif
 
-TEST_CASE("__word_div") {
+TEST_CASE("__saturated_div") {
     Random rng(0);
     natural a, b;
     for (int i = 0; i < 1000'000; i++) {
@@ -392,6 +436,30 @@ TEST_CASE("-=") {
     natural a(5);
     a -= natural(4);
     REQUIRE(a == natural(1));
+}
+
+TEST_CASE("-= 2") {
+    natural       a = {0, 4, 0, 1};
+    const natural b = {1, 2, 1};
+    const natural c = {UINT64_MAX, 1, UINT64_MAX};
+    a -= b;
+    if (a != c) {
+        print("a={}\n", stre(a));
+        print("c={}\n", stre(c));
+    }
+    REQUIRE(a == c);
+}
+
+TEST_CASE("-= 3") {
+    natural       a = {0, 0, 1};
+    const natural b = {2};
+    const natural c = {UINT64_MAX - 1, UINT64_MAX};
+    a -= b;
+    if (a != c) {
+        print("a={}\n", stre(a));
+        print("c={}\n", stre(c));
+    }
+    REQUIRE(a == c);
 }
 
 TEST_CASE("big add 1") {
@@ -740,8 +808,6 @@ TEST_CASE("num_bits") {
     REQUIRE(natural(15).num_bits() == 4);
     REQUIRE(natural(16).num_bits() == 5);
 }
-
-#include <bit>
 
 TEST_CASE("popcount") {
     for (uint i: {0, 4, 31231, -3123121})

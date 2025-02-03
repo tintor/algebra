@@ -22,7 +22,7 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     if (max_min.sign() < 0)
         throw std::runtime_error("max smaller than min in uniform_sample()");
     ++max_min;
-    return integer(uniform_sample(max_min, rng)) + min;
+    return integer(uniform_sample(max_min.abs, rng)) + min;
 }
 
 constexpr integer exp2(std_int auto exp) {

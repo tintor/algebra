@@ -14,6 +14,7 @@ template<> struct IsNumberClass<natural> : std::true_type {};
 struct natural {
     integer_backend words;
 
+    constexpr natural(std::initializer_list<uint64_t> a) : words(a) { }
     constexpr natural() {}
     constexpr natural(std_int auto a) : words(a) {
         Check(a >= 0, "assigning negative number to natural");
@@ -71,45 +72,20 @@ struct natural {
         return unsafe_u128();
     }
 
-    // TODO move to kernels
-    constexpr size_t num_trailing_zeros() const {
-        size_t a = 0;
-        for (int i = 0; i < words.size(); i++) {
-            if (words[i])
-                return a + std::countr_zero(words[i]);
-            a += 64;
-        }
-        return a;
-    }
-
-    // TODO move to kernels
-    constexpr void __add(uint64_t b, int i) {
-        while (true) {
-            if (b == 0)
-                return;
-            if (i == words.size()) {
-                words.push_back(b);
-                return;
-            }
-            uint128_t acc = (uint128_t)words[i] + b;
-            words[i] = acc;
-            b = acc >> 64;
-            i += 1;
-        }
-    }
-
-    constexpr natural& operator+=(uint64_t b) {
-        __add(b, 0);
+    constexpr size_t num_trailing_zeros() const { return algebra::num_trailing_zeros(words.data(), words.size()); }
+    constexpr natural& operator+=(const uint64_t b) {
+        if (__add_and_return_carry(words.data(), words.size(), b))
+            words.push_back(1);
         return *this;
     }
-
-    // TODO move to kernels
-    constexpr natural& operator+=(uint128_t b) {
-        // TODO this could be rewritten to do only one scan of A instead of two
-        __add(static_cast<uint64_t>(b), 0);
-        if (words.size() == 0)
-            words.push_back(0);
-        __add(static_cast<uint64_t>(b >> 64), 1);
+    constexpr natural& operator+=(const uint128_t b) {
+        uint128_t carry = __add_and_return_carry(words.data(), words.size(), b);
+        if (carry) {
+            if (carry >> 64)
+                words.push_back(carry, carry >> 64);
+            else
+                words.push_back(carry);
+        }
         return *this;
     }
 
@@ -141,105 +117,37 @@ struct natural {
         return *this;
     }
 
-    // TODO move to kernels
     constexpr natural& operator-=(uint64_t b) {
-        if (!words.allocated()) {
-            Check(words[0] >= b, "natural can't be negative");
-            words[0] -= b;
-            if (words[0] == 0)
-                words.pop_back();
-            return *this;
-        }
-
-        Check(words[0] >= b || words.size() >= 2, "natural can't be negative");
-
-        if (words[0] > b) {
-            words[0] -= b;
-            return *this;
-        }
-
-        words[0] -= b;
-        for (int i = 1; i < words.size(); ++i)
-            if (words[i]--)
-                break;
-        if (words.back() == 0)
-            words.pop_back();
+        int A = words.size();
+        __sub(words.data(), A, b);
+        words.downsize(A);
         return *this;
     }
 
-    // TODO move to kernels
-    // TODO fix same issue as above
     constexpr natural& operator-=(uint128_t b) {
-        if (b <= UINT64_MAX)
-            return operator-=(static_cast<uint64_t>(b));
-
-        // subtract low part of b
-        Check(words[0] >= uint64_t(b) || words.size() >= 2, "natural can't be negative");
-
-        words[0] -= uint64_t(b);
-        for (int i = 1; i < words.size(); ++i)
-            if (words[i]--)
-                break;
-        if (words.back() == 0)
-            words.pop_back();
-
-        // subtract high part of b
-        Check(words.size() >= 3 || words[1] >= uint64_t(b >> 64), "natural can't be negative");
-
-        words[1] -= uint64_t(b >> 64);
-        for (int i = 2; i < words.size(); ++i)
-            if (words[i]--)
-                break;
-        if (words.back() == 0)
-            words.pop_back();
-
+        int A = words.size();
+        __sub(words.data(), A, b);
+        words.downsize(A);
         return *this;
     }
 
-    // TODO move to kernels
     constexpr natural& operator-=(const natural& b) {
-        uint64_t borrow = 0;
-        for (int i = 0; i < b.words.size(); ++i) {
-            int128_t diff = (int128_t)words[i] - b.words[i] - borrow;
-            if (diff < 0) {
-                words[i] = diff + ((uint128_t)1 << 64);
-                borrow = 1;
-            } else {
-                words[i] = diff;
-                borrow = 0;
-            }
-        }
-        for (size_t i = b.words.size(); borrow && i < words.size(); ++i) {
-            int128_t diff = (int128_t)words[i] - borrow;
-            if (diff < 0) {
-                words[i] = diff + ((uint128_t)1 << 64);
-                borrow = 1;
-            } else {
-                words[i] = diff;
-                borrow = 0;
-            }
-        }
-        Check(!borrow, "natural subtraction out of domain");
-        words.normalize();
+        int A = words.size();
+        __sub(words.data(), A, b.words.data(), b.words.size());
+        words.downsize(A);
         return *this;
     }
 
-    // TODO move to kernels
-    constexpr void mul_add(uint64_t a, uint64_t carry) {
+    constexpr void mul_add(uint64_t a, uint64_t b) {
         if (a == 0) {
-            words.set_zero();
-            if (carry)
-                words.push_back(carry);
+            words = b;
             return;
         }
-        for (int i = 0; i < words.size(); ++i) {
-            uint128_t acc = (uint128_t)words[i] * a + carry;
-            words[i] = acc;
-            carry = acc >> 64;
-        }
+        uint64_t carry = __mul_add_return_carry(words.data(), words.size(), a, b);
         if (carry)
             words.push_back(carry);
     }
+
     constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
 
     constexpr uint64_t operator%(std_int auto b) const {
@@ -344,7 +252,8 @@ struct natural {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr int64_t num_bits() const { return words.size() ? words.size() * 64 - std::countl_zero(words.back()) : 0; }
+    constexpr int64_t num_bits() const { return algebra::num_bits(words.data(), words.size()); }
+
     constexpr bool bit(int64_t i) const {
         size_t w = i / 64;
         size_t b = i % 64;
@@ -362,17 +271,35 @@ struct natural {
 
     constexpr operator bool() const { return words.size(); }
 
-    constexpr natural& operator++() { return operator+=(uint64_t(1)); }
-    constexpr natural& operator--() { return operator-=(uint64_t(1)); }
+    constexpr natural& operator++() {
+        if (__increment_and_return_carry(words.data(), words.size()))
+            words.push_back(1);
+        return *this;
+    }
+    constexpr natural& operator--() {
+        Check(!words.empty(), "decrementing zero natural");
+        int A = words.size();
+        __decrement(words.data(), A);
+        words.downsize(A);
+        return *this;
+    }
 
     constexpr natural operator++(int) { natural a = *this; operator++(); return a; }
     constexpr natural operator--(int) { natural a = *this; operator--(); return a; }
 
-    template<std::floating_point T>
-    constexpr operator T() const;
+    template<std::floating_point T> constexpr operator T() const;
 };
 
 constexpr std::string str(natural a) { return str(a.words.data(), a.words.size()); }
+
+// for debugging
+constexpr std::string stre(const natural& a) {
+    std::string s = "[";
+    for (int i = 0; i < a.words.size(); i++)
+        s += std::format(" {}", a.words[i]);
+    s += " ]";
+    return s;
+}
 
 constexpr natural operator-(const natural& a) {
     Check(a.words.size() == 0, "natural can't be negative");
@@ -571,7 +498,7 @@ constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
     int Q = mul_max_size(a.words.data(), A, b.words.data(), B);
     q.words.reset(Q);
     if (std::min(A, B) <= 2 || std::max(A, B) < KARATSUBA_LIMIT) {
-        __mini_mul(a.words.data(), A, b.words.data(), B, q.words.data(), Q);
+        __add_product(q.words.data(), Q, a.words.data(), A, b.words.data(), B);
     } else {
         const int W = 4 * std::max(A, B);
         if (W <= 1024) {
@@ -825,6 +752,7 @@ constexpr natural& operator*=(natural& a, std_signed_int auto b) {
     return a *= make_unsigned(b);
 }
 
+// A += B * C (without memory allocation)
 constexpr void add_product(natural& a, const natural& b, const natural& c) {
     const int B = b.words.size();
     const int C = c.words.size();
@@ -834,13 +762,12 @@ constexpr void add_product(natural& a, const natural& b, const natural& c) {
     // TODO if c == 1 just call __add(a, b)
 
     int A = a.words.size();
-    A = std::max(A, B + C) + 1;  // TODO compute thighter bound
-    a.words.resize(A);
+    a.words.resize(std::max(A, B + C) + 1); // TODO compute thighter bound
     __add_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
-    a.words.resize(A);
+    a.words.downsize(A);
 }
 
-// A += B * C
+// A += B * c (without memory allocation)
 constexpr void add_product(natural& a, const natural& b, const uint64_t c) {
     const int B = b.words.size();
     if (B == 0 || c == 0)
@@ -849,22 +776,26 @@ constexpr void add_product(natural& a, const natural& b, const uint64_t c) {
     // TODO if c == 1 just call __add(a, b)
 
     int A = a.words.size();
-    A = std::max(A, B + 1) + 1;  // TODO compute thighter bound
-    a.words.resize(A);
+    a.words.resize(std::max(A, B + 1) + 1); // TODO compute thighter bound
     __add_product(a.words.data(), A, b.words.data(), B, c);
-    a.words.resize(A);
-    a.words.normalize();
+    a.words.downsize(A);
 }
 
 // Assumes A >= B * C
-// A -= B * C (but without memory allocation)
-constexpr void sub_product(natural& _a, const natural& _b, const natural& _c) {
-    // TODO optimize the memory allocation
-    _a -= _b * _c;
+// A -= B * C (without memory allocation)
+constexpr void sub_product(natural& a, const natural& b, const natural& c) {
+    const int B = b.words.size();
+    const int C = c.words.size();
+    if (B == 0 || C == 0)
+        return;
+
+    int A = a.words.size();
+    __sub_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+    a.words.downsize(A);
 }
 
-// Assumes A >= B * C
-// A -= B * C (but without memory allocation)
+// Assumes A >= B * c
+// A -= B * c (without memory allocation)
 constexpr void sub_product(natural& a, const natural& b, const uint64_t c) {
     const int B = b.words.size();
     if (B == 0 || c == 0)
@@ -872,7 +803,7 @@ constexpr void sub_product(natural& a, const natural& b, const uint64_t c) {
 
     int A = a.words.size();
     __sub_product(a.words.data(), A, b.words.data(), B, c);
-    a.words.resize(A);
+    a.words.downsize(A);
 }
 
 constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
@@ -880,7 +811,7 @@ constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
         q.words.reset(a.words.size());
     int Q;
     uint64_t r = __div(a.words.data(), a.words.size(), b, q.words.data(), Q);
-    q.words.resize(Q);
+    q.words.downsize(Q);
     return r;
 }
 
@@ -939,34 +870,6 @@ constexpr uint128_t __unsafe_u128(const uint64_t* a, const int A) {
     return c;
 }
 
-// return A < B * C (without allocating memory)
-constexpr bool __less_a_bc(const uint64_t* a, const int A, const uint64_t* b, const int B, uint64_t c) {
-    if (c == 0 || A > B + 1)
-        return false;
-    if (A < B)
-        return true;
-
-    // A == B || A == B + 1
-    int cmp = 0;
-    uint128_t carry = 0;
-    for (auto i = 0; i < B; i++) {
-        carry += __mulq(b[i], c);
-        uint64_t bc = carry;
-        carry >>= 64;
-
-        if (a[i] > bc) cmp = 1;
-        if (a[i] < bc) cmp = -1;
-    }
-
-    uint64_t aa = (A > B) ? a[B] : 0;
-    uint64_t bc = carry;
-    if (aa > bc)
-        return false;
-    if (aa < bc)
-        return true;
-    return cmp < 0;
-}
-
 // returns largest uint64_t Q such that A >= B * Q (assuming B != 0)
 constexpr uint64_t __saturated_div(const uint64_t* a, const int A, const uint64_t* b, const int B) {
     if (__less(a, A, b, B))
@@ -1022,7 +925,7 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
     Check(B != 0, "division by zero");
 
     // NOTE max word size of R is b.word.size + 1
-    const int Q = A; //std::min(A, A - B + 1); //div_max_size(a, A, b, B); TODO
+    const int Q = std::min(A, A - B + 1); //div_max_size(a, A, b, B); TODO
     if (a != q.words.data())
         q.words.reset(Q, /*initialize*/false);
 
@@ -1039,19 +942,18 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
 #endif
 
     r.set_zero();
-//    r.words.reset(A - Q, /*initialize*/false);
-//    std::copy(a + Q, a + A, r.words.data());
+    r.words.reset(A - Q, /*initialize*/false);
+    std::copy(a + Q, a + A, r.words.data());
 
-    for (int i = A/*Q*/; i-- > 0;) {
+    for (int i = Q; i-- > 0;) {
         if (r.words.size() || a[i])
             r.words.insert_first_word(a[i]);
 
         const uint64_t w = __saturated_div(r, _b);
-        r -= _b * w;
-        //sub_product(r, _b, w);
+        r -= _b * w;  //sub_product(r, _b, w);
         q.words[i] = w;
     }
-    q.words.resize(Q);
+    q.words.downsize(Q);
     q.words.normalize();
 }
 
@@ -1104,8 +1006,7 @@ constexpr void mod(const natural& a, const natural& b, natural& r) {
         if (r.words.size() || a.words[i])
             r.words.insert_first_word(a.words[i]);
         const uint64_t q = __saturated_div(r, b);
-        // sub_product(r, b, q); // r -= b * q TODO
-        r -= q * q;
+        sub_product(r, b, q); // r -= b * q
     }
 }
 
@@ -1126,13 +1027,7 @@ constexpr void mod(natural& a, const natural& b) {
         r -= 1;
         R += 1;
         const uint64_t w = __saturated_div(r, R, b.words.data(), B);
-        // TODO switch back to sub_product
-        std::vector<uint64_t> m;
-        m.resize(mul_max_size(b.words.data(), B, r, R));
-        int M;
-        __mul(b.words.data(), B, r, R, m.data(), M);
-        __sub(r, R, m.data(), M);
-        //__sub_product(r, R, b.words.data(), B, w); // r -= b * w
+        __sub_product(r, R, b.words.data(), B, w); // r -= b * w
     }
     a.words.resize(R);
 }

@@ -18,6 +18,46 @@ TEST_CASE("uniform_sample") {
     }
 }
 
+integer random_integer(const int bits_max, std::mt19937_64& rng) {
+    int bits = std::uniform_int_distribution<int>(0, bits_max)(rng);
+    integer a;
+    uniform_sample_bits(bits, rng, a.abs);
+    if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
+        a.negate();
+    return a;
+}
+
+TEST_CASE("add/sub_product stress") {
+    int m = 64;
+    int n = 64;
+    std::mt19937_64 rng(904);
+    for (int i = 0; i < 100'000; i++) {
+        integer a = random_integer(m, rng);
+        integer b = random_integer(n, rng);
+        integer c = random_integer(n, rng);
+        int64_t d = std::uniform_int_distribution<int64_t>(INT64_MIN, INT64_MAX)(rng);
+
+        integer e = a;
+        add_product(e, b, c);
+        REQUIRE(e == a + b * c);
+
+        e = a;
+        add_product(e, b, d);
+        if (e != a + b * d) {
+            print("a={}\nb={}\nd={}\n", a, b, d);
+            REQUIRE(e == a + b * d);
+        }
+
+        e = a;
+        sub_product(e, b, c);
+        REQUIRE(e == a - b * c);
+
+        e = a;
+        sub_product(e, b, d);
+        REQUIRE(e == a - b * d);
+    }
+}
+
 TEST_CASE("abs") {
     REQUIRE(abs(0_i) == 0);
     REQUIRE(abs(10_i) == 10);

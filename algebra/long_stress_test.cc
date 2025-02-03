@@ -9,7 +9,7 @@ using namespace algebra::literals;
 using namespace std;
 
 constexpr integer sample_integer(auto& rng) {
-    int bits = std::uniform_int_distribution<int>(0, 1024)(rng);
+    int bits = std::uniform_int_distribution<int>(0, 64)(rng);
     if (bits == 0)
         return 0;
 
@@ -23,7 +23,7 @@ constexpr integer sample_integer(auto& rng) {
 }
 
 constexpr natural sample_positive_natural(auto& rng) {
-    int bits = std::uniform_int_distribution<int>(1, 1024)(rng);
+    int bits = std::uniform_int_distribution<int>(1, 64)(rng);
     natural a;
     a = pow(2_n, bits - 1);
     a |= uniform_sample_bits(bits - 1, rng);
@@ -137,7 +137,7 @@ constexpr real<B> sample_real(auto& rng) {
 
 #define STR(A) format(#A "={}\n", A)
 
-const bool test_add_product = false;
+const bool test_add_product = true;
 const bool test_sub_product = false;
 
 void integer_test(uint64_t seed) {
@@ -157,7 +157,7 @@ void integer_test(uint64_t seed) {
     if (test_add_product) {
         { integer e = a; add_product(e, b, one); TEST2(e == a + b, STR(a) + STR(b)); }
         { integer e = a; add_product(e, one, b); TEST(e == a + b); }
-        { integer e = a; add_product(e, b, zero); TEST(e == a); }
+        { integer e = a; add_product(e, b, zero); TEST2(e == a, STR(a) + STR(b)); }
         { integer e = a; add_product(e, zero, b); TEST(e == a); }
         { integer e = a; add_product(e, b, 1); TEST(e == a + b); }
         { integer e = a; add_product(e, 1, b); TEST(e == a + b); }

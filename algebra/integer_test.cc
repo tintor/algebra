@@ -7,6 +7,14 @@ TEST_CASE("add_product") {
     a = 1;
     add_product(a, 2_i, 3_i);
     REQUIRE(a == 7);
+    add_product(a, 2_i, 0_i);
+    REQUIRE(a == 7);
+    add_product(a, 0_i, 3_i);
+    REQUIRE(a == 7);
+    add_product(a, 1_i, 3_i);
+    REQUIRE(a == 10);
+    add_product(a, 2_i, 1_i);
+    REQUIRE(a == 12);
 
     a = -1;
     add_product(a, 2_i, 3_i);

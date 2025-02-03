@@ -389,12 +389,18 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
 constexpr void add_product(integer& a, const integer& b, const integer& c) { __add_product<true>(a, b, c); }
 constexpr void sub_product(integer& a, const integer& b, const integer& c) { __add_product<false>(a, b, c); }
 
+constexpr int __signum(const integer& a) {
+    if (a.is_negative()) return -1;
+    return (a.abs == 0) ? 0 : 1;
+}
+
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != (c < 0);
     const auto cu = abs_unsigned(c);
 
+    integer aa = a;
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
         add_product(a.abs, b.abs, cu);
         a.abs.words.set_negative(a_negative);
@@ -417,6 +423,7 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
             a.abs.words.set_negative(!a_negative);
         }
     }
+    //Check(plus ? __signum(aa + b * c) == __signum(a) : __signum(aa - b * c) == __signum(a));
 }
 
 constexpr void add_product(integer& a, const integer& b, const int64_t c) { __add_product<true>(a, b, c); }

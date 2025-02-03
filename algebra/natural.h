@@ -1086,4 +1086,9 @@ constexpr void invert_bits(natural& a) {
     a.words.normalize();
 }
 
+constexpr void complement(natural& a) {
+    __complement(a.words.data(), a.words.size());
+    a.words.normalize();
+}
+
 }
