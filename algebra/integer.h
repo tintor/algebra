@@ -90,27 +90,58 @@ struct integer {
     }
     constexpr integer(const char* s, unsigned base = 10) : integer(std::string_view(s), base) {}
 
-    constexpr operator char() const { return operator int(); }
-    constexpr operator uint8_t() const { return operator uint32_t(); }
-    constexpr operator short() const { return operator int(); }
-    constexpr operator uint16_t() const { return operator uint32_t(); }
-    constexpr operator int() const { return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0]; }
-    constexpr operator unsigned() const { return abs.operator uint32_t(); }
-    constexpr operator long() const { return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0]; }
-    constexpr operator unsigned long() const { return abs.operator unsigned long(); }
-    constexpr operator unsigned long long() const { return abs.operator unsigned long long(); }
+    constexpr operator char() const {
+        Check(is_int8(), "integer -> int8 overflow");
+        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+    }
+    constexpr operator uint8_t() const {
+        Check(is_uint16(), "integer -> uint8 overflow");
+        return abs.words[0];
+    }
+    constexpr operator short() const {
+        Check(is_int16(), "integer -> int16 overflow");
+        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+    }
+    constexpr operator uint16_t() const {
+        Check(is_uint16(), "integer -> uint16 overflow");
+        return abs.words[0];
+    }
+    constexpr operator int() const {
+        Check(is_int32(), "integer -> int32 overflow");
+        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+    }
+    constexpr operator unsigned() const {
+        Check(is_uint32(), "integer -> uint32 overflow");
+        return abs.words[0];
+    }
+    constexpr operator long() const {
+        Check(is_int64(), "integer -> int64 overflow");
+        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+    }
+    constexpr operator unsigned long() const {
+        Check(is_uint64(), "integer -> uint64 overflow");
+        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+    }
+    constexpr operator unsigned long long() const {
+        Check(is_uint64(), "integer -> uint64 overflow");
+        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+    }
     static_assert(sizeof(long) == 8);
     static_assert(sizeof(long long) == 8);
-
-    constexpr operator __int128() const {
+    constexpr operator int128_t() const {
+        Check(is_int128(), "integer -> int128 overflow");
         if (sign() == 2) return (uint128_t(abs.words[1]) << 64) | abs.words[0];
         if (sign() == 1) return uint128_t(abs.words[0]);
         if (sign() == -1) return -uint128_t(abs.words[0]);
         if (sign() == -2) return -((uint128_t(abs.words[1]) << 64) | abs.words[0]);
         return 0;
     }
-
-    constexpr operator unsigned __int128() const { return abs.operator unsigned __int128(); }
+    constexpr operator uint128_t() const {
+        Check(is_uint128(), "integer -> unt128 overflow");
+        if (sign() == 2) return (uint128_t(abs.words[1]) << 64) | abs.words[0];
+        if (sign() == 1) return abs.words[0];
+        return 0;
+    }
 
     constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + abs.str_size_upper_bound(base); }
     constexpr int str(char* buffer, int buffer_size, unsigned base = 10, bool upper = true) const {
@@ -357,6 +388,10 @@ constexpr std::string str(const integer& a) {
     return a.is_negative() ? "-" + str(a.abs) : str(a.abs);
 }
 
+constexpr std::string stre(const integer& a) {
+    return a.is_negative() ? "-" + stre(a.abs) : stre(a.abs);
+}
+
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const integer& c) {
     const bool a_negative = a.is_negative();
@@ -378,9 +413,7 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
             a.abs.words.normalize();
         } else {
             a.abs.words.resize(m);
-            // TODO fuse invert_bits and ++
-            invert_bits(a.abs);
-            ++a.abs;
+            complement(a.abs);
             a.abs.words.set_negative(!a_negative);
         }
     }
@@ -417,13 +450,13 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
             a.abs.words.normalize();
         } else {
             a.abs.words.resize(m);
+
             // TODO fuse invert_bits and ++
             invert_bits(a.abs);
             ++a.abs;
             a.abs.words.set_negative(!a_negative);
         }
     }
-    //Check(plus ? __signum(aa + b * c) == __signum(a) : __signum(aa - b * c) == __signum(a));
 }
 
 constexpr void add_product(integer& a, const integer& b, const int64_t c) { __add_product<true>(a, b, c); }
