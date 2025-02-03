@@ -25,6 +25,14 @@ TEST_CASE("sub_product") {
     natural b = static_cast<uint128_t>(UINT64_MAX) + 1;
     sub_product(b, 2_n, 3_n);
     REQUIRE(b == UINT64_MAX - 5);
+
+    a = 340282366920938463463412908294782434869_n;
+    b = 5850;
+    uint64_t d = 2746327603956567807;
+    natural e;
+    e = a;
+    sub_product(e, b, d);
+    REQUIRE(e == a - b * d);
 }
 
 TEST_CASE("add_product scalar") {
@@ -77,28 +85,17 @@ natural rand_natural(int size, Random& rng) {
     return a;
 }
 
-TEST_CASE("add/sub_product stress") {
+TEST_CASE("add/sub_product scalar stress") {
     Random rng(31231);
-    for (int i = 0; i < 100'000; i++) {
+    for (int i = 0; i < 1'000'000; i++) {
         natural a = rand_natural(1, 8, rng);
         natural b = rand_natural(1, 4, rng);
-        natural c = rand_natural(1, 4, rng);
         uint64_t d = rng.Uniform<uint64_t>(0, INT64_MAX);
         natural e;
 
         e = a;
-        add_product(e, b, c);
-        REQUIRE(e == a + b * c);
-
-        e = a;
         add_product(e, b, d);
         REQUIRE(e == a + b * d);
-
-        if (a >= b * c) {
-            e = a;
-            sub_product(e, b, c);
-            REQUIRE(e == a - b * c);
-        }
 
         e = a;
         sub_product(e, b, 0);
@@ -115,6 +112,38 @@ TEST_CASE("add/sub_product stress") {
             sub_product(e, b, d);
             REQUIRE(e == a - b * d);
         }
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
+    }
+}
+
+TEST_CASE("add/sub_product stress") {
+    Random rng(31231);
+    for (int i = 0; i < 10'000'000; i++) {
+        natural a = rand_natural(1, 8, rng);
+        natural b = rand_natural(1, 4, rng);
+        natural c = rand_natural(1, 4, rng);
+        natural e;
+
+        e = a;
+        add_product(e, b, c);
+        REQUIRE(e == a + b * c);
+
+        if (a >= b * c) {
+            e = a;
+            sub_product(e, b, c);
+            REQUIRE(e == a - b * c);
+        }
+
+        e = a;
+        sub_product(e, b, 0);
+        REQUIRE(e == a);
+
+        if (a >= b) {
+            e = a;
+            sub_product(e, b, 1);
+            REQUIRE(e == a - b);
+        }
+        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
 }
 

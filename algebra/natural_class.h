@@ -763,7 +763,10 @@ constexpr void add_product(natural& a, const natural& b, const natural& c) {
 
     int A = a.words.size();
     a.words.resize(std::max(A, B + C) + 1); // TODO compute thighter bound
-    __add_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+    if (B < C)
+        __add_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+    else
+        __add_product(a.words.data(), A, c.words.data(), C, b.words.data(), B);
     a.words.downsize(A);
 }
 
@@ -790,7 +793,10 @@ constexpr void sub_product(natural& a, const natural& b, const natural& c) {
         return;
 
     int A = a.words.size();
-    __sub_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+    if (B < C)
+        __sub_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+    else
+        __sub_product(a.words.data(), A, c.words.data(), C, b.words.data(), B);
     a.words.downsize(A);
 }
 

@@ -457,40 +457,26 @@ constexpr void __add_product(uint64_t* a, int& A, const uint64_t* b, const int B
 }
 
 // Assumes A >= B * c
-// A -= B * c
-constexpr int __sub_product(uint64_t* a, int A, const uint64_t* b, const int B, const uint64_t c) {
+// A -= (B * c) << (shift * 64)
+constexpr void __sub_product(uint64_t* a, int& A, const uint64_t* b, const int B, const uint64_t c, int shift = 0) {
     uint128_t carry = 0; // for bc
-    uint64_t borrow = 0; // for a
     for (int i = 0; i < B; i++) {
         carry += __mulq(b[i], c);
         uint64_t bc = carry;
         carry >>= 64;
 
-        int128_t diff = (int128_t)a[i] - bc - borrow;
-        if (diff < 0) {
-            a[i] = diff + ((uint128_t)1 << 64);
-            borrow = 1;
-        } else {
-            a[i] = diff;
-            borrow = 0;
-        }
+        carry += a[i + shift] < bc;
+        a[i] -= bc;
     }
-    for (int i = B; carry || borrow; i++) {
+    for (int i = B + shift; carry; i++) {
         uint64_t bc = carry;
         carry >>= 64;
 
-        int128_t diff = (int128_t)a[i] - bc - borrow;
-        if (diff < 0) {
-            a[i] = diff + ((uint128_t)1 << 64);
-            borrow = 1;
-        } else {
-            a[i] = diff;
-            borrow = 0;
-        }
+        carry += a[i] < bc;
+        a[i] -= bc;
     }
     while (A && !a[A - 1])
         A -= 1;
-    return A;
 }
 
 // Assumes A >= B * c
@@ -498,7 +484,7 @@ constexpr int __sub_product(uint64_t* a, int A, const uint64_t* b, const int B, 
 constexpr void __sub_product(uint64_t* a, int& A, const uint64_t* b, const int B, const uint64_t* c, const int C) {
     for (int i = 0; i < B; i++)
         if (b[i] != 0)
-            A = i + __sub_product(a + i, A - i, c, C, b[i]);
+            __sub_product(a, A, c, C, b[i], i);
 }
 
 constexpr std::string str(uint64_t* a, int A) {

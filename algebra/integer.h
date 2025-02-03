@@ -394,6 +394,8 @@ constexpr std::string stre(const integer& a) {
 
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const integer& c) {
+    if (b.abs.words.empty() || c.abs.words.empty())
+        return;
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != c.is_negative();
 
@@ -407,7 +409,9 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
         const int m = mul_max_size(b.abs.words.data(), b.abs.words.size(), c.abs.words.data(), c.abs.words.size());
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
+        natural orig_a_abs = a.abs;
         sub_product(a.abs, b.abs, c.abs);
+        Check(orig_a_abs - b.abs * c.abs == a.abs);
         if (a.abs.words.size() > m) {
             a.abs.words[m] -= 1;
             a.abs.words.normalize();
@@ -429,6 +433,8 @@ constexpr int __signum(const integer& a) {
 
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
+    if (b.abs.words.empty() || c == 0)
+        return;
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != (c < 0);
     const auto cu = abs_unsigned(c);
@@ -450,10 +456,7 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
             a.abs.words.normalize();
         } else {
             a.abs.words.resize(m);
-
-            // TODO fuse invert_bits and ++
-            invert_bits(a.abs);
-            ++a.abs;
+            complement(a.abs);
             a.abs.words.set_negative(!a_negative);
         }
     }

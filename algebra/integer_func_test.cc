@@ -28,10 +28,10 @@ integer random_integer(const int bits_max, std::mt19937_64& rng) {
 }
 
 TEST_CASE("add/sub_product stress") {
-    int m = 64;
-    int n = 64;
+    int m = 64 * 2;
+    int n = 64 * 2;
     std::mt19937_64 rng(904);
-    for (int i = 0; i < 100'000; i++) {
+    for (int i = 0; i < 10'000'000; i++) {
         integer a = random_integer(m, rng);
         integer b = random_integer(n, rng);
         integer c = random_integer(n, rng);
@@ -43,13 +43,17 @@ TEST_CASE("add/sub_product stress") {
 
         e = a;
         add_product(e, b, d);
-        if (e != a + b * d) {
-            print("a={}\nb={}\nd={}\n", a, b, d);
-            REQUIRE(e == a + b * d);
-        }
+        REQUIRE(e == a + b * d);
 
         e = a;
         sub_product(e, b, c);
+        if (e != a - b * c) {
+            print("a={}\n", stre(a));
+            print("b={}\n", stre(b));
+            print("c={}\n", stre(c));
+            print("e={}\n", stre(e));
+            print("#={}\n", stre(a - b * c));
+        }
         REQUIRE(e == a - b * c);
 
         e = a;
