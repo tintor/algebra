@@ -950,7 +950,7 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
             r.words.insert_first_word(a[i]);
 
         const uint64_t w = __saturated_div(r, _b);
-        r -= _b * w;  //sub_product(r, _b, w);
+        sub_product(r, _b, w);
         q.words[i] = w;
     }
     q.words.downsize(Q);

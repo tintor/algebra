@@ -21,6 +21,10 @@ TEST_CASE("sub_product") {
     natural a = 10;
     sub_product(a, 2_n, 3_n);
     REQUIRE(a == 4);
+
+    natural b = static_cast<uint128_t>(UINT64_MAX) + 1;
+    sub_product(b, 2_n, 3_n);
+    REQUIRE(b == UINT64_MAX - 5);
 }
 
 TEST_CASE("add_product scalar") {

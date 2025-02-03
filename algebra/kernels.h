@@ -495,11 +495,10 @@ constexpr int __sub_product(uint64_t* a, int A, const uint64_t* b, const int B, 
 
 // Assumes A >= B * c
 // A -= B * c
-constexpr int __sub_product(uint64_t* a, int A, const uint64_t* b, const int B, const uint64_t* c, const int C) {
+constexpr void __sub_product(uint64_t* a, int& A, const uint64_t* b, const int B, const uint64_t* c, const int C) {
     for (int i = 0; i < B; i++)
         if (b[i] != 0)
             A = i + __sub_product(a + i, A - i, c, C, b[i]);
-    return A;
 }
 
 constexpr std::string str(uint64_t* a, int A) {
