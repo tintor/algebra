@@ -78,6 +78,8 @@ struct xrational {
             base.simplify();
     }
 
+    constexpr bool is_rational() const { return root.is_one(); }
+    constexpr bool is_zero() const { return base.is_zero(); }
     constexpr bool is_negative() const { return base.is_negative(); }
     constexpr void negate() { base.negate(); }
 
@@ -98,35 +100,83 @@ constexpr void __addition_compatible(const xrational& a, const xrational& b) {
         throw std::runtime_error("adding xrationals with different roots");
 }
 
-constexpr xrational operator+(const xrational& a, const xrational& b) {
-    __addition_compatible(a, b);
-    return {a.base + b.base, a.root};
+template<bool plus>
+constexpr xrational __add(const xrational& a, const xrational& b) {
+    if (a.is_zero())
+        return plus ? b : -b;
+    if (b.is_zero())
+        return a;
+    if (a.root == b.root)
+        return {plus ? (a.base + b.base) : (a.base - b.base), a.root};
+
+    const char* msg = plus ? "adding xrationals with different roots" : "subtracting xrationals with different roots";
+    natural c = gcd(a.root, b.root);
+    Check(!c.is_one(), msg);
+
+    natural ac = a.root / c, ae;
+    Check(__exact_sqrt1(ac, ae), msg);
+    natural bc = b.root / c, be;
+    Check(__exact_sqrt1(bc, be), msg);
+
+    Check(__exact_sqrt2(ac, ae) && __exact_sqrt2(bc, be), msg);
+    return {plus ? (a.base * ae + b.base * be) : (a.base * ae - b.base * be), c};
 }
 
-constexpr xrational operator+(const xrational& a, const rational_like auto& b) { return {a.base + b, a.root}; }
+constexpr xrational operator+(const xrational& a, const xrational& b) { return __add<true>(a, b); }
+constexpr xrational operator-(const xrational& a, const xrational& b) { return __add<false>(a, b); }
+
+constexpr xrational operator+(const xrational& a, const rational_like auto& b) {
+    if (b.is_zero())
+        return a;
+    Check(a.root.is_one(), "adding xrationals with different roots");
+    return {a.base + b, 1};
+}
 
 constexpr xrational& operator+=(xrational& a, const xrational& b) {
-    __addition_compatible(a, b);
-    a.base += b.base;
+    if (a.is_rational() && b.is_rational()) {
+        a.base += b.base;
+        return a;
+    }
+    return a = a + b;
+}
+
+constexpr xrational& operator+=(xrational& a, const rational_like auto& b) {
+    if (b.is_zero())
+        return a;
+    Check(a.root.is_one(), "adding xrationals with different roots");
+    a.base += b;
     return a;
 }
 
-constexpr xrational& operator+=(xrational& a, const rational_like auto& b) { a.base += b; return a; }
-
-constexpr xrational operator-(const xrational& a, const xrational& b) {
-    __addition_compatible(a, b);
-    return {a.base - b.base, a.root};
+constexpr xrational operator-(const xrational& a, const rational_like auto& b) {
+    if (b.is_zero())
+        return a;
+    Check(a.root.is_one(), "subtracting xrationals with different roots");
+    return {a.base - b, 1};
 }
 
-constexpr xrational operator-(const xrational& a, const rational_like auto& b) { return {a.base - b, a.root}; }
+constexpr xrational operator-(const rational_like auto& a, const xrational& b) {
+    if (a.is_zero())
+        return -b;
+    Check(b.root.is_one(), "subtracting xrationals with different roots");
+    return {a - b.base, 1};
+}
 
 constexpr xrational& operator-=(xrational& a, const xrational& b) {
-    __addition_compatible(a, b);
-    a.base -= b.base;
-    return a;
+    if (a.is_rational() && b.is_rational()) {
+        a.base -= b.base;
+        return a;
+    }
+    return a = a - b;
 }
 
-constexpr xrational& operator-=(xrational& a, const rational_like auto& b) { a.base -= b; return a; }
+constexpr xrational& operator-=(xrational& a, const rational_like auto& b) {
+    if (b.is_zero())
+        return a;
+    Check(a.root.is_one(), "subtracting xrationals with different roots");
+    a.base -= b;
+    return a;
+}
 
 constexpr xrational sqr(const xrational& a) {
     integer num, den;
@@ -148,7 +198,7 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
     exact_sqrt(a.root, whole, root);
     exact_sqrt(b.root, whole, root);
     integer w = whole;
-    if ((a.base.sign() < 0) != (b.base.sign() < 0))
+    if (a.is_negative() != b.is_negative())
         w.negate();
     return {rational{std::move(w), a.base.den * b.base.den}, std::move(root)};
 }
@@ -166,7 +216,7 @@ constexpr xrational& operator*=(xrational& a, const rational_like auto& b) {
 }
 
 constexpr xrational operator/(const xrational& a, const xrational& b) {
-    if (&a == &b || (a.base == b.base && a.root == b.root))
+    if (&a == &b)
         return xrational{rational{1}};
     if (a.root == b.root)
         return xrational{a.base / b.base};
@@ -178,6 +228,12 @@ constexpr xrational operator/(const xrational& a, const xrational& b) {
 }
 
 constexpr xrational operator/(const xrational& a, const rational_like auto& b) { return {a.base / b, a.root}; }
+constexpr xrational operator/(const rational_like auto& a, const xrational& b) {
+    rational e = a;
+    e /= b.base;
+    e /= integer(b.root);
+    return {std::move(e), b.root};
+}
 
 constexpr xrational& operator/=(xrational& a, const xrational& b) {
     a = a / b;

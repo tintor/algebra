@@ -118,6 +118,7 @@ public:
     constexpr bool is_even() const { return is_integer() && num.is_even(); }
     constexpr bool is_odd() const { return is_integer() && num.is_odd(); }
     constexpr bool is_negative() const { return num.is_negative(); }
+    constexpr bool is_zero() const { return num.is_zero(); }
 };
 
 constexpr auto signum(const rational& a) { return signum(a.num); }
