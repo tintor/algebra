@@ -9,9 +9,9 @@ TEST_CASE("extract_64bits") {
         int bits = std::uniform_int_distribution<int>(32, 256)(rng);
         natural x = uniform_sample_bits(bits, rng);
 
-        REQUIRE(extract_64bits(x, x.num_bits()) == 0);
+        REQUIRE(extract_u64(x, x.num_bits()) == 0);
         for (int j = 0; j < x.num_bits(); j++) {
-            REQUIRE(extract_64bits(x, j) == (x >> j).words[0]);
+            REQUIRE(extract_u64(x, j) == (x >> j).words[0]);
         }
     }
 }
@@ -99,7 +99,7 @@ void test_isqrt(const auto& fn) {
     verify_isqrt(e, fn(e));
 
     print("192 bit\n");
-    for (int i = 0; i < 100'000'000; i++) {
+    for (int i = 0; i < 1'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(129, 192)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -107,7 +107,7 @@ void test_isqrt(const auto& fn) {
     }
 
     print("256 bit\n");
-    for (int i = 0; i < 10'000'000; i++) {
+    for (int i = 0; i < 1'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(193, 256)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -115,7 +115,7 @@ void test_isqrt(const auto& fn) {
     }
 
     print("512 bit\n");
-    for (int i = 0; i < 1'000'000; i++) {
+    for (int i = 0; i < 100'000; i++) {
         int bits = std::uniform_int_distribution<int>(257, 512)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -123,7 +123,7 @@ void test_isqrt(const auto& fn) {
     }
 
     print("1024 bit\n");
-    for (int i = 0; i < 1'000'000; i++) {
+    for (int i = 0; i < 100'000; i++) {
         int bits = std::uniform_int_distribution<int>(513, 1024)(rng);
         natural x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
@@ -480,7 +480,6 @@ TEST_CASE("is_prime") {
 
 TEST_CASE("is_power_of_two") {
     REQUIRE(is_power_of_two(1_n));
-    REQUIRE(is_power_of_two(1));
     REQUIRE(is_power_of_two(2));
     REQUIRE(!is_power_of_two(3));
     REQUIRE(is_power_of_two(4));

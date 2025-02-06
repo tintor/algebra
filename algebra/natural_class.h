@@ -72,14 +72,18 @@ struct natural {
         return unsafe_u128();
     }
 
-    constexpr size_t num_trailing_zeros() const { return algebra::num_trailing_zeros(words.data(), words.size()); }
+    constexpr operator cnatural() const { return {words.data(), words.size()}; }
+    constexpr operator vnatural() { return {{words.data(), words.size()}, words.capacity()}; }
+    constexpr operator inatural() { return {words.data(), words.size()}; }
+
+    constexpr size_t num_trailing_zeros() const { return algebra::num_trailing_zeros(*this); }
     constexpr natural& operator+=(const uint64_t b) {
-        if (__add_and_return_carry(words.data(), words.size(), b))
+        if (__add_and_return_carry(*this, b))
             words.push_back(1);
         return *this;
     }
     constexpr natural& operator+=(const uint128_t b) {
-        uint128_t carry = __add_and_return_carry(words.data(), words.size(), b);
+        uint128_t carry = __add_and_return_carry(*this, b);
         if (carry) {
             if (carry >> 64)
                 words.push_back(carry, carry >> 64);
@@ -100,41 +104,29 @@ struct natural {
             while (words.size() < B)
                 words.push_back(0);
         }
-        uint128_t acc = 0;
-        for (int i = 0; i < words.size(); ++i) {
-            if (i >= B) {
-                if (!acc)
-                    return *this;
-            } else {
-                acc += b[i];
-            }
-            acc += words[i];
-            words[i] = acc;
-            acc >>= 64;
-        }
-        if (acc)
-            words.push_back(acc);
+        if (__add_and_return_carry(*this, static_cast<cnatural>(_b)))
+            words.push_back(1);
         return *this;
     }
 
     constexpr natural& operator-=(uint64_t b) {
-        int A = words.size();
-        __sub(words.data(), A, b);
-        words.downsize(A);
+        inatural a = *this;
+        __sub(a, b);
+        words.downsize(a.size);
         return *this;
     }
 
     constexpr natural& operator-=(uint128_t b) {
-        int A = words.size();
-        __sub(words.data(), A, b);
-        words.downsize(A);
+        inatural a = *this;
+        __sub(a, b);
+        words.downsize(a.size);
         return *this;
     }
 
     constexpr natural& operator-=(const natural& b) {
-        int A = words.size();
-        __sub(words.data(), A, b.words.data(), b.words.size());
-        words.downsize(A);
+        inatural a = *this;
+        __sub(a, static_cast<cnatural>(b));
+        words.downsize(a.size);
         return *this;
     }
 
@@ -143,24 +135,22 @@ struct natural {
             words = b;
             return;
         }
-        uint64_t carry = __mul_add_return_carry(words.data(), words.size(), a, b);
+        uint64_t carry = __mul_add_return_carry(*this, a, b);
         if (carry)
             words.push_back(carry);
     }
 
-    constexpr natural& operator*=(uint64_t b) { mul_add(b, 0); return *this; }
-
     constexpr uint64_t operator%(std_int auto b) const {
         static_assert(sizeof(b) <= 8);
         Check(b > 0, "division of natural by zero or negative number");
-        return __mod(words.data(), words.size(), static_cast<uint64_t>(b));
+        return __mod(*this, static_cast<uint64_t>(b));
     }
 
     constexpr uint128_t operator%(const uint128_t b) const {
         Check(b > 0, "division of natural by zero or negative number");
         if (b <= UINT64_MAX)
-            return __mod(words.data(), words.size(), static_cast<uint64_t>(b));
-        return __mod(words.data(), words.size(), b);
+            return __mod(*this, static_cast<uint64_t>(b));
+        return __mod(*this, b);
     }
 
     constexpr int mod2() const { return words[0] % 2; }
@@ -231,7 +221,7 @@ struct natural {
         return m % 9;
     }
 
-    constexpr int mod10() const { return algebra::mod10(words.data(), words.size()); }
+    constexpr int mod10() const { return algebra::mod10(*this); }
 
     constexpr natural& operator%=(std_int auto b) { *this = operator%(b); return *this; }
 
@@ -252,7 +242,7 @@ struct natural {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr int64_t num_bits() const { return algebra::num_bits(words.data(), words.size()); }
+    constexpr int64_t num_bits() const { return algebra::num_bits(*this); }
 
     constexpr bool bit(int64_t i) const {
         size_t w = i / 64;
@@ -272,15 +262,15 @@ struct natural {
     constexpr operator bool() const { return words.size(); }
 
     constexpr natural& operator++() {
-        if (__increment_and_return_carry(words.data(), words.size()))
+        if (__increment_and_return_carry(*this))
             words.push_back(1);
         return *this;
     }
     constexpr natural& operator--() {
         Check(!words.empty(), "decrementing zero natural");
-        int A = words.size();
-        __decrement(words.data(), A);
-        words.downsize(A);
+        inatural a = *this;
+        __decrement(a);
+        words.downsize(a.size);
         return *this;
     }
 
@@ -290,7 +280,7 @@ struct natural {
     template<std::floating_point T> constexpr operator T() const;
 };
 
-constexpr std::string str(natural a) { return str(a.words.data(), a.words.size()); }
+constexpr std::string str(const natural& a) { return str(static_cast<cnatural>(a)); }
 
 // for debugging
 constexpr std::string stre(const natural& a) {
@@ -376,7 +366,7 @@ constexpr natural& operator-=(natural& a, const std_signed_int auto b) {
     return a -= make_unsigned(b);
 }
 
-constexpr bool operator<(const natural& a, const natural& b) { return __less(a.words.data(), a.words.size(), b.words.data(), b.words.size()); }
+constexpr bool operator<(const natural& a, const natural& b) { return __less(a, b); }
 
 constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { return a.words[0] < b && a.words.size() <= 1; }
 constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
@@ -450,6 +440,8 @@ constexpr void __add(natural& a, const uint64_t* b, const int B, int shift = 0) 
 
 constexpr natural& operator<<=(natural& a, int64_t b);
 
+constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(static_cast<cnatural>(a)); }
+
 // no support for &a == &q
 constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
     auto A = a.words.size();
@@ -474,7 +466,7 @@ constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
         return;
     }
 
-    if (is_power_of_two(a.words.data(), A)) {
+    if (is_power_of_two(a)) {
         const size_t z = (A - 1) * 64 + std::countr_zero(a.words[A - 1]); // = a.num_trailing_zeros() but O(1)
         const size_t bits = b.num_bits() + z;
         const size_t words = (bits + 63) / 64;
@@ -484,7 +476,7 @@ constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
         q <<= z;
         return;
     }
-    if (is_power_of_two(b.words.data(), B)) {
+    if (is_power_of_two(b)) {
         const size_t z = (B - 1) * 64 + std::countr_zero(a.words[B - 1]); // = b.num_trailing_zeros() but O(1)
         const size_t bits = a.num_bits() + z;
         const size_t words = (bits + 63) / 64;
@@ -495,22 +487,23 @@ constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
         return;
     }
 
-    int Q = mul_max_size(a.words.data(), A, b.words.data(), B);
+    int Q = mul_max_size(a, b);
     q.words.reset(Q);
+    vnatural vq = q;
     if (std::min(A, B) <= 2 || std::max(A, B) < KARATSUBA_LIMIT) {
-        __add_product(q.words.data(), Q, a.words.data(), A, b.words.data(), B);
+        __add_product(vq, static_cast<cnatural>(a), static_cast<cnatural>(b));
     } else {
         const int W = 4 * std::max(A, B);
         if (W <= 1024) {
             uint64_t w[1024];
-            __mul_karatsuba_rec(a.words.data(), A, b.words.data(), B, q.words.data(), Q, w, w + W);
+            __mul_karatsuba_rec(a, b, vq, w, w + W);
         } else {
             auto w = new uint64_t[W];
-            __mul_karatsuba_rec(a.words.data(), A, b.words.data(), B, q.words.data(), Q, w, w + W);
+            __mul_karatsuba_rec(a, b, vq, w, w + W);
             delete[] w;
         }
     }
-    q.words.resize(Q);
+    q.words.resize(vq.size);
 }
 
 constexpr natural mul_karatsuba(const natural& a, const natural& b) {
@@ -521,13 +514,14 @@ constexpr natural mul_karatsuba(const natural& a, const natural& b) {
 
 // supports &a == &q
 constexpr void __mul(const natural& a, const natural& b, natural& q) {
-    int Q;
     if (&a != &q)
         q.set_zero();
     auto A = a.words.size();
-    q.words.resize(A + b.words.size());
-    __mul(a.words.data(), A, b.words.data(), b.words.size(), q.words.data(), Q, /*init*/false);
-    q.words.resize(Q);
+    auto B = b.words.size();
+    q.words.resize(A + B);
+    vnatural vq = q;
+    __mul({a.words.data(), A}, {b.words.data(), B}, vq, /*init*/false);
+    q.words.downsize(vq.size);
 }
 
 // TODO move to kernels
@@ -685,12 +679,9 @@ constexpr void mul(const natural& a, const natural& b, natural& out) {
 
     if (a.words.size() == 1) {
         if (b.words.size() == 1) {
-            uint128_t p = a.words[0];
-            p *= b.words[0];
-
+            uint128_t p = __mulq(a.words[0], b.words[0]);
             out.words.reset_one_without_init();
             out.words[0] = p;
-
             uint64_t high = p >> 64;
             if (high)
                 out.words.push_back(high);
@@ -715,7 +706,7 @@ constexpr void mul(natural& a, const natural& b) {
     }
 
     if (b.words.size() == 1) {
-        a *= b.words[0];
+        a.mul_add(b.words[0], /*carry*/0);
         return;
     }
 
@@ -740,11 +731,12 @@ constexpr natural operator*(std_int auto a, natural b) { return std::move(b) * a
 
 constexpr natural& operator*=(natural& a, const natural& b) { mul(a, b); return a; }
 constexpr natural& operator*=(natural& a, std_unsigned_int auto b) {
-    static_assert(sizeof(b) == 16 || sizeof(b) <= 8);
-
-    if (b <= UINT64_MAX)
-        return a *= static_cast<uint64_t>(b);
-    __mul(a, static_cast<uint128_t>(b), a);
+    if (b <= UINT64_MAX) {
+        a.mul_add(static_cast<uint64_t>(b), 0);
+    } else {
+        static_assert(sizeof(b) == 16 || sizeof(b) <= 8);
+        __mul(a, static_cast<uint128_t>(b), a);
+    }
     return a;
 }
 constexpr natural& operator*=(natural& a, std_signed_int auto b) {
@@ -763,11 +755,12 @@ constexpr void add_product(natural& a, const natural& b, const natural& c) {
 
     int A = a.words.size();
     a.words.resize(std::max(A, B + C) + 1); // TODO compute thighter bound
+    vnatural va {{a.words.data(), A}, a.words.capacity()};
     if (B < C)
-        __add_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+        __add_product(va, b, static_cast<cnatural>(c));
     else
-        __add_product(a.words.data(), A, c.words.data(), C, b.words.data(), B);
-    a.words.downsize(A);
+        __add_product(va, c, static_cast<cnatural>(b));
+    a.words.downsize(va.size);
 }
 
 // A += B * c (without memory allocation)
@@ -780,8 +773,9 @@ constexpr void add_product(natural& a, const natural& b, const uint64_t c) {
 
     int A = a.words.size();
     a.words.resize(std::max(A, B + 1) + 1); // TODO compute thighter bound
-    __add_product(a.words.data(), A, b.words.data(), B, c);
-    a.words.downsize(A);
+    vnatural va {{a.words.data(), A}, a.words.capacity()};
+    __add_product(va, b, c);
+    a.words.downsize(va.size);
 }
 
 // Assumes A >= B * C
@@ -792,12 +786,12 @@ constexpr void sub_product(natural& a, const natural& b, const natural& c) {
     if (B == 0 || C == 0)
         return;
 
-    int A = a.words.size();
+    inatural ia = a;
     if (B < C)
-        __sub_product(a.words.data(), A, b.words.data(), B, c.words.data(), C);
+        __sub_product(ia, b, static_cast<cnatural>(c));
     else
-        __sub_product(a.words.data(), A, c.words.data(), C, b.words.data(), B);
-    a.words.downsize(A);
+        __sub_product(ia, c, static_cast<cnatural>(b));
+    a.words.downsize(ia.size);
 }
 
 // Assumes A >= B * c
@@ -807,156 +801,68 @@ constexpr void sub_product(natural& a, const natural& b, const uint64_t c) {
     if (B == 0 || c == 0)
         return;
 
-    int A = a.words.size();
-    __sub_product(a.words.data(), A, b.words.data(), B, c);
-    a.words.downsize(A);
+    inatural ia = a;
+    __sub_product(ia, b, c);
+    a.words.downsize(ia.size);
 }
 
 constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
     if (&a != &q)
         q.words.reset(a.words.size());
-    int Q;
-    uint64_t r = __div(a.words.data(), a.words.size(), b, q.words.data(), Q);
-    q.words.downsize(Q);
+    vnatural vq = q;
+    uint64_t r = __div(a, b, vq);
+    q.words.downsize(vq.size);
     return r;
 }
 
-// returns static_cast<ucent>((a >> e) & UINT128_MAX) - without memory allocation
-constexpr uint128_t extract_128bits(const uint64_t* a, const int A, int64_t e) {
-    Check(e >= 0);
-    const auto i = e / 64;
-    const auto b = e % 64;
-
-    if (i >= A)
-        return 0;
-    if (b == 0) {
-        uint128_t res = a[i];
-        if (i + 1 >= A)
-            return res;
-        res |= static_cast<uint128_t>(a[i + 1]) << 64;
-        return res;
-    }
-
-    uint128_t res = a[i] >> b;
-    if (i + 1 >= A)
-        return res;
-    res |= static_cast<uint128_t>(a[i + 1]) << (64 - b);
-    if (i + 2 >= A)
-        return res;
-    res |= static_cast<uint128_t>(a[i + 2]) << (128 - b);
-    return res;
-}
-
-constexpr uint128_t extract_128bits(const natural& a, int64_t e) {
-    return extract_128bits(a.words.data(), a.words.size(), e);
-}
-
-// returns (a >> e).words[0] - without memory allocation
-constexpr uint64_t extract_64bits(const natural& a, int64_t e) {
-    Check(e >= 0);
-    const auto word_shift = e / 64;
-    const auto bit_shift = e % 64;
-
-    if (word_shift >= a.words.size())
-        return 0;
-    if (bit_shift == 0)
-        return a.words[word_shift];
-
-    uint64_t res = a.words[word_shift] >> bit_shift;
-    if (word_shift + 1 >= a.words.size())
-        return res;
-    res |= a.words[word_shift + 1] << (64 - bit_shift);
-    return res;
-}
-
-constexpr uint128_t __unsafe_u128(const uint64_t* a, const int A) {
-    uint128_t c = a[0];
-    if (A > 1)
-        c |= static_cast<uint128_t>(a[1]) << 64;
-    return c;
-}
-
-// returns largest uint64_t Q such that A >= B * Q (assuming B != 0)
-constexpr uint64_t __saturated_div(const uint64_t* a, const int A, const uint64_t* b, const int B) {
-    if (__less(a, A, b, B))
-        return 0;
-    if (__equal(a, A, b, B))
-        return 1;
-    if (A == 1) // since a > b  ==>  B == 1
-        return a[0] / b[0];
-    if (A == 2)
-        return std::min<uint128_t>(__unsafe_u128(a, A) / __unsafe_u128(b, B), UINT64_MAX);
-
-    const auto e = num_bits(a, A) - 128;
-    uint128_t q = extract_128bits(a, A, e);
-
-    const uint128_t bq = extract_128bits(b, B, e);
-    if (bq)
-        q /= bq;
-
-    if (q > UINT64_MAX)
-        q = UINT64_MAX;
-
-    const uint64_t c = q;
-    // if (a >= b * c)
-    if (!__less_a_bc(a, A, b, B, c))
-        return c;
-    if (!__less_a_bc(a, A, b, B, c - 1))
-        return c - 1;
-    return c - 2;
-}
-
-constexpr uint64_t __saturated_div(const natural& a, const natural& b) {
-    return __saturated_div(a.words.data(), a.words.size(), b.words.data(), b.words.size());
-}
-
-constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural& q, natural& r) {
-    const int B = _b.words.size();
-    const uint64_t* b = _b.words.data();
-
-    if (B <= 1) {
-        if (a != q.words.data())
-            q.words.reset(A);
-        int Q;
-        r = __div(a, A, b[0], q.words.data(), Q);
-        q.words.resize(Q);
+constexpr void __div(cnatural a, cnatural b, natural& q, natural& r) {
+    if (b.size <= 1) {
+        if (a.words != q.words.data())
+            q.words.reset(a.size);
+        vnatural vq = q;
+        r = __div(a, b[0], vq);
+        q.words.resize(vq.size);
         return;
     }
-    if (__less(a, A, b, B)) {
-        r.words.resize(A);
-        std::copy(a, a + A, r.words.data());
+    if (__less(a, b)) {
+        r.words.resize(a.size);
+        std::copy(a.words, a.words + a.size, r.words.data());
         q.set_zero(); // update Q after R in case &A == &Q
         return;
     }
-    Check(B != 0, "division by zero");
+    Check(b.size != 0, "division by zero");
 
     // NOTE max word size of R is b.word.size + 1
-    const int Q = std::min(A, A - B + 1); //div_max_size(a, A, b, B); TODO
-    if (a != q.words.data())
+    const int Q = std::min(a.size, a.size - b.size + 1); //div_max_size(a, A, b, B); TODO
+    if (a.words != q.words.data())
         q.words.reset(Q, /*initialize*/false);
 
 #if 0
     if (Q == 1) {
         q.words.reset(1);
-        const uint64_t w = __saturated_div(a, A, b, B);
-        r.words.reset(A - 1, /*initialize*/false);
-        std::copy(a + 1, a + A, r.words.data());
-        sub_product(r, _b, w);
+        const uint64_t w = __saturated_div(a, b);
+        r.words.reset(a.size - 1, /*initialize*/false);
+        std::copy(a.words + 1, a.words + a.size, r.words.data());
+        vnatural vr = r;
+        sub_product(vr, b, w);
+        r.words.downsize(vr.size);
         q.words[0] = w;
         return;
     }
 #endif
 
     r.set_zero();
-    r.words.reset(A - Q, /*initialize*/false);
-    std::copy(a + Q, a + A, r.words.data());
+    r.words.reset(a.size - Q, /*initialize*/false);
+    std::copy(a.words + Q, a.words + a.size, r.words.data());
 
     for (int i = Q; i-- > 0;) {
         if (r.words.size() || a[i])
             r.words.insert_first_word(a[i]);
 
-        const uint64_t w = __saturated_div(r, _b);
-        sub_product(r, _b, w);
+        const uint64_t w = __saturated_div(r, b);
+        vnatural vr = r;
+        __sub_product(vr, b, w);
+        r.words.downsize(vr.size);
         q.words[i] = w;
     }
     q.words.downsize(Q);
@@ -997,13 +903,13 @@ constexpr void __div(const uint64_t* a, const int A, const natural& _b, natural&
 #endif
 
 constexpr void div(const natural& a, const natural& b, natural& q, natural& r) {
-    __div(a.words.data(), a.words.size(), b, q, r);
+    __div(a, b, q, r);
 }
 
 // TODO move this kernel to util.h
 constexpr void mod(const natural& a, const natural& b, natural& r) {
     if (b.words.size() <= 1) {
-        r = __mod(a.words.data(), a.words.size(), b.words[0]);
+        r = __mod(a, b.words[0]);
         return;
     }
     Check(!b.words.empty(), "division by zero");
@@ -1022,7 +928,7 @@ constexpr void mod(natural& a, const natural& b) {
     const int B = b.words.size();
 
     if (B <= 1) {
-        a = __mod(a.words.data(), A, b.words[0]);
+        a = __mod(a, b.words[0]);
         return;
     }
     Check(B != 0, "division by zero");
@@ -1032,8 +938,10 @@ constexpr void mod(natural& a, const natural& b) {
     for (auto i = A; i-- > 0;) {
         r -= 1;
         R += 1;
-        const uint64_t w = __saturated_div(r, R, b.words.data(), B);
-        __sub_product(r, R, b.words.data(), B, w); // r -= b * w
+        inatural ir {r, R};
+        const uint64_t w = __saturated_div(ir, b);
+        __sub_product(ir, b, w); // r -= b * w
+        R = ir.size;
     }
     a.words.resize(R);
 }
@@ -1044,18 +952,18 @@ const int BZ_BASE_CASE_SIZE = 2;
 
 // recursively divide A by D, and accumulate quotient into Q (with shift) and return remainder R
 // p is a stack of temporaries, one for each recursion depth
-void __divide_2n1n(const uint64_t* a, const int A, const natural& d, int n, natural& q, int q_shift, natural& r, natural* p) {
+void __divide_2n1n(cnatural a, cnatural d, int n, natural& q, int q_shift, natural& r, natural* p) {
     if (n <= BZ_BASE_CASE_SIZE) {
-        __div(a, A, d, *p, r);
+        __div(a, d, *p, r);
         __add(q, p->words.data(), p->words.size(), q_shift);
         return;
     }
 
-    const int an = std::min(n, A);
-    __divide_2n1n(a, an, d, n/2, q, q_shift + n, *p, p + 1);
+    const int an = std::min(n, a.size);
+    __divide_2n1n({a.words, an}, d, n/2, q, q_shift + n, *p, p + 1);
     p->words.insert_first_n_words(n);
-    __add(*p, a + an, A - an);
-    __divide_2n1n(p->words.data(), p->words.size(), d, n/2, q, q_shift, r, p + 1);
+    __add(*p, a.words + an, a.size - an);
+    __divide_2n1n(*p, d, n/2, q, q_shift, r, p + 1);
 }
 
 constexpr void __divide_bz(natural a, natural d, natural& q, natural& r) {
@@ -1063,7 +971,7 @@ constexpr void __divide_bz(natural a, natural d, natural& q, natural& r) {
     const auto A = a.words.size();
 
     natural new_r;
-    q.words.reserve_and_set_zero(div_max_size(a.words.data(), A, d.words.data(), D));
+    q.words.reserve_and_set_zero(div_max_size(a, d));
     r.words.reserve_and_set_zero(D);
     new_r.words.reserve_and_set_zero(D);
 
@@ -1084,7 +992,7 @@ constexpr void __divide_bz(natural a, natural d, natural& q, natural& r) {
         std::copy(a.words.data() + start, a.words.data() + end, r.words.data());
 
         q.words.insert_first_n_words(2*D); // TODO it might be possible to optimize this with non-zero q_shift param below (q_shoft = i-2*D)
-        __divide_2n1n(r.words.data(), r.words.size(), d, D, q, 0, new_r, p_stack);
+        __divide_2n1n(r, d, D, q, 0, new_r, p_stack);
         std::swap(r, new_r);
     }
 
@@ -1460,7 +1368,7 @@ constexpr natural::operator T() const {
         return std::numeric_limits<T>::infinity();
     if (exponent <= 0)
         return words[0];
-    const auto m = extract_64bits(*this, exponent);
+    const auto m = extract_u64(*this, exponent);
     return std::ldexp(static_cast<T>(m), exponent);
 }
 

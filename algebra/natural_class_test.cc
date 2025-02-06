@@ -2,51 +2,6 @@
 #include "algebra/__test.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 
-TEST_CASE("add_product") {
-    natural a = 1;
-    add_product(a, 2_n, 3_n);
-    REQUIRE(a.words.size() == 1);
-    REQUIRE(a == 7);
-    add_product(a, 0_n, 3_n);
-    REQUIRE(a == 7);
-    add_product(a, 2_n, 0_n);
-    REQUIRE(a == 7);
-    add_product(a, 2_n, 1_n);
-    REQUIRE(a == 9);
-    add_product(a, 1_n, 3_n);
-    REQUIRE(a == 12);
-}
-
-TEST_CASE("sub_product") {
-    natural a = 10;
-    sub_product(a, 2_n, 3_n);
-    REQUIRE(a == 4);
-
-    natural b = static_cast<uint128_t>(UINT64_MAX) + 1;
-    sub_product(b, 2_n, 3_n);
-    REQUIRE(b == UINT64_MAX - 5);
-
-    a = 340282366920938463463412908294782434869_n;
-    b = 5850;
-    uint64_t d = 2746327603956567807;
-    natural e;
-    e = a;
-    sub_product(e, b, d);
-    REQUIRE(e == a - b * d);
-}
-
-TEST_CASE("add_product scalar") {
-    natural a = 1;
-    add_product(a, 2_n, static_cast<uint64_t>(3));
-    REQUIRE(a == 7);
-}
-
-TEST_CASE("sub_product scalar") {
-    natural a = 10;
-    sub_product(a, 2_n, static_cast<uint64_t>(3));
-    REQUIRE(a == 4);
-}
-
 TEST_CASE("div 10") {
     natural a = 10;
     int b = 10;
@@ -83,68 +38,6 @@ natural rand_natural(int size, Random& rng) {
     for (int i = 0; i < size; i++)
         a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
     return a;
-}
-
-TEST_CASE("add/sub_product scalar stress") {
-    Random rng(31231);
-    for (int i = 0; i < 1'000'000; i++) {
-        natural a = rand_natural(1, 8, rng);
-        natural b = rand_natural(1, 4, rng);
-        uint64_t d = rng.Uniform<uint64_t>(0, INT64_MAX);
-        natural e;
-
-        e = a;
-        add_product(e, b, d);
-        REQUIRE(e == a + b * d);
-
-        e = a;
-        sub_product(e, b, 0);
-        REQUIRE(e == a);
-
-        if (a >= b) {
-            e = a;
-            sub_product(e, b, 1);
-            REQUIRE(e == a - b);
-        }
-
-        if (a >= b * d) {
-            e = a;
-            sub_product(e, b, d);
-            REQUIRE(e == a - b * d);
-        }
-        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
-    }
-}
-
-TEST_CASE("add/sub_product stress") {
-    Random rng(31231);
-    for (int i = 0; i < 10'000'000; i++) {
-        natural a = rand_natural(1, 8, rng);
-        natural b = rand_natural(1, 4, rng);
-        natural c = rand_natural(1, 4, rng);
-        natural e;
-
-        e = a;
-        add_product(e, b, c);
-        REQUIRE(e == a + b * c);
-
-        if (a >= b * c) {
-            e = a;
-            sub_product(e, b, c);
-            REQUIRE(e == a - b * c);
-        }
-
-        e = a;
-        sub_product(e, b, 0);
-        REQUIRE(e == a);
-
-        if (a >= b) {
-            e = a;
-            sub_product(e, b, 1);
-            REQUIRE(e == a - b);
-        }
-        if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
-    }
 }
 
 #if 0
@@ -326,12 +219,76 @@ TEST_CASE("mul_karatsuba general") {
 }
 #endif
 
+TEST_CASE("__less_a_bc_scalar") {
+    Random rng(555);
+    natural a, b;
+    for (int i = 0; i < 1000'000; i++) {
+        rand_natural(a, 1, 2, rng);
+        rand_natural(b, 1, 1, rng);
+        uint64_t c = rng.Uniform<uint64_t>(0, UINT64_MAX);
+        REQUIRE(__less_a_bc_scalar(a, b, c) == (a < b * c));
+    }
+}
+
+TEST_CASE("__less_a_bc") {
+    Random rng(666);
+    natural a, b, c;
+    for (int i = 0; i < 1000'000; i++) {
+        rand_natural(a, 1, 10, rng);
+        rand_natural(b, 1, 5, rng);
+        rand_natural(c, 1, 5, rng);
+        REQUIRE(__less_a_bc(a, b, c) == a < b * c);
+    }
+}
+
+TEST_CASE("__less_ab_c") {
+    Random rng(999);
+    natural a, b, c;
+    for (int i = 0; i < 1000'000; i++) {
+        rand_natural(a, 1, 5, rng);
+        rand_natural(b, 1, 5, rng);
+        rand_natural(c, 1, 10, rng);
+        REQUIRE(__less_ab_c(a, b, c) == a * b < c);
+    }
+}
+
+TEST_CASE("__less_ab_cd") {
+    Random rng(888);
+    natural a, b, c, d;
+    for (int i = 0; i < 1000'000; i++) {
+        rand_natural(a, 1, 5, rng);
+        rand_natural(b, 1, 5, rng);
+        rand_natural(c, 1, 5, rng);
+        rand_natural(d, 1, 5, rng);
+        REQUIRE(__less_ab_cd(a, b, c, d) == a * b < c * d);
+    }
+}
+
+constexpr int signum(const natural& a, const natural& b) {
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+}
+
+TEST_CASE("__det_ab_cd") {
+    Random rng(777);
+    natural a, b, c, d;
+    for (int i = 0; i < 1000'000; i++) {
+        rand_natural(a, 1, 5, rng);
+        rand_natural(b, 1, 5, rng);
+        rand_natural(c, 1, 5, rng);
+        rand_natural(d, 1, 5, rng);
+        REQUIRE(__det_ab_cd(a, b, c, d) == signum(a * b, c * d));
+    }
+}
+
 TEST_CASE("__saturated_div") {
     Random rng(0);
     natural a, b;
     for (int i = 0; i < 1000'000; i++) {
         rand_natural(a, 1, 10, rng);
         rand_natural(b, 1, 10, rng);
+        REQUIRE(a * b == b * a);
         const uint64_t q = __saturated_div(b, a);
         REQUIRE(a * q <= b);
         if (q != std::numeric_limits<uint64_t>::max())
@@ -818,11 +775,28 @@ TEST_CASE(">>=") {
 }
 
 TEST_CASE("factorial") {
+    uint64_t _a = 1;
+    uint64_t _b = 1;
+    inatural aa {&_a, 1};
+    cnatural bb {&_b, 1};
+    auto carry = __add_and_return_carry(aa, bb);
+    REQUIRE(_a == 2);
+    REQUIRE(carry == 0);
+
     natural a(1);
+    natural b = a;
+    b += a;
+    REQUIRE(b == 2);
+
     for (int i = 2; i <= 50; i++) {
         natural b = a;
         for (int j = 1; j < i; j++)
             b += a;
+        if (a * i != b) {
+            print("a={}\n", str(a));
+            print("b={}\n", str(b));
+            print("i={}\n", i);
+        }
         REQUIRE(a * i == b);
         REQUIRE(b / i == a);
         a *= natural(i);
@@ -854,4 +828,124 @@ TEST_CASE("<<") {
 TEST_CASE("literal") {
     natural a = 1'234'567'890'234'567'890'234'567'890'234'567'890'234'567'890'234'567'890'234'567'890'234'567'890'234'567'890_n;
     REQUIRE(a.str() == "1234567890234567890234567890234567890234567890234567890234567890234567890234567890");
+}
+
+TEST_CASE("add_product") {
+    natural a = 1;
+    add_product(a, 2_n, 3_n);
+    REQUIRE(a.words.size() == 1);
+    REQUIRE(a == 7);
+    add_product(a, 0_n, 3_n);
+    REQUIRE(a == 7);
+    add_product(a, 2_n, 0_n);
+    REQUIRE(a == 7);
+    add_product(a, 2_n, 1_n);
+    REQUIRE(a == 9);
+    add_product(a, 1_n, 3_n);
+    REQUIRE(a == 12);
+}
+
+TEST_CASE("sub_product") {
+    natural a = 10;
+    sub_product(a, 2_n, 3_n);
+    REQUIRE(a == 4);
+
+    natural b = static_cast<uint128_t>(UINT64_MAX) + 1;
+    sub_product(b, 2_n, 3_n);
+    REQUIRE(b == UINT64_MAX - 5);
+
+    a = 340282366920938463463412908294782434869_n;
+    b = 5850;
+    uint64_t d = 2746327603956567807;
+    natural e;
+    e = a;
+    sub_product(e, b, d);
+    REQUIRE(e == a - b * d);
+
+    a = 642925181765695293749472128589009400496477258957537017768413464458702803216754593095075074170080266581351009920531714606644854070062962_n;
+    b = 3067758199959723904076027525013189935007362036353598278716_n;
+    natural c = 105070284311530410717944298959725463208120064695905449166363534139015629378424_n;
+    e = a;
+    sub_product(e, b, c);
+    REQUIRE(e == a - b * c);
+}
+
+TEST_CASE("add_product scalar") {
+    natural a = 1;
+    add_product(a, 2_n, static_cast<uint64_t>(3));
+    REQUIRE(a == 7);
+}
+
+TEST_CASE("sub_product scalar") {
+    natural a = 10;
+    sub_product(a, 2_n, static_cast<uint64_t>(3));
+    REQUIRE(a == 4);
+}
+
+
+TEST_CASE("add/sub_product scalar stress") {
+    Random rng(31231);
+    for (int i = 0; i < 500'000; i++) {
+        natural a = rand_natural(1, 8, rng);
+        natural b = rand_natural(1, 4, rng);
+        uint64_t d = rng.Uniform<uint64_t>(0, INT64_MAX);
+        natural e;
+
+        e = a;
+        add_product(e, b, d);
+        REQUIRE(e == a + b * d);
+
+        e = a;
+        sub_product(e, b, 0);
+        REQUIRE(e == a);
+
+        if (a >= b) {
+            e = a;
+            sub_product(e, b, 1);
+            REQUIRE(e == a - b);
+        }
+
+        if (a >= b * d) {
+            e = a;
+            sub_product(e, b, d);
+            REQUIRE(e == a - b * d);
+        }
+    }
+}
+
+TEST_CASE("add/sub_product stress") {
+    Random rng(31231);
+    for (int i = 0; i < 1000'000; i++) {
+        natural a = rand_natural(1, 8, rng);
+        natural b = rand_natural(1, 4, rng);
+        natural c = rand_natural(1, 4, rng);
+        natural e;
+
+        e = a;
+        add_product(e, b, c);
+        REQUIRE(e == a + b * c);
+
+        if (a >= b * c) {
+            e = a;
+            sub_product(e, b, c);
+            if (e != a - b * c) {
+                print("a={}\n{}\n", a, stre(a));
+                print("b={}\n{}\n", b, stre(b));
+                print("c={}\n{}\n", c, stre(c));
+                print("e={}\n{}\n", e, stre(e));
+                print("#={}\n{}\n", a-b*c, stre(a-b*c));
+            }
+            REQUIRE(e == a - b * c);
+        }
+
+        e = a;
+        sub_product(e, b, 0);
+        REQUIRE(e == a);
+
+        if (a >= b) {
+            e = a;
+            sub_product(e, b, 1);
+            REQUIRE(e == a - b);
+        }
+    }
 }

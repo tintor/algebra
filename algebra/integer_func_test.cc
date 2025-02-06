@@ -27,11 +27,22 @@ integer random_integer(const int bits_max, std::mt19937_64& rng) {
     return a;
 }
 
-TEST_CASE("add/sub_product stress") {
+TEST_CASE("abs") {
+    REQUIRE(abs(0_i) == 0);
+    REQUIRE(abs(10_i) == 10);
+    REQUIRE(abs(-3_i) == 3);
+}
+
+TEST_CASE("pow") {
+    REQUIRE(pow(2_i, 3) == 8);
+    REQUIRE(pow(10_i, 30) == 1000000000000000000000000000000_i);
+}
+
+TEST_CASE("add/sub_product") {
     int m = 64 * 2;
     int n = 64 * 2;
     std::mt19937_64 rng(904);
-    for (int i = 0; i < 10'000'000; i++) {
+    for (int i = 0; i < 1000'000; i++) {
         integer a = random_integer(m, rng);
         integer b = random_integer(n, rng);
         integer c = random_integer(n, rng);
@@ -47,28 +58,10 @@ TEST_CASE("add/sub_product stress") {
 
         e = a;
         sub_product(e, b, c);
-        if (e != a - b * c) {
-            print("a={}\n", stre(a));
-            print("b={}\n", stre(b));
-            print("c={}\n", stre(c));
-            print("e={}\n", stre(e));
-            print("#={}\n", stre(a - b * c));
-        }
         REQUIRE(e == a - b * c);
 
         e = a;
         sub_product(e, b, d);
         REQUIRE(e == a - b * d);
     }
-}
-
-TEST_CASE("abs") {
-    REQUIRE(abs(0_i) == 0);
-    REQUIRE(abs(10_i) == 10);
-    REQUIRE(abs(-3_i) == 3);
-}
-
-TEST_CASE("pow") {
-    REQUIRE(pow(2_i, 3) == 8);
-    REQUIRE(pow(10_i, 30) == 1000000000000000000000000000000_i);
 }

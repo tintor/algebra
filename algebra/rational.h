@@ -120,6 +120,7 @@ public:
     constexpr bool is_negative() const { return num.is_negative(); }
 };
 
+constexpr auto signum(const rational& a) { return signum(a.num); }
 constexpr void negate(rational& a) { a.negate(); }
 constexpr rational fract(const rational&);
 
@@ -188,8 +189,6 @@ constexpr rational::rational(T x) {
     if (x < 0)
         num = -num;
 }
-
-constexpr bool is_power_of_two(uint64_t a) { return (a & (a - 1)) == 0; }
 
 constexpr void rational::simplify() {
     Check(!den.is_zero(), "rational with zero denominator");

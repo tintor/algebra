@@ -146,6 +146,7 @@ public:
         operator[](0) = 0;
     }
 
+    constexpr int capacity() const { return std::max(1, _capacity); }
     constexpr int size() const { return std::abs(_size); }
     constexpr bool empty() const { return _size == 0; }
     constexpr bool allocated() const { return _capacity; }

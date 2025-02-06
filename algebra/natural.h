@@ -291,7 +291,7 @@ constexpr natural isqrt_hardware(const natural& a) {
     if (a_exp <= 0) {
         a_fp = a.words[0];
     } else {
-        const uint64_t m = extract_64bits(a, a_exp);
+        const uint64_t m = extract_u64(a, a_exp);
         a_fp = std::ldexp(static_cast<double>(m), a_exp);
     }
 
@@ -672,7 +672,7 @@ constexpr std::pair<int, int> mod63_65(const natural& a) {
     int m65 = 0;
     int i = 0;
     while (i < a.num_bits()) {
-        uint64_t b = extract_64bits(a, i);
+        uint64_t b = extract_u64(a, i);
 
         m63 += b % 64;
         if (m63 >= 63)
@@ -1057,8 +1057,6 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
     }
 }
 
-constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(a.words.data(), a.words.size()); }
-
 constexpr bool is_power_of_three(natural a) {
     if (a.words.empty())
         return false;
@@ -1087,7 +1085,7 @@ constexpr void invert_bits(natural& a) {
 }
 
 constexpr void complement(natural& a) {
-    __complement(a.words.data(), a.words.size());
+    __complement(a);
     a.words.normalize();
 }
 

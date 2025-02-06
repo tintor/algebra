@@ -406,7 +406,7 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
         sub_product(a.abs, b.abs, c.abs);
         a.abs.words.set_negative(a_negative);
     } else {
-        const int m = mul_max_size(b.abs.words.data(), b.abs.words.size(), c.abs.words.data(), c.abs.words.size());
+        const int m = mul_max_size(b.abs, c.abs);
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
         natural orig_a_abs = a.abs;
@@ -447,7 +447,7 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
         sub_product(a.abs, b.abs, cu);
         a.abs.words.set_negative(a_negative);
     } else {
-        const int m = mul_max_size(b.abs.words.data(), b.abs.words.size(), &cu, 1);
+        const int m = mul_max_size(b.abs, {&cu, 1});
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
         sub_product(a.abs, b.abs, cu);
