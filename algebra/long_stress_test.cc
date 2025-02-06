@@ -135,10 +135,10 @@ constexpr real<B> sample_real(auto& rng) {
         } \
     }
 
-#define STR(A) format(#A "={}\n", A)
+std::string str(uint64_t a) { return format("{}", a); }
+std::string stre(uint64_t a) { return ""; }
 
-const bool test_add_product = true;
-const bool test_sub_product = false;
+#define STR(A) format(#A "={} {}\n", str(A), stre(A))
 
 void integer_test(uint64_t seed) {
     std::mt19937_64 rng(seed);
@@ -154,27 +154,23 @@ void integer_test(uint64_t seed) {
 
     //if (b != 0 && a >= 0) { integer e = a; mod(e, b); TEST(e == a % b); } TODO
 
-    if (test_add_product) {
-        { integer e = a; add_product(e, b, one); TEST2(e == a + b, STR(a) + STR(b)); }
-        { integer e = a; add_product(e, one, b); TEST(e == a + b); }
-        { integer e = a; add_product(e, b, zero); TEST2(e == a, STR(a) + STR(b)); }
-        { integer e = a; add_product(e, zero, b); TEST(e == a); }
-        { integer e = a; add_product(e, b, 1); TEST(e == a + b); }
-        { integer e = a; add_product(e, 1, b); TEST(e == a + b); }
-        { integer e = a; add_product(e, b, 0); TEST(e == a); }
-        { integer e = a; add_product(e, 0, b); TEST(e == a); }
-    }
+    { integer e = a; add_product(e, b, one); TEST(e == a + b); }
+    { integer e = a; add_product(e, one, b); TEST(e == a + b); }
+    { integer e = a; add_product(e, b, zero); TEST(e == a); }
+    { integer e = a; add_product(e, zero, b); TEST(e == a); }
+    { integer e = a; add_product(e, b, 1); TEST(e == a + b); }
+    { integer e = a; add_product(e, 1, b); TEST(e == a + b); }
+    { integer e = a; add_product(e, b, 0); TEST(e == a); }
+    { integer e = a; add_product(e, 0, b); TEST(e == a); }
 
-    if (test_sub_product) {
-        { integer e = a; sub_product(e, b, one); TEST(e == a - b); }
-        { integer e = a; sub_product(e, one, b); TEST(e == a - b); }
-        { integer e = a; sub_product(e, b, zero); TEST(e == a); }
-        { integer e = a; sub_product(e, zero, b); TEST(e == a); }
-        { integer e = a; sub_product(e, b, 1); TEST(e == a - b); }
-        { integer e = a; sub_product(e, 1, b); TEST(e == a - b); }
-        { integer e = a; sub_product(e, b, 0); TEST(e == a); }
-        { integer e = a; sub_product(e, 0, b); TEST(e == a); }
-    }
+    { integer e = a; sub_product(e, b, one); TEST(e == a - b); }
+    { integer e = a; sub_product(e, one, b); TEST(e == a - b); }
+    { integer e = a; sub_product(e, b, zero); TEST(e == a); }
+    { integer e = a; sub_product(e, zero, b); TEST(e == a); }
+    { integer e = a; sub_product(e, b, 1); TEST(e == a - b); }
+    { integer e = a; sub_product(e, 1, b); TEST(e == a - b); }
+    { integer e = a; sub_product(e, b, 0); TEST(e == a); }
+    { integer e = a; sub_product(e, 0, b); TEST(e == a); }
 
     if (a != 0) {
         TEST(a * b / a == b);
@@ -189,7 +185,7 @@ void integer_test(uint64_t seed) {
         if (a > 0) TEST(r >= 0);
         if (a == 0) TEST(r == 0);
         if (a < 0) TEST(r <= 0);
-        TEST2(a == b * q + r, STR(a) + STR(b) + STR(q) + STR(r));
+        TEST(a == b * q + r);
 
         q = a; q /= b; TEST(q == a / b);
         q = a; q %= b; TEST(q == a % b);
@@ -198,12 +194,12 @@ void integer_test(uint64_t seed) {
     const integer c = sample_integer(rng);
     trio_identities(a, b, c);
 
-    if (test_add_product) { integer e = a; add_product(e, b, c); TEST(e == a + b * c); }
-    if (test_sub_product) { integer e = a; sub_product(e, b, c); TEST(e == a - b * c); }
+    { integer e = a; add_product(e, b, c); TEST(e == a + b * c); }
+    { integer e = a; sub_product(e, b, c); TEST(e == a - b * c); }
 
     uint64_t w = rng();
-    if (test_add_product) { integer e = a; add_product(e, b, w); TEST(e == a + b * w); }
-    if (test_sub_product) { integer e = a; sub_product(e, b, w); TEST(e == a - b * w); }
+    { integer e = a; add_product(e, b, w); TEST(e == a + b * w); }
+    { integer e = a; sub_product(e, b, w); TEST(e == a - b * w); }
 
     uint64_t m = rng();
     while (m == 0)

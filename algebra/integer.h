@@ -432,18 +432,17 @@ constexpr int __signum(const integer& a) {
 }
 
 template<bool plus>
-constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
-    if (b.abs.words.empty() || c == 0)
+constexpr void __add_product(integer& a, const integer& b, const uint64_t cu, const bool c_negative) {
+    if (b.abs.words.empty() || cu == 0)
         return;
     const bool a_negative = a.is_negative();
-    const bool bc_negative = b.is_negative() != (c < 0);
-    const auto cu = abs_unsigned(c);
+    const bool bc_negative = b.is_negative() != c_negative;
 
     integer aa = a;
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
         add_product(a.abs, b.abs, cu);
         a.abs.words.set_negative(a_negative);
-    } else if (a.num_bits() > b.num_bits() + num_bits(abs_unsigned(c))) {
+    } else if (a.num_bits() > b.num_bits() + num_bits(cu)) {
         sub_product(a.abs, b.abs, cu);
         a.abs.words.set_negative(a_negative);
     } else {
@@ -462,8 +461,8 @@ constexpr void __add_product(integer& a, const integer& b, const int64_t c) {
     }
 }
 
-constexpr void add_product(integer& a, const integer& b, const int64_t c) { __add_product<true>(a, b, c); }
-constexpr void sub_product(integer& a, const integer& b, const int64_t c) { __add_product<false>(a, b, c); }
+constexpr void add_product(integer& a, const integer& b, const std_int auto c) { __add_product<true>(a, b, abs_unsigned(c), c < 0); static_assert(sizeof(c) <= 8); }
+constexpr void sub_product(integer& a, const integer& b, const std_int auto c) { __add_product<false>(a, b, abs_unsigned(c), c < 0); static_assert(sizeof(c) <= 8); }
 
 constexpr void div(const integer& a, const integer& b, integer& quot, integer& rem) {
     if (b == 1) {

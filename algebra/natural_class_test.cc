@@ -882,7 +882,6 @@ TEST_CASE("sub_product scalar") {
     REQUIRE(a == 4);
 }
 
-
 TEST_CASE("add/sub_product scalar stress") {
     Random rng(31231);
     for (int i = 0; i < 500'000; i++) {
