@@ -226,40 +226,48 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
 constexpr bool operator==(const xrational& a, const rational_like auto& b) { return a.root == 1 && a.base == b; }
 constexpr bool operator==(const rational_like auto& a, const xrational& b) { return b.root == 1 && a == b.base; }
 
-constexpr bool __less_abs(const xrational& a, const xrational& b) {
-    if (a.root == b.root)
-        return a.base < b.base;
-    if (a.base == b.base)
-        return a.root < b.root;
+// returns abs(a) < abs(b)
+constexpr bool __less_abs(const rational& a, const rational& b) {
+    return (a.den.abs == b.den.abs) ? (a.num.abs < b.num.abs) : __less_ab_cd(a.num.abs, b.den.abs, b.num.abs, a.den.abs);
+}
+
+constexpr bool __less_abs(const rational& a_base, const natural& a_root, const rational& b_base, const natural& b_root) {
+    if (a_root == b_root)
+        return __less_abs(a_base, b_base);
+    if (a_base == b_base)
+        return a_root < b_root;
 
     natural aa, bb;
-    aa.words.reserve_bits((a.base.num.num_bits() + b.base.den.num_bits()) * 2 + a.root.num_bits());
-    bb.words.reserve_bits((b.base.num.num_bits() + a.base.den.num_bits()) * 2 + b.root.num_bits());
+    aa.words.reserve_bits((a_base.num.num_bits() + b_base.den.num_bits()) * 2 + a_root.num_bits());
+    bb.words.reserve_bits((b_base.num.num_bits() + a_base.den.num_bits()) * 2 + b_root.num_bits());
 
-    mul(a.base.num.abs, b.base.den.abs, aa);
-    mul(b.base.num.abs, a.base.den.abs, bb);
+    mul(a_base.num.abs, b_base.den.abs, aa);
+    mul(b_base.num.abs, a_base.den.abs, bb);
 
     aa *= aa;
-    aa *= a.root;
+    aa *= a_root;
 
     bb *= bb;
-    bb *= b.root;
+    bb *= b_root;
     return aa < bb;
 }
 
-constexpr bool operator<(const xrational& a, const xrational& b) {
-    if (signum(a) != signum(b))
-        return signum(a) < signum(b);
-    return (a > 0) ? __less_abs(a, b) : __less_abs(b, a);
+constexpr bool __less(const rational& a_base, const natural& a_root, const rational& b_base, const natural& b_root) {
+    const int sa = signum(a_base);
+    const int sb = signum(b_base);
+    if (sa != sb)
+        return sa < sb;
+    return (sa > 0) ? __less_abs(a_base, a_root, b_base, b_root) : __less_abs(b_base, b_root, a_base, a_root);
 }
 
+constexpr bool operator<(const xrational& a, const xrational& b) {
+    return __less(a.base, a.root, b.base, b.root);
+}
 constexpr bool operator<(const xrational& a, const rational_like auto& b) {
-    // TODO optimize this allocation
-    return a.root.is_one() ? a.base < b : a < xrational(b);
+    return a.root.is_one() ? a.base < b : __less(a.base, a.root, b, 1);
 }
 constexpr bool operator<(const rational_like auto& a, const xrational& b) {
-    // TODO optimize this allocation
-    return b.root.is_one() ? a < b.base : xrational(a) < b;
+    return b.root.is_one() ? a < b.base : __less(a, 1, b.base, b.root);
 }
 
 constexpr xrational sqrt(const xrational& a) {
