@@ -1,7 +1,5 @@
 #include "algebra/real.h"
-#include "algebra/rational_func.h"
 #include "algebra/xrational.h"
-#include "algebra/integer.h"
 #include "algebra/__stress_test.h"
 #include <string>
 using namespace algebra;

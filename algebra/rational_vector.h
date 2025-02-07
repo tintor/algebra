@@ -1,5 +1,5 @@
 #pragma once
-#include "algebra/rational_func.h"
+#include "algebra/rational.h"
 #include "algebra/xrational.h"
 #include "algebra/vector.h"
 
