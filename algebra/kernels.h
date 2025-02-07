@@ -461,6 +461,46 @@ constexpr void __add(vnatural& a, cnatural b, int shift = 0) {
     a.push_back(__add_and_return_carry(a, b, shift));
 }
 
+// a = abs(a - b)
+// return a < b = is_negative(a - b)
+// NOTE: caller needs to normalize A
+constexpr bool __diff(inatural a, cnatural b) {
+    Check(a.size >= b.size);
+    int i = 0;
+
+    for (; i < b.size; ++i) {
+        if (a[i] < b[i])
+            goto borrow;
+        no_borrow:
+        a[i] -= b[i];
+    }
+    return false;
+
+    for (; i < b.size; ++i) {
+        a[i]--;
+        if (~a[i] && a[i] >= b[i])
+            goto no_borrow;
+        borrow:
+        a[i] -= b[i];
+    }
+    for (; i < a.size; ++i)
+        if (a[i]--)
+            return false;
+    __complement(a);
+    return true;
+}
+
+// basic building block for integer += and -=
+// a += b
+// NOTE: caller needs to normalize A (if carry == 0)
+constexpr uint64_t __add_and_return_carry(inatural a, bool& a_neg, cnatural b, bool b_neg) {
+    if (a_neg == b_neg)
+        return __add_and_return_carry(a, b);
+    if (__diff(a, b))
+        a_neg = !a_neg;
+    return 0;
+}
+
 // assuming a >= b
 constexpr void __sub(inatural& a, cnatural b) {
     int i = 0;

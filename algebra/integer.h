@@ -164,7 +164,10 @@ struct integer {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr void negate() { abs.words.negate(); }
+    constexpr void negate() {
+        abs.words.negate();
+        words.negate();
+    }
 
     constexpr size_t popcount() const {
         if (!is_negative())
@@ -184,22 +187,35 @@ struct integer {
 
     constexpr operator bool() const { return sign(); }
 
-    // TODO update words
+    constexpr operator cnatural() const { return {abs.words.data(), abs.words.size()}; }
+    constexpr operator vnatural() { return {{abs.words.data(), abs.words.size()}, abs.words.capacity()}; }
+    constexpr operator inatural() { return {abs.words.data(), abs.words.size()}; }
+
     constexpr integer& operator++() {
-        if (!is_negative())
-            abs += uint64_t(1);
-        else
-            abs -= uint64_t(1);
+        if (is_negative()) {
+            --abs;
+            inatural a = *this;
+            __decrement(a);
+            words.downsize(a.size);
+        } else {
+            ++abs;
+            if (__increment_and_return_carry(*this))
+                words.push_back(1);
+        }
         return *this;
     }
 
-    // TODO update words
     constexpr integer& operator--() {
-        if (is_negative())
-            abs += uint64_t(1);
-        else if (abs.words.size() > 0)
-            abs -= uint64_t(1);
-        else
+        if (is_negative()) {
+            ++abs;
+            if (__increment_and_return_carry(*this))
+                words.push_back(1);
+        } else if (abs.words.size() > 0) {
+            --abs;
+            inatural a = *this;
+            __decrement(a);
+            words.downsize(a.size);
+        } else
             *this = -1;
         return *this;
     }
@@ -245,12 +261,20 @@ struct integer {
     }
 };
 
+constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
+
+constexpr bool operator==(const integer& a, std_int auto b) {
+    if (b < 0)
+        return a.is_negative() && a.abs == abs_unsigned(b);
+    return !a.is_negative() && a.abs == make_unsigned(b);
+}
+
 constexpr void negate(integer& a) { a.negate(); }
 constexpr integer operator-(integer a) { a.negate(); return a; }
 
-// TODO update words
-constexpr integer& operator+=(integer& a, const integer& b) {
-    if (a.is_negative() == b.is_negative()) {
+template<bool plus>
+constexpr integer& __old_add(integer& a, const integer& b) {
+    if (plus ? a.is_negative() == b.is_negative() : (a.is_negative() != b.is_negative())) {
         a.abs += b.abs;
         return a;
     }
@@ -260,31 +284,48 @@ constexpr integer& operator+=(integer& a, const integer& b) {
     }
     a.abs = b.abs - a.abs; // TODO optimize this temporary
     a.abs.words.set_negative(b.is_negative());
-    return a;
 }
 
 // TODO update words
-constexpr integer& operator-=(integer& a, const integer& b) {
-    if (a.is_negative() != b.is_negative()) {
-        a.abs += b.abs;
-        return a;
+template<bool plus>
+constexpr integer& __add(integer& a, const integer& b) {
+    integer a_copy = a;
+
+    if (a.abs.words.size() < b.abs.words.size())
+        a.abs.words.resize(b.abs.words.size());
+    bool a_neg = a.is_negative();
+    const uint64_t carry = __add_and_return_carry(a, a_neg, b, plus == b.is_negative());
+    if (carry)
+        a.abs.words.push_back(carry);
+    else
+        a.abs.words.normalize();
+    a.abs.words.set_negative(a_neg);
+
+    integer a2 = a_copy;
+    __old_add<plus>(a2, b);
+    a2.abs.words.normalize();
+    if (a != a2) {
+        std::print("plus={}\n", plus);
+        print("a={}\n", str(a_copy));
+        print("b={}\n", str(b));
+        print("new={} {}\n", str(a), a.abs.words.size());
+        print("old={} {}\n", str(a2), a2.abs.words.size());
+        Check(a == a2);
     }
-    if (b.abs < a.abs) {
-        a.abs -= b.abs;
-        return a;
-    }
-    a.abs = b.abs - a.abs; // TODO optimize this temporary
-    a.abs.words.set_negative(b.is_negative());
-    a.negate();
     return a;
 }
 
-constexpr integer& operator+=(integer& a, std_int auto b) {
+constexpr integer& operator+=(integer& a, const integer& b) { return __add<true>(a, b); }
+constexpr integer& operator-=(integer& a, const integer& b) { return __add<false>(a, b); }
+
+// TODO update words
+template<bool plus>
+constexpr integer& __add(integer& a, std_int auto b) {
     auto ub = make_unsigned(b);
     if (b < 0)
         return a -= ~ub + 1;
 
-    if (!a.is_negative()) {
+    if (plus == !a.is_negative()) {
         a.abs += ub;
         return a;
     }
@@ -298,24 +339,8 @@ constexpr integer& operator+=(integer& a, std_int auto b) {
     return a;
 }
 
-constexpr integer& operator-=(integer& a, std_int auto b) {
-    auto ub = make_unsigned(b);
-    if (b < 0)
-        return a += ~ub + 1;
-
-    if (a.is_negative()) {
-        a.abs += ub;
-        return a;
-    }
-
-    if (a.abs >= ub) {
-        a.abs -= ub;
-        return a;
-    }
-    a = ub - static_cast<decltype(ub)>(a.abs);
-    a.negate();
-    return a;
-}
+constexpr integer& operator+=(integer& a, std_int auto b) { return __add<true>(a, b); }
+constexpr integer& operator-=(integer& a, std_int auto b) { return __add<false>(a, b); }
 
 constexpr integer operator+(integer a, std_int auto b) { return a += b; }
 constexpr integer operator+(std_int auto a, integer b) { return b += a; }
@@ -324,14 +349,6 @@ constexpr integer operator+(integer a, const integer& b) { return a += b; }
 constexpr integer operator-(integer a, const integer& b) { return a -= b; }
 constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
 constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
-
-constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
-
-constexpr bool operator==(const integer& a, std_int auto b) {
-    if (b < 0)
-        return a.is_negative() && a.abs == abs_unsigned(b);
-    return !a.is_negative() && a.abs == make_unsigned(b);
-}
 
 constexpr void mul(const integer& a, const integer& b, integer& c) {
     c.abs = a.abs * b.abs;
@@ -427,7 +444,8 @@ constexpr void add_product(integer& a, const integer& b, const integer& c) { __a
 constexpr void sub_product(integer& a, const integer& b, const integer& c) { __add_product<false>(a, b, c); }
 
 constexpr int __signum(const integer& a) {
-    if (a.is_negative()) return -1;
+    if (a.is_negative())
+        return -1;
     return (a.abs == 0) ? 0 : 1;
 }
 

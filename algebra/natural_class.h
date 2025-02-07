@@ -93,7 +93,6 @@ struct natural {
         return *this;
     }
 
-    // TODO move to kernels
     constexpr natural& operator+=(const natural& _b) {
         const uint64_t* b = _b.words.data();
         const int B = _b.words.size();

@@ -126,9 +126,9 @@ constexpr xrational operator+(const xrational& a, const xrational& b) { return _
 constexpr xrational operator-(const xrational& a, const xrational& b) { return __add<false>(a, b); }
 
 constexpr xrational operator+(const xrational& a, const rational_like auto& b) {
-    if (b.is_zero())
+    if (b == 0)
         return a;
-    Check(a.root.is_one(), "adding xrationals with different roots");
+    Check(a.is_rational(), "adding xrationals with different roots");
     return {a.base + b, 1};
 }
 
@@ -141,24 +141,24 @@ constexpr xrational& operator+=(xrational& a, const xrational& b) {
 }
 
 constexpr xrational& operator+=(xrational& a, const rational_like auto& b) {
-    if (b.is_zero())
+    if (b == 0)
         return a;
-    Check(a.root.is_one(), "adding xrationals with different roots");
+    Check(a.is_rational(), "adding xrationals with different roots");
     a.base += b;
     return a;
 }
 
 constexpr xrational operator-(const xrational& a, const rational_like auto& b) {
-    if (b.is_zero())
+    if (b == 0)
         return a;
-    Check(a.root.is_one(), "subtracting xrationals with different roots");
+    Check(a.is_rational(), "subtracting xrationals with different roots");
     return {a.base - b, 1};
 }
 
 constexpr xrational operator-(const rational_like auto& a, const xrational& b) {
-    if (a.is_zero())
+    if (a == 0)
         return -b;
-    Check(b.root.is_one(), "subtracting xrationals with different roots");
+    Check(b.is_rational(), "subtracting xrationals with different roots");
     return {a - b.base, 1};
 }
 
@@ -171,9 +171,9 @@ constexpr xrational& operator-=(xrational& a, const xrational& b) {
 }
 
 constexpr xrational& operator-=(xrational& a, const rational_like auto& b) {
-    if (b.is_zero())
+    if (b == 0)
         return a;
-    Check(a.root.is_one(), "subtracting xrationals with different roots");
+    Check(a.is_rational(), "subtracting xrationals with different roots");
     a.base -= b;
     return a;
 }

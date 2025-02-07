@@ -3,7 +3,8 @@ load(":library.bzl", "library")
 
 cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"])
 
-library("natural_class", hdrs = ["integer_backend.h", "util.h", "kernels.h"])
+library("kernels",       hdrs = ["util.h", "types.h"])
+library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
 library("natural",       deps = [":natural_class"])
 library("integer",       deps = [":natural_class"], test_deps = [":natural"])
 library("integer_func",  deps = [":integer", ":natural"])

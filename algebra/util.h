@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <bit>
 #include <algorithm>
+#include "algebra/types.h"
 
 namespace algebra {
 

@@ -3,6 +3,8 @@
 #include <random>
 #include <print>
 
+namespace algebra { namespace literals { } }
+
 using std::format;
 using std::print;
 using namespace algebra;
