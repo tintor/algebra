@@ -83,3 +83,39 @@ TEST_CASE("__add_and_return_carry - add negative") {
     REQUIRE(a[0] == 15);
     REQUIRE(a[1] == 21);
 }
+
+constexpr uint128_t operator"" _u128(const char* str) {
+    uint128_t result = 0;
+    for ( ; *str; ++str)
+        result = result * 10 + *str - '0';
+    return result;
+}
+
+TEST_CASE("__add_and_return_carry - regression") {
+    uint64_t a[] = {38300863014223413, 0};
+    uint128_t bb = 222189650051079730985154229019380080095_u128;
+    uint64_t b[] = {static_cast<uint64_t>(bb), static_cast<uint64_t>(bb >> 64)};
+    bool a_neg = false;
+    auto carry = __add_and_return_carry({a, 2}, a_neg, {b, 2}, true);
+    REQUIRE(carry == 0);
+    REQUIRE(a_neg == true);
+    uint128_t c = 222189650051079730985115928156365856682_u128;
+    REQUIRE(a[0] == static_cast<uint64_t>(c));
+    REQUIRE(a[1] == static_cast<uint64_t>(c >> 64));
+}
+
+TEST_CASE("__add_and_return_carry - regression alt") {
+    uint64_t aa = 38300863014223413;
+    uint128_t bb = 222189650051079730985154229019380080095_u128;
+
+    uint64_t a[] = {aa, 0};
+    uint64_t b[] = {static_cast<uint64_t>(bb), static_cast<uint64_t>(bb >> 64)};
+    bool a_neg = false;
+    auto carry = __add_and_return_carry({a, 2}, a_neg, {b, 2}, false);
+    REQUIRE(carry == 0);
+    REQUIRE(a_neg == false);
+
+    auto cc = bb + aa;
+    REQUIRE(a[0] == static_cast<uint64_t>(cc));
+    REQUIRE(a[1] == static_cast<uint64_t>(cc >> 64));
+}

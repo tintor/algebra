@@ -6,12 +6,12 @@ cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"
 library("kernels",       hdrs = ["util.h", "types.h"])
 library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
 library("natural",       deps = [":natural_class"])
-library("integer",       deps = [":natural_class"], test_deps = [":natural"])
-library("integer_func",  deps = [":integer", ":natural"])
-library("rational",      deps = [":integer_func"])
+library("integer_class", deps = [":natural"])
+library("integer",       deps = [":integer_class"])
+library("rational",      deps = [":integer"])
 library("xrational",     deps = [":rational"])
-library("rational_func", deps = [":rational", ":natural"])
-library("real",          deps = [":rational", ":natural"])
+library("rational_func", deps = [":rational"])
+library("real",          deps = [":rational"])
 library("real_func",     deps = [":real"])
 library("expr",          deps = [":rational_func"])
 
@@ -37,8 +37,8 @@ library("geometry",
 
 cc_library(
     name = "algebra",
-    deps = [":natural", ":integer_func", ":rational_func", ":real_func", ":expr", ":geometry", ":rational_vector"],
+    deps = [":integer", ":rational_func", ":real_func", ":expr", ":geometry", ":rational_vector"],
 )
 
-cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer_func", ":rational_func", ":xrational", ":real_func"])
+cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer", ":rational_func", ":xrational", ":real_func"])
 cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":natural"])

@@ -1,7 +1,5 @@
 #pragma once
-#include "algebra/natural.h"
 #include "algebra/rational.h"
-#include "algebra/integer_func.h"
 
 namespace algebra {
 

@@ -1,3 +1,4 @@
+#pragma once
 #include <concepts>
 #include <limits>
 #include <cmath>
