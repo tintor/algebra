@@ -11,8 +11,8 @@ library("integer",       deps = [":integer_class"])
 library("rational",      deps = [":integer"])
 library("xrational",     deps = [":rational"])
 library("rational_func", deps = [":rational"])
-library("real",          deps = [":rational"])
-library("real_func",     deps = [":real"])
+library("real_class",    deps = [":rational"])
+library("real",          deps = [":real_class"])
 library("expr",          deps = [":rational_func"])
 
 library("vector",          has_test = False)
@@ -37,8 +37,8 @@ library("geometry",
 
 cc_library(
     name = "algebra",
-    deps = [":integer", ":rational_func", ":real_func", ":expr", ":geometry", ":rational_vector"],
+    deps = [":integer", ":rational_func", ":real", ":expr", ":geometry", ":rational_vector"],
 )
 
-cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer", ":rational_func", ":xrational", ":real_func"])
+cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":integer", ":rational_func", ":xrational", ":real"])
 cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":natural"])

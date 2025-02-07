@@ -1,4 +1,4 @@
-#include "algebra/real_func.h"
+#include "algebra/real.h"
 #include "algebra/rational_func.h"
 #include "algebra/xrational.h"
 #include "algebra/integer.h"
