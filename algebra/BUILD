@@ -35,6 +35,8 @@ library("geometry",
     deps = [":solve_linear", ":point_segment_squared_distance", ":segment_segment_squared_distance", ":segment_segment_intersection"],
     test_deps = [":rational_vector"])
 
+library("dual")
+
 cc_library(
     name = "algebra",
     deps = [":rational", ":real", ":expr", ":geometry", ":rational_vector"],
