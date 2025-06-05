@@ -68,7 +68,7 @@ Overloaded operators:
 #### `void natural::mul_add(uint64_t a, uint64_t carry)`
 #### `std::string natural::str(uint32_t base = 10, bool upper = true) const`
 #### `std::string natural::hex() const`
-- Same as `natual::str(16)`
+- Same as `natural::str(16)`
 #### `size_type natural::str_size_upper_bound(uint32_t base = 10) const`
 #### `size_type natural::str(char* buffer, int buffer_size, uint32_t base = 10, bool upper = true) const`
 #### `size_t natural::num_bits() const`
@@ -133,7 +133,7 @@ Overloaded operators:
 #### `rational::rational()`
 #### `rational::rational(integer a)`
 #### `rational::rational(integer a, integer b)`
-- Ininializes rational as a/b, and simplifies by removing common divisor.
+- Initializes rational as a/b, and simplifies by removing common divisor.
 #### `rational::rational(integer a, integer b, int)`
 - Same as `rational::rational(integer a, integer b)`, but assuming a and b are already simplified.
 #### `rational::rational(std::integral auto a)`
