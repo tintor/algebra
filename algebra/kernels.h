@@ -668,7 +668,7 @@ constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t
         w += r.capacity;
         Check(w <= we);
         __mul_karatsuba_rec(aa, bb, r, w, we); // r = aa * bb
-        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them? Tests are pasing with 256 words.
+        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them? Tests are passing with 256 words.
 
         vnatural p {{w, 0}, a1.size + b1.size};
         w += p.capacity;
