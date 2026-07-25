@@ -83,7 +83,7 @@ struct integer {
     constexpr bool is_uint64() const { return sign() >= 0 && abs.is_uint64(); }
     constexpr bool is_uint128() const { return sign() >= 0 && abs.is_uint128(); }
 
-    constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s) {
+    constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s, base) {
         if (s.size() && s[0] == '-')
             abs.words.negate();
         words = abs.words;

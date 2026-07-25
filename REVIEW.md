@@ -125,7 +125,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.4 `uint8_t(integer)` validates the wrong range** — `integer_class.h:98` calls
   `Check(is_uint16())`. `uint8_t(integer(300))` → `44`. **[confirmed]**
 
-- [ ] **2.5 `integer(string_view, base)` ignores `base`** — `integer_class.h:86` forwards only
+- [x] **2.5 `integer(string_view, base)` ignores `base`** — `integer_class.h:86` forwards only
   the string to `natural`, so `integer("ff", 16)` throws. **[confirmed]**
 
 - [ ] **2.6 `rational(int, int)` accepts a zero denominator** — `rational_class.h:29-48` never

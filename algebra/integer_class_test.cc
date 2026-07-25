@@ -640,3 +640,15 @@ TEST_CASE("static_cast<uint8_t> range") {
     REQUIRE_THROWS(u16(integer(65536)));
     REQUIRE_THROWS(u16(integer(-1)));
 }
+
+TEST_CASE("parse with base") {
+    REQUIRE(integer("ff", 16) == 255);
+    REQUIRE(integer("FF", 16) == 255);
+    REQUIRE(integer("-ff", 16) == -255);
+    REQUIRE(integer("101", 2) == 5);
+    REQUIRE(integer("-101", 2) == -5);
+    REQUIRE(integer("777", 8) == 511);
+    REQUIRE(integer("123") == 123);
+    REQUIRE(integer("-123") == -123);
+    REQUIRE(integer(std::string_view("ff"), 16) == 255);
+}
