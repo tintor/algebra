@@ -62,7 +62,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   One concrete cause: `natural_class.h:970` captures `A = a.words.size()` *before* `a <<= shift`
   (`:979`), so if `a` grows a word, `end = min(i, A)` never copies the top word. **[confirmed]**
 
-- [ ] **1.12 `std::format("{:.N}", rational)` reads out of bounds when the value has fewer
+- [x] **1.12 `std::format("{:.N}", rational)` reads out of bounds when the value has fewer
   integer digits than `N`.** `rational_class.h:451-452`: `s[i + s.size() - r]` with `r > s.size()`;
   needs zero padding. `{:.3}` of `1/1000` → `'0.  1'`. **[confirmed]**
 

@@ -440,14 +440,19 @@ struct std::formatter<algebra::rational, char> {
         else
             w = ((n << 1) + a.den) / (a.den << 1);
         // TODO allocate on stack if small enough
-        std::string s = w.str();
-        for (int i = r; i < s.size(); i++)
-            *it++ = s[i - r];
-        if (r >= s.size())
+        const std::string s = w.str();
+        const int len = s.size();
+        if (len > r) {
+            for (int i = 0; i < len - r; i++)
+                *it++ = s[i];
+        } else {
             *it++ = '0';
+        }
         *it++ = '.';
-        for (int i = 0; i < r; i++)
-            *it++ = s[i + s.size() - r];
+        for (int i = len; i < r; i++) // fraction shorter than r digits
+            *it++ = '0';
+        for (int i = (len > r) ? (len - r) : 0; i < len; i++)
+            *it++ = s[i];
         return it;
     }
 };

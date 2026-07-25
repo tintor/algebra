@@ -77,3 +77,17 @@ TEST_CASE("from floating point") {
     REQUIRE(rational(-1.0) == rational(-1));
     REQUIRE(rational(-0.1) == -rational(0.1));
 }
+
+TEST_CASE("format with fixed fraction digits") {
+    REQUIRE(format("{:.3}", rational(1, 1000)) == "0.001");
+    REQUIRE(format("{:.3}", rational(1, 100)) == "0.010");
+    REQUIRE(format("{:.3}", rational(1, 2)) == "0.500");
+    REQUIRE(format("{:.3}", rational(1, 8)) == "0.125");
+    REQUIRE(format("{:.3}", rational(0)) == "0.000");
+    REQUIRE(format("{:.5}", rational(1, 3)) == "0.33333");
+    REQUIRE(format("{:.2}", rational(3, 4)) == "0.75");
+    REQUIRE(format("{:.4}", rational(12345, 1000)) == "12.3450");
+    REQUIRE(format("{:.2}", rational(12345, 1000)) == "12.35");
+    REQUIRE(format("{:.3}", rational(-1, 1000)) == "-0.001");
+    REQUIRE(format("{:.1}", rational(7)) == "7.0");
+}
