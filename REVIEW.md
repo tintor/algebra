@@ -16,7 +16,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   (`:546`), which additionally reads `a[1]` when `size == 1`.
   `(2^64+5) - 5u` → `0`. **[confirmed]**
 
-- [ ] **1.2 `natural % uint128_t` is wrong for >= 3 words.**
+- [x] **1.2 `natural % uint128_t` is wrong for >= 3 words.**
   `kernels.h:589-605` — the Horner loop runs least-significant-first (`i = 0; i += 2`),
   but Horner requires most-significant-first, so word *i* gets weight `m^(k-i)` instead of `m^i`.
   `(2^200+12345) % (2^100+7)` → `4722366459672795283456`, correct is `12394`. **[confirmed]**

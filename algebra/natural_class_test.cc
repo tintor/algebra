@@ -960,3 +960,25 @@ TEST_CASE("operator-= uint64 keeps high words") {
     c -= static_cast<uint64_t>(6);
     REQUIRE(c == (natural(1) << 64) - 1u);
 }
+
+TEST_CASE("operator% uint128 with more than two words") {
+    natural a = 1;
+    a <<= 200;
+    a += 12345u; // 2**200 + 12345
+    natural bn = 1;
+    bn <<= 100;
+    bn += 7u; // 2**100 + 7
+    const uint128_t b = (static_cast<uint128_t>(1) << 100) + 7;
+
+    REQUIRE(natural(a % b) == a % bn);
+
+    // and a case where the modulus needs the full 128 bits
+    natural c = 1;
+    c <<= 300;
+    c -= 1u;
+    natural dn = 1;
+    dn <<= 127;
+    dn += 12345u;
+    const uint128_t d = (static_cast<uint128_t>(1) << 127) + 12345;
+    REQUIRE(natural(c % d) == c % dn);
+}

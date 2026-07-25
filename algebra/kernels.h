@@ -575,9 +575,11 @@ constexpr uint128_t __mod(cnatural a, const uint128_t b) {
     if (m == b)
         m = 0;
 
+    // Horner's method over 128-bit chunks, most significant chunk first
     uint128_t res = 0;
-    for (int i = 0; i < a.size; i += 2) {
+    for (int j = (a.size + 1) / 2; j-- > 0;) {
         res = mul_mod(res, m, b);
+        const int i = j * 2;
         uint128_t acc = a[i];
         if (i + 1 < a.size)
             acc |= static_cast<uint128_t>(a[i + 1]) << 64;
