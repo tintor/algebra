@@ -64,13 +64,14 @@ constexpr integer pow(integer base, std_int auto exp) {
     return result;
 }
 
+// returns result * (base ** exp)
 constexpr integer pow(integer base, std_int auto exp, integer result) {
-    if (base == 2)
-        return result << exp;
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(integer, ...)");
+    if (base == 2)
+        return result << exp;
     if (exp == 0)
-        return 1;
+        return result;
     if (exp == 1)
         return result * base;
     if (is_power_of_two(base))

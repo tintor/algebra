@@ -147,7 +147,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.10 `mod()` returns the modulus instead of 0 for exact multiples** —
   `integer.h:160-163` and `integer_class.h:542-545`, `:551`: `mod(-10, 5)` → `5`.
 
-- [ ] **2.11 `pow(integer base, exp, integer result)` returns `1` for `exp == 0`**
+- [x] **2.11 `pow(integer base, exp, integer result)` returns `1` for `exp == 0`**
   (`integer.h:73`) where every other branch means `result * base^exp` → should return `result`.
   It also tests `base == 2` before the `exp < 0` check.
 

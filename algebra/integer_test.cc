@@ -110,3 +110,18 @@ TEST_CASE("in place mod is euclidean") {
     REQUIRE(m(-10, -3) == 2);
     REQUIRE(m(10, -3) == 1);
 }
+
+TEST_CASE("pow with accumulator") {
+    // pow(base, exp, result) == result * base**exp
+    REQUIRE(pow(3_i, 0, 5_i) == 5);
+    REQUIRE(pow(3_i, 1, 5_i) == 15);
+    REQUIRE(pow(3_i, 2, 5_i) == 45);
+    REQUIRE(pow(3_i, 3, 5_i) == 135);
+    REQUIRE(pow(2_i, 0, 5_i) == 5);
+    REQUIRE(pow(2_i, 3, 5_i) == 40);
+    REQUIRE(pow(4_i, 2, 5_i) == 80);
+    REQUIRE(pow(10_i, 3, 2_i) == 2000);
+    REQUIRE(pow(1_i, 5, 7_i) == 7);
+    REQUIRE_THROWS(pow(2_i, -1, 5_i));
+    REQUIRE_THROWS(pow(3_i, -1, 5_i));
+}
