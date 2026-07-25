@@ -167,7 +167,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `uint64_t` overload, truncating a `uint128_t`; and `b * b == b_sq` computes `b*b` in 64-bit.
   Broken for any `n` where `a^2` exceeds 64 bits.
 
-- [ ] **2.17 `cross(Vec3,Vec3)`** — `vector.h:188`: the y component is `a.x*b.z - a.z*b.x`,
+- [x] **2.17 `cross(Vec3,Vec3)`** — `vector.h:188`: the y component is `a.x*b.z - a.z*b.x`,
   i.e. negated relative to the standard cross product.
 
 - [ ] **2.18 `__gcd_inner`** — `natural.h:145` uses `__builtin_ctzl` (64-bit) on `T` that can

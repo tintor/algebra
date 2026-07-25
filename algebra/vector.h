@@ -185,7 +185,8 @@ SWIZZLE3(z, x, y)
 SWIZZLE3(z, y, x)
 
 template<typename T> constexpr T cross(const Vec2<T>& a, const Vec2<T>& b) { return {a.x * b.y - a.y * b.x}; }
-template<typename T> constexpr Vec3<T> cross(const Vec3<T>& a, const Vec3<T>& b) { return {cross(yz(a), yz(b)), cross(xz(a), xz(b)), cross(xy(a), xy(b))}; }
+// note: the y component is cross(xz(b), xz(a)), not cross(xz(a), xz(b))
+template<typename T> constexpr Vec3<T> cross(const Vec3<T>& a, const Vec3<T>& b) { return {cross(yz(a), yz(b)), cross(xz(b), xz(a)), cross(xy(a), xy(b))}; }
 
 template<typename T>
 constexpr bool order(const T& a, const T& b, const T& c) {

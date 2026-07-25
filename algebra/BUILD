@@ -15,7 +15,7 @@ library("real_class",    deps = [":rational"])
 library("real",          deps = [":real_class"])
 library("expr",          deps = [":rational"])
 
-library("vector",          has_test = False)
+library("vector",          test_deps = [":rational"])
 library("solve_linear",    deps = [":vector"], test_deps = [":rational"])
 library("rational_vector", deps = [":vector", ":rational", ":xrational"])
 
