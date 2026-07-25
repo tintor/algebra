@@ -109,6 +109,7 @@ struct natural {
     }
 
     constexpr natural& operator-=(uint64_t b) {
+        Check(*this >= b, "natural can't be negative");
         inatural a = *this;
         __sub(a, b);
         words.downsize(a.size);
@@ -116,6 +117,7 @@ struct natural {
     }
 
     constexpr natural& operator-=(uint128_t b) {
+        Check(*this >= b, "natural can't be negative");
         inatural a = *this;
         __sub(a, b);
         words.downsize(a.size);
@@ -123,6 +125,7 @@ struct natural {
     }
 
     constexpr natural& operator-=(const natural& b) {
+        Check(!__less(*this, b), "natural can't be negative");
         inatural a = *this;
         __sub(a, static_cast<cnatural>(b));
         words.downsize(a.size);
@@ -337,7 +340,7 @@ constexpr natural operator-(const std_unsigned_int auto a, natural b) {
         Check(b.words.size() <= 1 && uint64_t(a) >= b.words[0], "natural can't be negative");
         return uint64_t(a) - b.words[0];
     }
-    Check(a <= b, "natural can't be negative");
+    Check(a >= b, "natural can't be negative");
     return a - static_cast<uint128_t>(b);
 }
 

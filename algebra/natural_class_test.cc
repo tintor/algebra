@@ -1163,3 +1163,34 @@ TEST_CASE("move assignment does not leak") {
     }
     REQUIRE(g_array_allocs == before);
 }
+
+TEST_CASE("subtraction below zero throws") {
+    REQUIRE_THROWS(natural(3) - natural(5));
+    REQUIRE_THROWS(natural(3) - 5u);
+    REQUIRE_THROWS(natural(3) - static_cast<uint64_t>(5));
+    REQUIRE_THROWS(3u - natural(5));
+    REQUIRE_THROWS(static_cast<uint128_t>(3) - natural(5));
+    REQUIRE_THROWS((natural(1) << 64) - (natural(1) << 65));
+    REQUIRE_THROWS(natural(0) - 1u);
+
+    natural a = 1;
+    a <<= 100;
+    REQUIRE_THROWS((static_cast<uint128_t>(1) << 90) - a);
+
+    {
+        natural b = 5;
+        REQUIRE_THROWS(b -= natural(6));
+    }
+    {
+        natural b = 5;
+        REQUIRE_THROWS(b -= static_cast<uint64_t>(6));
+    }
+
+    // valid subtractions keep working
+    REQUIRE(natural(5) - natural(3) == 2u);
+    REQUIRE(natural(5) - 3u == 2u);
+    REQUIRE(5u - natural(3) == 2u);
+    REQUIRE((natural(1) << 65) - (natural(1) << 64) == (natural(1) << 64));
+    REQUIRE(static_cast<uint128_t>((static_cast<uint128_t>(1) << 100) - natural(5)) == (static_cast<uint128_t>(1) << 100) - 5);
+    REQUIRE(natural(5) - natural(5) == 0u);
+}

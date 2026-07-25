@@ -108,7 +108,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   overwrites `_words` without `delete[]`ing the current buffer. Every move-assign of a
   heap-sized `natural`/`integer` leaks.
 
-- [ ] **2.2 `natural` underflow is silent**, contradicting the README's "no silent overflow /
+- [x] **2.2 `natural` underflow is silent**, contradicting the README's "no silent overflow /
   failures":
   - `natural(3) - natural(5)` → `18446744073709551614` (`operator-=`/`__sub` have no
     precondition check) **[confirmed]**
