@@ -40,7 +40,13 @@ constexpr uint128_t __mulq(uint64_t a, uint64_t b) { return uint128_t(a) * b; }
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
 
-#if defined(__x86_64__) && !defined(__ILP32__)
+// x86-64 divq is a 128/64 -> 64 division, which the compiler does not generate on its own.
+// Define ALGEBRA_NO_ASM to use the portable implementation instead.
+#if defined(__x86_64__) && !defined(__ILP32__) && !defined(ALGEBRA_NO_ASM)
+#define ALGEBRA_X86_DIVQ 1
+#endif
+
+#ifdef ALGEBRA_X86_DIVQ
 constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
     uint64_t hi = a >> 64;
     uint64_t lo = a;
@@ -54,14 +60,7 @@ constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
     );
     q = lo;
 }
-#else
-constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
-    q = a / b;
-    m = a % b;
-}
-#endif
 
-#if defined(__x86_64__) && !defined(__ILP32__)
 constexpr uint64_t __divq(uint128_t a, uint64_t b) {
     uint64_t hi = a >> 64;
     uint64_t lo = a;
@@ -75,11 +74,7 @@ constexpr uint64_t __divq(uint128_t a, uint64_t b) {
     );
     return lo;
 }
-#else
-constexpr uint64_t __divq(uint128_t a, uint64_t b) { return a / b; }
-#endif
 
-#if defined(__x86_64__) && !defined(__ILP32__)
 constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) {
     uint64_t hi = a >> 64;
     uint64_t lo = a;
@@ -92,6 +87,14 @@ constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) {
     return m;
 }
 #else
+// Note: unlike divq, these do not trap when the quotient does not fit into 64 bits.
+constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
+    q = a / b;
+    r = a % b;
+}
+
+constexpr uint64_t __divq(uint128_t a, uint64_t b) { return a / b; }
+
 constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) { return a % b; }
 #endif
 
