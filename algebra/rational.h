@@ -51,13 +51,16 @@ constexpr rational pow(const rational& base, long exp) {
         return rational{base.den * base.den, base.num * base.num};
 
     const bool invert = exp < 0;
+    // exp >>= 1 on a negative value never reaches 0
+    unsigned long e = invert ? -static_cast<unsigned long>(exp) : static_cast<unsigned long>(exp);
     rational result = 1;
     rational _base = base;
-    while (exp) {
-        if (exp % 2)
+    while (e) {
+        if (e & 1)
             result *= _base;
-        _base *= _base;
-        exp >>= 1;
+        e >>= 1;
+        if (e)
+            _base *= _base;
     }
     if (invert)
         result.invert();

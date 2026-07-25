@@ -44,6 +44,20 @@ TEST_CASE("pow") {
     REQUIRE(e * a == 1);
 }
 
+TEST_CASE("pow with negative exponent") {
+    REQUIRE(pow(2_q, -3) == rational(1, 8));
+    REQUIRE(pow(2_q, -4) == rational(1, 16));
+    REQUIRE(pow(2_q, -10) == rational(1, 1024));
+    REQUIRE(pow(rational(3, 2), -3) == rational(8, 27));
+    REQUIRE(pow(rational(-2), -3) == rational(-1, 8));
+    REQUIRE(pow(rational(-2), -4) == rational(1, 16));
+    REQUIRE(pow(2_q, 3) == 8);
+    REQUIRE(pow(2_q, 10) == 1024);
+    REQUIRE(pow(rational(-2), 3) == -8);
+    REQUIRE(pow(0_q, 3) == 0);
+    REQUIRE_THROWS(pow(0_q, -3));
+}
+
 TEST_CASE("PI") {
     REQUIRE(approx_log2(PI(11) - rational(M_PI)) <= -52);
 }

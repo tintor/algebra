@@ -140,7 +140,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   **[confirmed]** (`+=`/`-=` are safe only because the `a.den == b.den` fast path catches
   self-aliasing.)
 
-- [ ] **2.9 `pow(rational, negative exp)` hangs** — `rational.h:56-61`: `exp >>= 1` on a
+- [x] **2.9 `pow(rational, negative exp)` hangs** — `rational.h:56-61`: `exp >>= 1` on a
   negative `long` is an arithmetic shift that sticks at `-1`, while `_base *= _base` grows
   without bound. Only `-1` and `-2` are special-cased.
 
