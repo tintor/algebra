@@ -809,6 +809,7 @@ constexpr void sub_product(natural& a, const natural& b, const uint64_t c) {
 }
 
 constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
+    Check(b != 0, "division by zero");
     if (&a != &q)
         q.words.reset(a.words.size());
     vnatural vq = q;
@@ -818,6 +819,7 @@ constexpr uint64_t div(const natural& a, uint64_t b, natural& q) {
 }
 
 constexpr void __div(cnatural a, cnatural b, natural& q, natural& r) {
+    Check(b.size != 0, "division by zero");
     if (b.size <= 1) {
         if (a.words != q.words.data())
             q.words.reset(a.size);
@@ -832,7 +834,6 @@ constexpr void __div(cnatural a, cnatural b, natural& q, natural& r) {
         q.set_zero(); // update Q after R in case &A == &Q
         return;
     }
-    Check(b.size != 0, "division by zero");
 
     // NOTE max word size of R is b.word.size + 1
     const int Q = std::min(a.size, a.size - b.size + 1); //div_max_size(a, A, b, B); TODO
@@ -910,11 +911,11 @@ constexpr void div(const natural& a, const natural& b, natural& q, natural& r) {
 
 // TODO move this kernel to util.h
 constexpr void mod(const natural& a, const natural& b, natural& r) {
+    Check(!b.words.empty(), "division by zero");
     if (b.words.size() <= 1) {
         r = __mod(a, b.words[0]);
         return;
     }
-    Check(!b.words.empty(), "division by zero");
     r.words.set_zero();
     for (auto i = a.words.size(); i-- > 0;) {
         if (r.words.size() || a.words[i])
@@ -929,11 +930,11 @@ constexpr void mod(natural& a, const natural& b) {
     const int A = a.words.size();
     const int B = b.words.size();
 
+    Check(B != 0, "division by zero");
     if (B <= 1) {
         a = __mod(a, b.words[0]);
         return;
     }
-    Check(B != 0, "division by zero");
 
     uint64_t* r = a.words.data() + A;
     int R = 0;
@@ -1017,7 +1018,7 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
 
 constexpr natural operator/(const natural& a, const natural& b) { natural quot, rem; div(a, b, /*out*/quot, /*out*/rem); return quot; }
 constexpr natural operator/(const natural& a, std_int auto b) {
-    Check(b >= 0, "division of natural with negative number");
+    Check(b > 0, "division of natural by zero or negative number");
     natural q;
     div(a, static_cast<uint64_t>(b), q);
     return q;
@@ -1025,7 +1026,7 @@ constexpr natural operator/(const natural& a, std_int auto b) {
 
 constexpr natural& operator/=(natural& a, const natural &b) { natural rem; div(a, b, /*out*/a, /*out*/rem); return a; }
 constexpr natural& operator/=(natural& a, std_int auto b) {
-    Check(b >= 0, "division of natural with negative number");
+    Check(b > 0, "division of natural by zero or negative number");
     div(a, static_cast<uint64_t>(b), a);
     return a;
 }

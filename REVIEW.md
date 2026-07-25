@@ -117,7 +117,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   - `natural_class.h:340`: `Check(a <= b, "natural can't be negative")` in
     `operator-(unsigned, natural)` has the comparison **backwards** (should be `a >= b`).
 
-- [ ] **2.3 Division by zero is a SIGFPE, not the documented exception.**
+- [x] **2.3 Division by zero is a SIGFPE, not the documented exception.**
   In `__div` (`natural_class.h:818`), `mod(const natural&,...)` (`:910`) and
   `mod(natural&,...)` (`:929`), the `b.size <= 1` branch runs `__mod(a, b[0])` *before* the
   `Check(b.size != 0, "division by zero")` on the next line — so that `Check` is unreachable.

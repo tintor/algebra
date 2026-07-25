@@ -1194,3 +1194,29 @@ TEST_CASE("subtraction below zero throws") {
     REQUIRE(static_cast<uint128_t>((static_cast<uint128_t>(1) << 100) - natural(5)) == (static_cast<uint128_t>(1) << 100) - 5);
     REQUIRE(natural(5) - natural(5) == 0u);
 }
+
+TEST_CASE("division by zero throws") {
+    natural a = 1;
+    a <<= 200;
+    a += 12345u;
+    const natural zero = 0;
+    natural q, r;
+
+    REQUIRE_THROWS(a / zero);
+    REQUIRE_THROWS(a % zero);
+    REQUIRE_THROWS(div(a, zero, q, r));
+    REQUIRE_THROWS(mod(a, zero, r));
+    q = a;
+    REQUIRE_THROWS(mod(q, zero));
+    REQUIRE_THROWS(div(a, static_cast<uint64_t>(0), q));
+    REQUIRE_THROWS(a / 0);
+    REQUIRE_THROWS(a % 0);
+    q = a;
+    REQUIRE_THROWS(q /= zero);
+    q = a;
+    REQUIRE_THROWS(q /= 0);
+
+    natural small = 7;
+    REQUIRE_THROWS(small / zero);
+    REQUIRE_THROWS(small % zero);
+}
