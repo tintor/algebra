@@ -1001,3 +1001,24 @@ TEST_CASE("operator-- normalizes") {
     --c;
     REQUIRE(c.words.size() == 2);
 }
+
+TEST_CASE("mul_karatsuba with power of two operand") {
+    natural a = 1;
+    a <<= 1300;
+    a += 2u; // not a power of two, and a.words[10] == 0
+
+    natural b = 1;
+    b <<= 640; // power of two, 11 words
+
+    REQUIRE(mul_karatsuba(a, b) == a * b);
+    REQUIRE(mul_karatsuba(b, a) == a * b);
+
+    natural c = 1;
+    c <<= 64;
+    REQUIRE(mul_karatsuba(a, c) == a * c);
+    REQUIRE(mul_karatsuba(c, a) == a * c);
+
+    natural d = 3;
+    REQUIRE(mul_karatsuba(a, d) == a * d);
+    REQUIRE(mul_karatsuba(d, a) == a * d);
+}

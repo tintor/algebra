@@ -476,7 +476,7 @@ constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
         return;
     }
     if (is_power_of_two(b)) {
-        const size_t z = (B - 1) * 64 + std::countr_zero(a.words[B - 1]); // = b.num_trailing_zeros() but O(1)
+        const size_t z = (B - 1) * 64 + std::countr_zero(b.words[B - 1]); // = b.num_trailing_zeros() but O(1)
         const size_t bits = a.num_bits() + z;
         const size_t words = (bits + 63) / 64;
         q.words.reset(words, /*init*/false); // preallocates memory!

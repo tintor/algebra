@@ -49,7 +49,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `i+1`, computing `x*e^x`. Both are accidentally right at `x = 1`.
   `cos(2)` → `-1.832` (want `-0.4161`); `exp(2)` → `14.778` = `2e^2`. **[confirmed]**
 
-- [ ] **1.9 `mul_karatsuba` is wrong when the second operand is a power of two.**
+- [x] **1.9 `mul_karatsuba` is wrong when the second operand is a power of two.**
   `natural_class.h:479`: `std::countr_zero(a.words[B - 1])` should be `b.words[B - 1]`. **[confirmed]**
 
 - [ ] **1.10 `mul_karatsuba` throws on operands with interior zero limbs.**
