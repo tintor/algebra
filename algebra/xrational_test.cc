@@ -47,3 +47,28 @@ TEST_CASE("div") {
     REQUIRE(1 / sqrt(2_x) == xrational(1/2_q, 2));
     REQUIRE(sqr(1 / sqrt(2_x)) == 1/2_q);
 }
+
+TEST_CASE("compound assignment with rational") {
+    {
+        xrational a = sqrt(3_x);
+        a /= 2;
+        REQUIRE(a == xrational(1/2_q, 3));
+    }
+    {
+        xrational a = sqrt(5_x);
+        a /= 3_q;
+        REQUIRE(a == xrational(1/3_q, 5));
+        a *= 3_q;
+        REQUIRE(a == sqrt(5_x));
+    }
+    {
+        xrational a = sqrt(5_x);
+        a /= integer(2);
+        REQUIRE(a == xrational(1/2_q, 5));
+    }
+    {
+        xrational a = 6_x;
+        a /= 3;
+        REQUIRE(a == 2_x);
+    }
+}

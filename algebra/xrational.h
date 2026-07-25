@@ -240,7 +240,7 @@ constexpr xrational& operator/=(xrational& a, const xrational& b) {
 
 constexpr xrational& operator/=(xrational& a, const rational_like auto& b) {
     a.base /= b;
-    return b;
+    return a;
 }
 
 constexpr bool operator==(const xrational& a, const xrational& b) {

@@ -154,7 +154,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.12 `simplify(rational&, rational&, rational&)`** — `rational.h:254` passes `z.den`
   where `z.num` is meant.
 
-- [ ] **2.13 `xrational::operator/=(xrational&, rational_like)` returns `b`, not `a`**
+- [x] **2.13 `xrational::operator/=(xrational&, rational_like)` returns `b`, not `a`**
   (`xrational.h:243`) — ill-formed as soon as it is instantiated.
 
 - [ ] **2.14 `operator==(xrational, xrational)`** — `xrational.h:276`: `bs *= a.base.num.abs`
