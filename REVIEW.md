@@ -128,7 +128,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.5 `integer(string_view, base)` ignores `base`** — `integer_class.h:86` forwards only
   the string to `natural`, so `integer("ff", 16)` throws. **[confirmed]**
 
-- [ ] **2.6 `rational(int, int)` accepts a zero denominator** — `rational_class.h:29-48` never
+- [x] **2.6 `rational(int, int)` accepts a zero denominator** — `rational_class.h:29-48` never
   calls `simplify()`, so `rational(1,0)` yields `1/0` while `rational(integer(1), integer(0))`
   throws. **[confirmed]**
 

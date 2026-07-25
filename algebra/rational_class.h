@@ -27,6 +27,7 @@ public:
     constexpr rational(std_int auto a) : num(a), den(1) { }
 
     constexpr rational(std_int auto n, std_int auto d) {
+        Check(d != 0, "rational with zero denominator");
         if (n == 0) {
             num = uint64_t(0);
             den = uint64_t(1);

@@ -91,3 +91,16 @@ TEST_CASE("format with fixed fraction digits") {
     REQUIRE(format("{:.3}", rational(-1, 1000)) == "-0.001");
     REQUIRE(format("{:.1}", rational(7)) == "7.0");
 }
+
+TEST_CASE("zero denominator throws") {
+    auto q = [](int n, int d) { return rational(n, d); };
+    REQUIRE_THROWS(q(1, 0));
+    REQUIRE_THROWS(q(0, 0));
+    REQUIRE_THROWS(q(-1, 0));
+    REQUIRE_THROWS(rational(integer(1), integer(0)));
+    REQUIRE_THROWS(rational("1/0"));
+
+    REQUIRE(q(0, 5) == 0);
+    REQUIRE(q(1, 2) == rational(1, 2));
+    REQUIRE(q(-4, 8) == rational(-1, 2));
+}
