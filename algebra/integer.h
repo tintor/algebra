@@ -111,20 +111,18 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
     integer r = m;
     integer new_t = 1;
     integer new_r = a;
-    integer e, q;
+    integer e, q, nt;
 
     while (new_r) {
-        div(r, new_r, /*out*/q, /*out*/e); // remainder is discarded
+        div(r, new_r, /*out*/q, /*out*/e); // e = r - q * new_r
 
         // (t, new_t) = (new_t, t − q * new_t)
-        e = t;
-        sub_product(e, q, new_t);
+        nt = t;
+        sub_product(nt, q, new_t);
         t.swap(new_t);
-        new_t.swap(e);
+        new_t.swap(nt);
 
-        // (r, new_r) = (new_r, r − quotient * new_r)
-        e = r;
-        sub_product(r, q, new_r);
+        // (r, new_r) = (new_r, r − q * new_r)
         r.swap(new_r);
         new_r.swap(e);
     }

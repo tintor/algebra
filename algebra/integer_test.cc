@@ -64,3 +64,36 @@ TEST_CASE("add/sub_product") {
         REQUIRE(e == a - b * d);
     }
 }
+
+TEST_CASE("inverse_mod") {
+    natural out;
+
+    REQUIRE(inverse_mod(3_n, 11_n, out));
+    REQUIRE(out == 4u); // 3 * 4 == 12 == 1 (mod 11)
+
+    REQUIRE(inverse_mod(1_n, 7_n, out));
+    REQUIRE(out == 1u);
+
+    REQUIRE(inverse_mod(5_n, 7_n, out));
+    REQUIRE(out == 3u); // 5 * 3 == 15 == 1 (mod 7)
+
+    // no inverse when gcd(a, m) != 1
+    REQUIRE(!inverse_mod(4_n, 8_n, out));
+    REQUIRE(!inverse_mod(6_n, 9_n, out));
+
+    // exhaustive small check
+    for (uint64_t m = 2; m < 30; m++)
+        for (uint64_t a = 1; a < m; a++) {
+            const bool ok = inverse_mod(natural(a), natural(m), out);
+            REQUIRE(ok == (gcd(a, m) == 1));
+            if (ok)
+                REQUIRE((natural(a) * out) % m == 1);
+        }
+
+    // multi-word
+    natural big = 1;
+    big <<= 130;
+    big += 7u;
+    REQUIRE(inverse_mod(3_n, big, out));
+    REQUIRE((3_n * out) % big == 1);
+}

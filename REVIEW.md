@@ -34,7 +34,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `integer_class.h:540-541`: `mod(a.abs, b.abs)` has no viable 2-arg `mod(natural,natural)`
   overload, so the `natural → integer` conversion selects the enclosing function itself. **[confirmed]**
 
-- [ ] **1.6 `inverse_mod` never terminates.**
+- [x] **1.6 `inverse_mod` never terminates.**
   `integer.h:127`: `sub_product(r, q, new_r)` should be `sub_product(e, q, new_r)`
   (compare the correct `t` block above it); the following `r.swap(new_r); new_r.swap(e)`
   then restores the old `r`, so the Euclid state never advances. **[confirmed]**
