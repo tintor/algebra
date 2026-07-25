@@ -312,8 +312,10 @@ constexpr void __increment(vnatural& a) {
 // assumes A != 0
 constexpr void __decrement(inatural& a) {
     for (int i = 0; i < a.size; ++i)
-        if (a[i]--)
+        if (a[i]--) {
+            a.normalize(); // top word can become zero
             return;
+        }
     Check(a.size > 0);
     a.size--;
 }

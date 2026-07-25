@@ -982,3 +982,22 @@ TEST_CASE("operator% uint128 with more than two words") {
     const uint128_t d = (static_cast<uint128_t>(1) << 127) + 12345;
     REQUIRE(natural(c % d) == c % dn);
 }
+
+TEST_CASE("operator-- normalizes") {
+    natural a = 1;
+    --a;
+    REQUIRE(a.words.size() == 0);
+    REQUIRE(!a);
+    REQUIRE(a == 0u);
+
+    natural b = 1;
+    b <<= 64; // 2**64
+    --b;
+    REQUIRE(b.words.size() == 1);
+    REQUIRE(b == UINT64_MAX);
+
+    natural c = 1;
+    c <<= 128;
+    --c;
+    REQUIRE(c.words.size() == 2);
+}
