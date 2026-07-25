@@ -43,7 +43,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `real_class.h:65-67` adds `z` to `exp`, then `normalize()` adds it again.
   `real<2>(rational(4))` → `num=1, exp=4` = **16**; `real<2>(4.0f)` likewise. **[confirmed]**
 
-- [ ] **1.8 `cos(rational,n)` and `exp(rational,n)` compute the wrong function.**
+- [x] **1.8 `cos(rational,n)` and `exp(rational,n)` compute the wrong function.**
   `rational.h:223` starts the term accumulator at `a = x` instead of `1`, so it sums
   `x^(2k+1)/(2k)!`; `rational.h:236-246` omits the leading `1` and divides by `i` instead of
   `i+1`, computing `x*e^x`. Both are accidentally right at `x = 1`.

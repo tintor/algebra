@@ -49,7 +49,24 @@ TEST_CASE("PI") {
 }
 
 TEST_CASE("exp") {
+    REQUIRE(exp(0_q, 20) == 1);
     REQUIRE(approx_log2(exp(1_q, 20) - rational(exp(1))) <= -52);
-    //REQUIRE(approx_log2(exp(1/10_q, 20) - rational(exp(0.1))) <= -52);
-    //REQUIRE(approx_log2(exp(10_q, 20) - rational(exp(10))) <= -52);
+    REQUIRE(approx_log2(exp(1/10_q, 20) - rational(exp(0.1))) <= -52);
+    REQUIRE(approx_log2(exp(2_q, 30) - rational(exp(2))) <= -52);
+    REQUIRE(approx_log2(exp(-1_q, 30) - rational(exp(-1))) <= -52);
+}
+
+TEST_CASE("cos") {
+    REQUIRE(cos(0_q, 5) == 1);
+    REQUIRE(approx_log2(cos(1_q, 12) - rational(cos(1.0))) <= -50);
+    REQUIRE(approx_log2(cos(2_q, 14) - rational(cos(2.0))) <= -50);
+    REQUIRE(approx_log2(cos(1/2_q, 12) - rational(cos(0.5))) <= -50);
+    REQUIRE(approx_log2(cos(-2_q, 14) - rational(cos(2.0))) <= -50);
+}
+
+TEST_CASE("sin") {
+    REQUIRE(sin(0_q, 5) == 0);
+    REQUIRE(approx_log2(sin(1_q, 12) - rational(sin(1.0))) <= -50);
+    REQUIRE(approx_log2(sin(2_q, 14) - rational(sin(2.0))) <= -50);
+    REQUIRE(approx_log2(sin(1/2_q, 12) - rational(sin(0.5))) <= -50);
 }

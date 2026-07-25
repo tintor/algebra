@@ -220,7 +220,7 @@ constexpr rational cos(rational x, unsigned n) {
     x %= 2 * PI(10);
 
     rational out = 1;
-    rational a = x;
+    rational a = 1; // cos(x) = 1 - x^2/2! + x^4/4! - ...
     rational b = x * x;
     b.negate();
     unsigned i = 0;
@@ -233,11 +233,11 @@ constexpr rational cos(rational x, unsigned n) {
     return out;
 }
 
+// exp(x) = 1 + x + x^2/2! + ... + x^n/n!
 constexpr rational exp(rational x, unsigned n) {
-    rational out = x;
-    rational a = x;
-    unsigned i = 0;
-    while (++i < n) {
+    rational out = 1;
+    rational a = 1;
+    for (unsigned i = 1; i <= n; i++) {
         a *= x;
         a /= i;
         out += a;
