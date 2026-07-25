@@ -402,32 +402,31 @@ constexpr natural isqrt3(const natural& a) {
     natural x2 = x * x;
     natural r, v, m;
 
-    //int i = 0;
     while (x2 > a) {
-        //std::print("{}\n", x);
+        // newton step: v = (x*x - a) / (2*x)
+        v = x2;
         v -= a;
-        div(x2, x, v, r); // v is much smaller than a, which makes this division cheaper!
+        div(v, x, /*out*/v, /*out*/r); // v is much smaller than a, which makes this division cheaper!
         v >>= 1;
         if (v == 0) {
             x -= 1;
             return x;
         }
+        // x*x decreases by (x_old + x_new) * (x_old - x_new)
         m = x;
         x -= v;
         m += x;
         m *= v;
         Check(m <= x2);
         x2 -= m;
-        //mul(x, x, x2);
-        //Check(++i <= 10000);
     }
 
-    if (v == a)
+    if (x2 == a)
         return x;
-    v += x;
+    x2 += x;
     x += 1;
-    v += x;
-    if (v <= a)
+    x2 += x; // x2 = (x + 1) * (x + 1)
+    if (x2 <= a)
         return x;
     x -= 1;
     return x;

@@ -160,7 +160,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.14 `operator==(xrational, xrational)`** — `xrational.h:276`: `bs *= a.base.num.abs`
   should be `b.base.num.abs`.
 
-- [ ] **2.15 `isqrt3`** — `natural.h:408`: `v -= a` runs on a freshly-constructed (zero)
+- [x] **2.15 `isqrt3`** — `natural.h:408`: `v -= a` runs on a freshly-constructed (zero)
   `natural`, i.e. an out-of-bounds underflow, before `v` is overwritten. Leftover from `isqrt2`.
 
 - [ ] **2.16 `try_fermat_factorize`** (`natural.h:715-736`) — `isqrt(b_sq)` binds the

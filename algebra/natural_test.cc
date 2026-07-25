@@ -133,6 +133,7 @@ void test_isqrt(const auto& fn) {
 
 constexpr natural isqrt_natural(const natural& x) { return isqrt(x); }
 TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
+TEST_CASE("isqrt3") { test_isqrt(isqrt3); }
 
 TEST_CASE("modX()") {
     std::mt19937_64 rng(0);
