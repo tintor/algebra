@@ -608,3 +608,18 @@ TEST_CASE("increment / decrement") {
     --nw;
     REQUIRE(nw == n);
 }
+
+TEST_CASE("mod integer") {
+    REQUIRE(mod(integer(7), integer(5)) == 2);
+    REQUIRE(mod(integer(-7), integer(5)) == 3);
+    REQUIRE(mod(integer(12), integer(5)) == 2);
+
+    integer big = 1;
+    big <<= 200;
+    big += 12345;
+    integer d = 1;
+    d <<= 100;
+    d += 7;
+    integer q = big / d;
+    REQUIRE(mod(big, d) == big - q * d);
+}

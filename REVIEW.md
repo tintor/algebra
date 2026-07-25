@@ -30,7 +30,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `__increment_and_return_carry(*this)` increments the *same* storage again
   (`operator inatural()` returns `abs.words`). `++integer(5)` → 7. **[confirmed]**
 
-- [ ] **1.5 `mod(integer, integer)` infinite-recurses → segfault.**
+- [x] **1.5 `mod(integer, integer)` infinite-recurses → segfault.**
   `integer_class.h:540-541`: `mod(a.abs, b.abs)` has no viable 2-arg `mod(natural,natural)`
   overload, so the `natural → integer` conversion selects the enclosing function itself. **[confirmed]**
 

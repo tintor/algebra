@@ -530,7 +530,11 @@ constexpr integer operator%(const integer& a, uint64_t b) {
 }
 
 constexpr integer mod(const integer& a, const integer& b) {
-    integer m = mod(a.abs, b.abs);
+    // Note: mod(a.abs, b.abs) would resolve back to this function, since natural
+    // converts implicitly to integer. Call the natural kernel explicitly.
+    natural r;
+    mod(static_cast<const natural&>(a.abs), static_cast<const natural&>(b.abs), /*out*/r);
+    integer m = std::move(r);
     if (a.is_negative()) {
         m.negate();
         m += b;
