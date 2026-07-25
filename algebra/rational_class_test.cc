@@ -64,3 +64,16 @@ constexpr std::string os() {
 TEST_CASE("constexpr ostream") {
     REQUIRE(os() == "-2/3");
 }
+
+TEST_CASE("from floating point") {
+    REQUIRE(rational(1.5) == rational(3, 2));
+    REQUIRE(rational(-1.5) == rational(-3, 2));
+    REQUIRE(rational(-1.5f) == rational(-3, 2));
+    REQUIRE(rational(-6.0) == rational(-6));
+    REQUIRE(rational(-0.25) == rational(-1, 4));
+    REQUIRE(rational(0.0) == rational(0));
+    REQUIRE(rational(-0.0) == rational(0));
+    REQUIRE(rational(6.0) == rational(6));
+    REQUIRE(rational(-1.0) == rational(-1));
+    REQUIRE(rational(-0.1) == -rational(0.1));
+}

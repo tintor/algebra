@@ -176,7 +176,7 @@ constexpr rational::rational(T x) {
     // Convert mantissa to an exact integer representation
     const int mantissa_bits = std::numeric_limits<T>::digits;
     T scaled_mantissa = std::ldexp(mantissa, mantissa_bits);
-    num = static_cast<long>(scaled_mantissa);
+    num = static_cast<long>(scaled_mantissa); // already signed, same sign as x
     exponent -= mantissa_bits;
 
     den = 1;
@@ -186,8 +186,6 @@ constexpr rational::rational(T x) {
         den <<= -exponent;
         simplify();
     }
-    if (x < 0)
-        num = -num;
 }
 
 constexpr void rational::simplify() {

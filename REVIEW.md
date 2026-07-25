@@ -84,6 +84,18 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   callers pass sign-flipped arguments and cancel it, so any new caller silently gets a sign
   error. Returns `s = -1` where `s = 1`. **[confirmed]**
 
+- [x] **1.17 `rational(float/double)` returns the absolute value for negative input.**
+  `rational_class.h:179-190` — `num` is assigned from the *signed* scaled mantissa and then
+  negated again by `if (x < 0) num = -num;`. `rational(-1.5)` → `3/2`.
+  Found while fixing 1.7; not covered by any test (all negative literals in the tests go
+  through the string parser or unary minus). **[confirmed]**
+
+- [x] **1.18 `natural::operator--` leaves an un-normalized value.**
+  `kernels.h:313` — `__decrement()` returns as soon as a word can be decremented without a
+  borrow, so `natural(1); --a;` has `size == 1` with word `0`: `a == 0u` is true while
+  `bool(a)` is also true, and `2**64 - 1` keeps a leading zero word. Found while fixing 1.4.
+  **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [ ] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
