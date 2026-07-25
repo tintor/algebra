@@ -95,7 +95,7 @@ struct integer {
         return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
     }
     constexpr operator uint8_t() const {
-        Check(is_uint16(), "integer -> uint8 overflow");
+        Check(is_uint8(), "integer -> uint8 overflow");
         return abs.words[0];
     }
     constexpr operator short() const {

@@ -623,3 +623,20 @@ TEST_CASE("mod integer") {
     integer q = big / d;
     REQUIRE(mod(big, d) == big - q * d);
 }
+
+TEST_CASE("static_cast<uint8_t> range") {
+    auto u8 = [](const integer& a) { return static_cast<uint8_t>(a); };
+    auto u16 = [](const integer& a) { return static_cast<uint16_t>(a); };
+
+    REQUIRE(u8(integer(0)) == 0);
+    REQUIRE(u8(integer(200)) == 200);
+    REQUIRE(u8(integer(255)) == 255);
+    REQUIRE_THROWS(u8(integer(256)));
+    REQUIRE_THROWS(u8(integer(300)));
+    REQUIRE_THROWS(u8(integer(70000)));
+    REQUIRE_THROWS(u8(integer(-1)));
+
+    REQUIRE(u16(integer(65535)) == 65535);
+    REQUIRE_THROWS(u16(integer(65536)));
+    REQUIRE_THROWS(u16(integer(-1)));
+}

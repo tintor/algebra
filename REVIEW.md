@@ -122,7 +122,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `mod(natural&,...)` (`:929`), the `b.size <= 1` branch runs `__mod(a, b[0])` *before* the
   `Check(b.size != 0, "division by zero")` on the next line — so that `Check` is unreachable.
 
-- [ ] **2.4 `uint8_t(integer)` validates the wrong range** — `integer_class.h:98` calls
+- [x] **2.4 `uint8_t(integer)` validates the wrong range** — `integer_class.h:98` calls
   `Check(is_uint16())`. `uint8_t(integer(300))` → `44`. **[confirmed]**
 
 - [ ] **2.5 `integer(string_view, base)` ignores `base`** — `integer_class.h:86` forwards only
