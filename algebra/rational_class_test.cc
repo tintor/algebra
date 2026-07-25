@@ -158,3 +158,20 @@ TEST_CASE("self assigning operators") {
         REQUIRE(a == 0);
     }
 }
+
+TEST_CASE("invert") {
+    rational a(2, 3);
+    a.invert();
+    REQUIRE(a == rational(3, 2));
+
+    rational b(-2, 3);
+    b.invert();
+    REQUIRE(b == rational(-3, 2));
+
+    rational c(5);
+    c.invert();
+    REQUIRE(c == rational(1, 5));
+
+    rational z(0);
+    REQUIRE_THROWS(z.invert());
+}

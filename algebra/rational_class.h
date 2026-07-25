@@ -96,6 +96,7 @@ public:
     constexpr operator double() const;
 
     constexpr void invert() {
+        Check(!num.is_zero(), "rational with zero denominator");
         std::swap(num, den);
         if (den.is_negative()) {
             den.negate();

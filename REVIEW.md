@@ -188,6 +188,11 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   it as `(a-b)->sign() == 0`; `operator+` calls `a == b`, which calls `operator-` → `a + -b`
   → `a == -b` → ... for operands whose sign is decidable but which aren't rationals/sums.
 
+- [x] **2.22 `rational::invert()` does not reject zero.** `rational_class.h:96` swaps `num` and
+  `den` unconditionally, producing a rational with a zero denominator, even though the README
+  documents "Throws exception if `num` is zero". Found while fixing 2.9 (`pow(0, -3)` returned
+  `1/0` instead of throwing). **[confirmed]**
+
 ## 3. Correct today, but fragile
 
 - **`integer` carries a duplicate word buffer.** `integer_class.h:11` has both `natural abs`
