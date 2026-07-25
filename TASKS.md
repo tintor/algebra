@@ -1,2 +1,0 @@
-- Fix all bugs from sections 1 and 2 of REVIEW.md. Use Test Driven Development.
-- 

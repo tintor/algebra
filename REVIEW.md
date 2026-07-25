@@ -79,7 +79,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `__divide_2n1n` (`natural_class.h:954`), `try_fermat_factorize` (`natural.h:715`).
   `multiple definition of ...` x3. **[confirmed]**
 
-- [ ] **1.16 `solve_linear` contradicts its own doc comment.**
+- [x] **1.16 `solve_linear` contradicts its own doc comment.**
   For the documented `A + sB + tC = 0` it returns `-s` (2-D) and `-s`, `-r` (3-D). In-repo
   callers pass sign-flipped arguments and cancel it, so any new caller silently gets a sign
   error. Returns `s = -1` where `s = 1`. **[confirmed]**

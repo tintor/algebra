@@ -1,0 +1,3 @@
+- [] Fix all bugs from sections 1 and 2 of REVIEW.md. Use Test Driven Development. One commit per bug, and push to `main` branch.
+- [] Fix all other issues from sections 3+ of REVIEW.md. Use Test Driven Development (where it makes sense). Create one PR per issue fixed. For performance issues, measure timing difference and explain in PR description. Marko will review and merge.
+- [] Fill the missing functions / methods in README.md and their description.

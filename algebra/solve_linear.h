@@ -36,21 +36,22 @@ constexpr bool solve_linear(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c
     auto det = determinant(b, c);
     if (det == 0)
         return false;
+    // Cramer's rule for sB + tC = -A: determinant(c, a) == -determinant(a, c)
     if (s)
-        *s = determinant(a, c) / det;
+        *s = determinant(c, a) / det;
     if (t)
         *t = determinant(a, b) / det;
     return true;
 }
 
 // A + sB + tC = 0
-// return (s, t) or false if no unique solution
+// returns (s, t) scaled by det, or false if no unique solution
 template<typename T>
 constexpr bool __solve_linear(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, T& s, T& t, T& det) {
     det = determinant(b, c);
     if (det == 0)
         return false;
-    s = determinant(a, c);
+    s = determinant(c, a);
     t = determinant(a, b);
     return true;
 }
@@ -62,25 +63,26 @@ constexpr bool solve_linear(const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c
     auto det = determinant(b, c, d);
     if (det == 0)
         return false;
+    // Cramer's rule for sB + tC + rD = -A; swapping two arguments negates a determinant
     if (s)
-        *s = determinant(a, c, d) / det;
+        *s = determinant(c, a, d) / det;
     if (t)
         *t = determinant(a, b, d) / det;
     if (r)
-        *r = determinant(a, b, c) / det;
+        *r = determinant(b, a, c) / det;
     return true;
 }
 
 // A + sB + tC + rD = 0
-// return (s, t, r) or false if no unique solution
+// returns (s, t, r) scaled by det, or false if no unique solution
 template<typename T>
 constexpr bool __solve_linear(const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c, const Vec3<T>& d, T& s, T& t, T& r, T& det) {
     det = determinant(b, c, d);
     if (det == 0)
         return false;
-    s = determinant(a, c, d);
+    s = determinant(c, a, d);
     t = determinant(a, b, d);
-    r = determinant(a, b, c);
+    r = determinant(b, a, c);
     return true;
 }
 

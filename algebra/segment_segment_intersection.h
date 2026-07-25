@@ -34,7 +34,7 @@ std::variant<None, PointParams<T>, SegmentParams<T>> segment_segment_intersectio
         const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
     T s, t, det;
     // if not parallel AND not degenerate
-    if (__solve_linear(a - c, a - b, c - d, s, t, det)) {
+    if (__solve_linear(a - c, b - a, c - d, s, t, det)) {
         if (det < 0) {
             negate(s);
             negate(t);
@@ -102,7 +102,7 @@ std::variant<None, Vec2<T>, std::pair<Vec2<T>, Vec2<T>>> segment_segment_interse
         const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
     T s, t, det;
     // if not parallel AND not degenerate
-    if (__solve_linear(a - c, a - b, c - d, s, t, det)) {
+    if (__solve_linear(a - c, b - a, c - d, s, t, det)) {
         if (det < 0) {
             negate(s);
             negate(t);

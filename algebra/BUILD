@@ -16,7 +16,7 @@ library("real",          deps = [":real_class"])
 library("expr",          deps = [":rational"])
 
 library("vector",          has_test = False)
-library("solve_linear",    has_test = False, deps = [":vector"])
+library("solve_linear",    deps = [":vector"], test_deps = [":rational"])
 library("rational_vector", deps = [":vector", ":rational", ":xrational"])
 
 library("point_segment_squared_distance",
