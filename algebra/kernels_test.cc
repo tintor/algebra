@@ -161,3 +161,13 @@ TEST_CASE("__sub uint128 - borrow into third word") {
     REQUIRE(a[0] == UINT64_MAX);
     REQUIRE(a[1] == UINT64_MAX);
 }
+
+TEST_CASE("pow uint64") {
+    REQUIRE(algebra::pow(static_cast<uint64_t>(2), 0) == 1);
+    REQUIRE(algebra::pow(static_cast<uint64_t>(2), 10) == 1024);
+    REQUIRE(algebra::pow(static_cast<uint64_t>(2), 31) == (static_cast<uint64_t>(1) << 31));
+    REQUIRE(algebra::pow(static_cast<uint64_t>(2), 40) == (static_cast<uint64_t>(1) << 40));
+    REQUIRE(algebra::pow(static_cast<uint64_t>(2), 63) == (static_cast<uint64_t>(1) << 63));
+    REQUIRE(algebra::pow(static_cast<uint64_t>(3), 5) == 243);
+    REQUIRE(algebra::pow(static_cast<uint64_t>(10), 19) == 10000000000000000000ull);
+}

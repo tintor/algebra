@@ -21,7 +21,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   but Horner requires most-significant-first, so word *i* gets weight `m^(k-i)` instead of `m^i`.
   `(2^200+12345) % (2^100+7)` → `4722366459672795283456`, correct is `12394`. **[confirmed]**
 
-- [ ] **1.3 `algebra::pow(uint64_t, unsigned)` returns 0 for base 2, exp >= 32.**
+- [x] **1.3 `algebra::pow(uint64_t, unsigned)` returns 0 for base 2, exp >= 32.**
   `util.h:100`: `return 1 << exp;` — `int` shift (UB for exp >= 31).
   Should be `uint64_t(1) << exp`. `pow(2,40)` → `0`. **[confirmed]**
 

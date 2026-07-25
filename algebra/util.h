@@ -97,7 +97,7 @@ constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) { return a % b; }
 
 constexpr uint64_t pow(uint64_t base, unsigned exp) {
     if (base == 2)
-        return 1 << exp;
+        return (exp < 64) ? (static_cast<uint64_t>(1) << exp) : 0; // 0 matches the wrap-around of the loop below
     if (exp == 0)
         return 1;
 
