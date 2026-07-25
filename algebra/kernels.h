@@ -352,8 +352,13 @@ constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init) {
             q[i] = 0;
     for (int i = a.size; i-- > 0;) {
         const uint64_t w = a[i];
-        if (w == 0)
+        if (w == 0) {
+            // q[i] is written by this iteration only, so it has to be cleared here:
+            // with init == true the loop above only clears q[a.size ..]. When q aliases
+            // a it already holds a[i] == 0.
+            q[i] = 0;
             continue;
+        }
 
         uint64_t* qi = q.words + i;
         auto acc = __mulq(w, b[0]);

@@ -1022,3 +1022,26 @@ TEST_CASE("mul_karatsuba with power of two operand") {
     REQUIRE(mul_karatsuba(a, d) == a * d);
     REQUIRE(mul_karatsuba(d, a) == a * d);
 }
+
+TEST_CASE("mul_karatsuba with sparse operands") {
+    for (int w : {33, 40, 64, 100}) {
+        natural a = 1;
+        a <<= 64 * w;
+        a += 1u; // interior words are all zero
+        natural b = 1;
+        b <<= 64 * w;
+        b += 3u;
+        REQUIRE(mul_karatsuba(a, b) == a * b);
+    }
+
+    natural a = 1;
+    a <<= 64 * 50;
+    a += 1u;
+    a <<= 64 * 50;
+    a += 7u;
+    natural b = 5;
+    b <<= 64 * 70;
+    b += 9u;
+    REQUIRE(mul_karatsuba(a, b) == a * b);
+    REQUIRE(mul_karatsuba(b, a) == a * b);
+}

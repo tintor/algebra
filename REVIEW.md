@@ -52,7 +52,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **1.9 `mul_karatsuba` is wrong when the second operand is a power of two.**
   `natural_class.h:479`: `std::countr_zero(a.words[B - 1])` should be `b.words[B - 1]`. **[confirmed]**
 
-- [ ] **1.10 `mul_karatsuba` throws on operands with interior zero limbs.**
+- [x] **1.10 `mul_karatsuba` throws on operands with interior zero limbs.**
   Root cause `kernels.h:351-353`: `__mul` skips writing `q[i]` when `a[i] == 0` (`continue`),
   but the `init` loop only zeroes `q[a.size ..]`. Every `__mul` call from the Karatsuba base
   case writes into an uninitialized `W` slice. Existing tests only use dense/all-ones operands.
