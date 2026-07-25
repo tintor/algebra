@@ -116,3 +116,45 @@ TEST_CASE("parse negative fraction below one") {
     REQUIRE(rational("-1.5") == rational(-3, 2));
     REQUIRE(rational("-0/5") == 0);
 }
+
+TEST_CASE("self assigning operators") {
+    {
+        rational a(1, 2);
+        a /= a;
+        REQUIRE(a == 1);
+    }
+    {
+        rational a(-3, 7);
+        a /= a;
+        REQUIRE(a == 1);
+    }
+    {
+        rational a(5);
+        a /= a;
+        REQUIRE(a == 1);
+    }
+    {
+        rational z(0);
+        REQUIRE_THROWS(z /= z);
+    }
+    {
+        rational a(1, 2);
+        a *= a;
+        REQUIRE(a == rational(1, 4));
+    }
+    {
+        rational a(1, 2);
+        a += a;
+        REQUIRE(a == 1);
+    }
+    {
+        rational a(1, 2);
+        a -= a;
+        REQUIRE(a == 0);
+    }
+    {
+        rational a(1, 2);
+        a %= a;
+        REQUIRE(a == 0);
+    }
+}

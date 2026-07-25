@@ -329,6 +329,13 @@ constexpr rational operator*(const rational& a, const integral auto& b) { return
 constexpr rational operator*(const integral auto& a, const rational& b) { return {a * b.num, b.den}; }
 
 constexpr rational& operator/=(rational& a, const rational& b) {
+    if (&a == &b) {
+        // a.den *= b.num below would read the already updated numerator
+        Check(!a.num.is_zero(), "rational with zero denominator");
+        a.num = 1;
+        a.den = 1;
+        return a;
+    }
     a.num *= b.den;
     a.den *= b.num;
     a.simplify();

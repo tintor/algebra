@@ -135,7 +135,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.7 `rational("-0.5")` loses the sign** — `rational_class.h:60`: `integer("-0")` is
   `+0`, so the later `if (num >= 0) num += frac` adds instead of subtracts. Returns `1/2`. **[confirmed]**
 
-- [ ] **2.8 `a /= a` and `a %= a` on `rational` are wrong** — `rational_class.h:330-335`
+- [x] **2.8 `a /= a` and `a %= a` on `rational` are wrong** — `rational_class.h:330-335`
   mutates `a.num` before reading `b.num`. `rational(1,2) /= itself` → `1/2` instead of `1`.
   **[confirmed]** (`+=`/`-=` are safe only because the `a.den == b.den` fast path catches
   self-aliasing.)
