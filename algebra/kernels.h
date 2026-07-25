@@ -460,7 +460,9 @@ constexpr void __add(vnatural& a, cnatural b, int shift = 0) {
     Check(a.capacity >= b.size + shift);
     while (a.size < b.size + shift)
         a[a.size++] = 0;
-    a.push_back(__add_and_return_carry(a, b, shift));
+    const uint64_t carry = __add_and_return_carry(a, b, shift);
+    if (carry)
+        a.push_back(carry);
 }
 
 // a = abs(a - b)

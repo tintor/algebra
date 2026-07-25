@@ -171,3 +171,22 @@ TEST_CASE("pow uint64") {
     REQUIRE(algebra::pow(static_cast<uint64_t>(3), 5) == 243);
     REQUIRE(algebra::pow(static_cast<uint64_t>(10), 19) == 10000000000000000000ull);
 }
+
+TEST_CASE("__add with zero carry into a full buffer") {
+    uint64_t w[] = {1, 2};
+    vnatural a {{w, 2}, 2}; // size == capacity
+    uint64_t b[] = {1};
+    __add(a, cnatural{b, 1}); // fits, no carry out
+    REQUIRE(a.size == 2);
+    REQUIRE(w[0] == 2);
+    REQUIRE(w[1] == 2);
+}
+
+TEST_CASE("__add with zero carry into a full buffer, shifted") {
+    uint64_t w[] = {1, 2, 3};
+    vnatural a {{w, 3}, 3};
+    uint64_t b[] = {1};
+    __add(a, cnatural{b, 1}, 2);
+    REQUIRE(a.size == 3);
+    REQUIRE(w[2] == 4);
+}

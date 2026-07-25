@@ -96,6 +96,12 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `bool(a)` is also true, and `2**64 - 1` keeps a leading zero word. Found while fixing 1.4.
   **[confirmed]**
 
+- [x] **1.19 `__add(vnatural&, cnatural, shift)` pushes a zero carry word.**
+  `kernels.h:455` called `a.push_back(carry)` unconditionally, so adding into a buffer whose
+  size already equals its capacity threw `Check failed ... vnatural::push_back` even when there
+  was no carry out. This is what made `mul_karatsuba` throw on sparse operands (the
+  `mul_max_size` bound leaves no spare word). Found while fixing 1.10. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [ ] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
