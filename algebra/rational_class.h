@@ -59,6 +59,8 @@ public:
 
         std::string_view group1(match[1].first, match[1].second - match[1].first);
         num = integer(group1);
+        // integer("-0") is +0, so the sign has to come from the text
+        const bool negative = group1.size() && group1[0] == '-';
 
         std::string_view group2(match[2].first, match[2].second - match[2].first);
         if (group2.empty()) {
@@ -69,7 +71,7 @@ public:
             den = pow(integer(10), group2.size() - 1);
             num *= den;
             integer frac(group2.substr(1));
-            if (num >= 0) num += frac; else num -= frac;
+            if (negative) num -= frac; else num += frac;
         } else
             throw std::runtime_error("unreachable");
 

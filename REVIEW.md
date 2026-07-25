@@ -132,7 +132,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   calls `simplify()`, so `rational(1,0)` yields `1/0` while `rational(integer(1), integer(0))`
   throws. **[confirmed]**
 
-- [ ] **2.7 `rational("-0.5")` loses the sign** — `rational_class.h:60`: `integer("-0")` is
+- [x] **2.7 `rational("-0.5")` loses the sign** — `rational_class.h:60`: `integer("-0")` is
   `+0`, so the later `if (num >= 0) num += frac` adds instead of subtracts. Returns `1/2`. **[confirmed]**
 
 - [ ] **2.8 `a /= a` and `a %= a` on `rational` are wrong** — `rational_class.h:330-335`

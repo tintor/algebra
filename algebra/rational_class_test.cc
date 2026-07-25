@@ -104,3 +104,15 @@ TEST_CASE("zero denominator throws") {
     REQUIRE(q(1, 2) == rational(1, 2));
     REQUIRE(q(-4, 8) == rational(-1, 2));
 }
+
+TEST_CASE("parse negative fraction below one") {
+    REQUIRE(rational("-0.5") == rational(-1, 2));
+    REQUIRE(rational("-0.001") == rational(-1, 1000));
+    REQUIRE(rational("-0.25") == rational(-1, 4));
+    REQUIRE(rational("-0.5e1") == rational(-5));
+    REQUIRE(rational("-0.5e-1") == rational(-1, 20));
+    REQUIRE(rational("0.5") == rational(1, 2));
+    REQUIRE(rational("-0.0") == 0);
+    REQUIRE(rational("-1.5") == rational(-3, 2));
+    REQUIRE(rational("-0/5") == 0);
+}
