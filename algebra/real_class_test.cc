@@ -53,3 +53,22 @@ TEST_CASE("+") {
     REQUIRE(1_d + 0 == 1_d);
     REQUIRE(0.0001_d + 0 == 0.0001_d);
 }
+
+TEST_CASE("real<2> from rational") {
+    REQUIRE(to_rational(real<2>(rational(4))) == rational(4));
+    REQUIRE(to_rational(real<2>(rational(1))) == rational(1));
+    REQUIRE(to_rational(real<2>(rational(6))) == rational(6));
+    REQUIRE(to_rational(real<2>(rational(-12))) == rational(-12));
+    REQUIRE(to_rational(real<2>(rational(3, 4))) == rational(3, 4));
+    REQUIRE(to_rational(real<2>(rational(-3, 8))) == rational(-3, 8));
+    REQUIRE(to_rational(real<2>(rational(0))) == rational(0));
+
+    REQUIRE(to_rational(real<2>(4.0f)) == rational(4));
+    REQUIRE(to_rational(real<2>(4.0)) == rational(4));
+    REQUIRE(to_rational(real<2>(-6.0)) == rational(-6));
+    REQUIRE(to_rational(real<2>(1.5)) == rational(3, 2));
+
+    REQUIRE(to_rational(decimal(rational(4))) == rational(4));
+    REQUIRE(to_rational(decimal(rational(-20))) == rational(-20));
+    REQUIRE(to_rational(decimal(rational(1, 4))) == rational(1, 4));
+}

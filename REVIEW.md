@@ -39,7 +39,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   (compare the correct `t` block above it); the following `r.swap(new_r); new_r.swap(e)`
   then restores the old `r`, so the Euclid state never advances. **[confirmed]**
 
-- [ ] **1.7 `real<2>(rational)` double-counts the numerator's trailing zeros.**
+- [x] **1.7 `real<2>(rational)` double-counts the numerator's trailing zeros.**
   `real_class.h:65-67` adds `z` to `exp`, then `normalize()` adds it again.
   `real<2>(rational(4))` → `num=1, exp=4` = **16**; `real<2>(4.0f)` likewise. **[confirmed]**
 

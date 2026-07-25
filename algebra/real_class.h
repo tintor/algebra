@@ -62,9 +62,8 @@ constexpr real<Base>::real(const rational& s) {
     if constexpr (Base == 2) {
         if (!is_power_of_two(s.den))
             throw std::runtime_error("inexact conversion");
-        exp = -s.den.num_trailing_zeros();
-        auto z = num.num_trailing_zeros();
-        exp += z;
+        // trailing zeros of num are moved into exp by normalize() below
+        exp = -static_cast<int>(s.den.num_trailing_zeros());
     } else if constexpr (Base == 10) {
         // Check if s.den has any prime factors not in base
         integer a = s.den;
