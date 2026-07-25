@@ -170,7 +170,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.17 `cross(Vec3,Vec3)`** — `vector.h:188`: the y component is `a.x*b.z - a.z*b.x`,
   i.e. negated relative to the standard cross product.
 
-- [ ] **2.18 `__gcd_inner`** — `natural.h:145` uses `__builtin_ctzl` (64-bit) on `T` that can
+- [x] **2.18 `__gcd_inner`** — `natural.h:145` uses `__builtin_ctzl` (64-bit) on `T` that can
   be `unsigned __int128` via `larger_type`.
 
 - [ ] **2.19 Non-x86-64 build is broken** — `util.h:60`: `m = a % b;` references an undeclared

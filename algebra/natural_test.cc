@@ -639,3 +639,18 @@ TEST_CASE("try_fermat_factorize") {
         }
     }
 }
+
+TEST_CASE("gcd 128 bit") {
+    const uint128_t one = 1;
+    REQUIRE(gcd(one << 100, one << 70) == (one << 70));
+    REQUIRE(gcd(3 * (one << 70), one << 100) == (one << 70));
+    REQUIRE(gcd(one << 64, one << 64) == (one << 64));
+    REQUIRE(gcd(5 * (one << 64), 15 * (one << 64)) == 5 * (one << 64));
+    REQUIRE(gcd(one << 127, 3 * (one << 65)) == (one << 65));
+    REQUIRE(gcd((one << 100) + 1, one << 100) == 1);
+
+    // odd 128 bit values (low word non-zero)
+    const uint128_t p = (one << 89) - 1; // 618970019642690137449562111 = 618970019642690137449562111
+    REQUIRE(gcd(p * 3, p * 5) == p);
+    REQUIRE(gcd(p, p) == p);
+}

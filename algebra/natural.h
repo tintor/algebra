@@ -142,7 +142,7 @@ constexpr natural uniform_sample(const natural& min, const natural& max, auto& r
 template<std_unsigned_int T>
 constexpr T __gcd_inner(T a, T b) {
     while (b) {
-        b >>= __builtin_ctzl(b); // since b is non-zero
+        b >>= std::countr_zero(b); // since b is non-zero (__builtin_ctzl would truncate T to 64 bits)
         if (a > b)
             std::swap(a, b);
         b -= a;
