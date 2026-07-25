@@ -177,7 +177,7 @@ constexpr BinarySplit __PI(unsigned a, unsigned b) {
         integer e = a;
         integer p = -(6*e - 5)*(2*e - 1)*(6*e - 1);
         integer q = 10939058860032000 * (e * e * e);
-        integer r = p * (545140134*a + 13591409);
+        integer r = p * (545140134ull * a + 13591409); // 545140134 * a overflows 32 bits for a >= 8
         return {p, q, r};
     }
     unsigned m = (a + b) / 2;

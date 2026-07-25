@@ -70,7 +70,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `natural_class.h:390`: `return static_cast<uint64_t>(b) < b;` — should be
   `static_cast<uint64_t>(a) < b`, and it throws for naturals > 64 bits. **[confirmed]**
 
-- [ ] **1.14 `__PI` overflows 32-bit unsigned.**
+- [x] **1.14 `__PI` overflows 32-bit unsigned.**
   `rational.h:180`: `545140134*a` with `unsigned a` wraps for `a >= 8`, corrupting every
   Chudnovsky term past ~digit 110. `545140134*8` → `66153776`. **[confirmed]**
 

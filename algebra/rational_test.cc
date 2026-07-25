@@ -70,3 +70,14 @@ TEST_CASE("sin") {
     REQUIRE(approx_log2(sin(2_q, 14) - rational(sin(2.0))) <= -50);
     REQUIRE(approx_log2(sin(1/2_q, 12) - rational(sin(0.5))) <= -50);
 }
+
+TEST_CASE("__PI leaf term") {
+    // p = -(6a-5)(2a-1)(6a-1), q = 10939058860032000 * a^3, r = p * (545140134*a + 13591409)
+    for (unsigned a : {1u, 2u, 7u, 8u, 9u, 20u, 100u}) {
+        const BinarySplit e = __PI(a, a + 1);
+        const integer ai = a;
+        REQUIRE(e.p == -(6 * ai - 5) * (2 * ai - 1) * (6 * ai - 1));
+        REQUIRE(e.q == integer(10939058860032000ll) * (ai * ai * ai));
+        REQUIRE(e.r == e.p * (integer(545140134) * ai + 13591409));
+    }
+}
