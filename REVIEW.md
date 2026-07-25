@@ -193,6 +193,13 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   documents "Throws exception if `num` is zero". Found while fixing 2.9 (`pow(0, -3)` returned
   `1/0` instead of throwing). **[confirmed]**
 
+- [x] **2.23 `isqrt(uint64_t)` is wrong near the top of the range and for large perfect
+  squares.** `natural.h:206` — for `x` close to `UINT64_MAX` the `std::sqrt` estimate is `2**32`
+  and the correction `q * q > x` overflows to 0, so it returned `2**32` (whose square does not
+  fit in 64 bits); and because `double` can round a large perfect square down, the truncated
+  estimate could be one too small with no upward correction. Found while fixing 2.16.
+  **[confirmed]**
+
 ## 3. Correct today, but fragile
 
 - **`integer` carries a duplicate word buffer.** `integer_class.h:11` has both `natural abs`

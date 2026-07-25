@@ -559,3 +559,30 @@ TEST_CASE("merseinne primes vs is_likely_prime") {
         CHECK(actual == expected);
     }
 }
+
+TEST_CASE("isqrt uint64") {
+    REQUIRE(isqrt(static_cast<uint64_t>(0)) == 0);
+    REQUIRE(isqrt(static_cast<uint64_t>(1)) == 1);
+    REQUIRE(isqrt(static_cast<uint64_t>(3)) == 1);
+    REQUIRE(isqrt(static_cast<uint64_t>(4)) == 2);
+    REQUIRE(isqrt(static_cast<uint64_t>(8)) == 2);
+    REQUIRE(isqrt(static_cast<uint64_t>(9)) == 3);
+    REQUIRE(isqrt(UINT64_MAX) == 4294967295ull);
+    REQUIRE(isqrt(UINT64_MAX - 1) == 4294967295ull);
+
+    // large perfect squares and their neighbours
+    for (uint64_t k : {3037000499ull, 4000000000ull, 4294967290ull, 4294967291ull, 4294967295ull}) {
+        REQUIRE(isqrt(k * k) == k);
+        REQUIRE(isqrt(k * k - 1) == k - 1);
+        if (k * k + 1 != 0)
+            REQUIRE(isqrt(k * k + 1) == k);
+    }
+
+    std::mt19937_64 rng(11);
+    for (int i = 0; i < 20000; i++) {
+        const uint64_t x = rng();
+        const uint64_t q = isqrt(x);
+        REQUIRE(static_cast<uint128_t>(q) * q <= x);
+        REQUIRE(static_cast<uint128_t>(q + 1) * (q + 1) > x);
+    }
+}

@@ -204,9 +204,14 @@ constexpr natural lcm(const natural& a, const natural& b) {
 }
 
 constexpr uint64_t isqrt(const uint64_t x) {
-    uint64_t q = static_cast<uint64_t>(std::sqrt(x));
+    constexpr uint64_t MAX = UINT32_MAX; // isqrt(UINT64_MAX), also the largest q with q*q <= UINT64_MAX
+    uint64_t q = static_cast<uint64_t>(std::sqrt(static_cast<double>(x)));
+    if (q > MAX)
+        q = MAX; // q * q below must not overflow
     if (q * q > x)
         q -= 1;
+    else if (q < MAX && (q + 1) * (q + 1) <= x)
+        q += 1; // double can round a large perfect square down
     return q;
 }
 
