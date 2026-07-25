@@ -712,7 +712,7 @@ constexpr bool is_possible_square(const natural& a) {
         && is_one_of(m65, {0,1,4,9,10,14,16,25,26,29,30,35,36,39,40,49,51,55,56,61,64});
 }
 
-uint64_t try_fermat_factorize(uint64_t n) {
+inline uint64_t try_fermat_factorize(uint64_t n) {
     if (n % 2 == 0)
         return 2;
 

@@ -42,5 +42,12 @@ cc_library(
     deps = [":rational", ":real", ":expr", ":geometry", ":rational_vector"],
 )
 
+cc_test(
+    name = "link_test",
+    srcs = ["link_test.cc", "link_test2.cc"],
+    deps = [":algebra", ":__test"],
+    args = ["-d=yes"],
+)
+
 cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":rational", ":xrational", ":real"])
 cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":natural"])

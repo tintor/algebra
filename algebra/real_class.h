@@ -247,7 +247,7 @@ constexpr decimal operator""_d(const char* s) { return rational(s); }
 
 }
 
-std::optional<int> REAL_FRACT_DIGITS;
+inline std::optional<int> REAL_FRACT_DIGITS;
 
 template <int B>
 struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational, char> {

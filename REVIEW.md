@@ -74,7 +74,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `rational.h:180`: `545140134*a` with `unsigned a` wraps for `a >= 8`, corrupting every
   Chudnovsky term past ~digit 110. `545140134*8` → `66153776`. **[confirmed]**
 
-- [ ] **1.15 Header-only library can't be linked from two TUs.**
+- [x] **1.15 Header-only library can't be linked from two TUs.**
   Three non-`inline` definitions at namespace scope: `REAL_FRACT_DIGITS` (`real_class.h:251`),
   `__divide_2n1n` (`natural_class.h:954`), `try_fermat_factorize` (`natural.h:715`).
   `multiple definition of ...` x3. **[confirmed]**
