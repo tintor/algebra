@@ -155,9 +155,12 @@ constexpr void mod(integer& a, const integer& b) {
     const bool negative = a.is_negative();
     a.abs.words.set_negative(false);
     mod(a.abs, b.abs);
-    if (negative) {
-        a.negate();
-        a += b;
+    if (negative && !a.abs.words.empty()) {
+        // result is in [0, abs(b)) range
+        natural e = b.abs;
+        e.words.set_negative(false);
+        e -= a.abs;
+        a = std::move(e);
     }
 }
 

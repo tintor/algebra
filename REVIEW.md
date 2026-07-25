@@ -144,7 +144,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   negative `long` is an arithmetic shift that sticks at `-1`, while `_base *= _base` grows
   without bound. Only `-1` and `-2` are special-cased.
 
-- [ ] **2.10 `mod()` returns the modulus instead of 0 for exact multiples** —
+- [x] **2.10 `mod()` returns the modulus instead of 0 for exact multiples** —
   `integer.h:160-163` and `integer_class.h:542-545`, `:551`: `mod(-10, 5)` → `5`.
 
 - [ ] **2.11 `pow(integer base, exp, integer result)` returns `1` for `exp == 0`**

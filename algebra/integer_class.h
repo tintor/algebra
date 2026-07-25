@@ -534,17 +534,19 @@ constexpr integer mod(const integer& a, const integer& b) {
     // converts implicitly to integer. Call the natural kernel explicitly.
     natural r;
     mod(static_cast<const natural&>(a.abs), static_cast<const natural&>(b.abs), /*out*/r);
-    integer m = std::move(r);
-    if (a.is_negative()) {
-        m.negate();
-        m += b;
+    if (a.is_negative() && !r.words.empty()) {
+        // result is in [0, abs(b)) range
+        natural e = b.abs;
+        e.words.set_negative(false);
+        e -= r;
+        return e;
     }
-    return m;
+    return r;
 }
 
 constexpr uint64_t mod(const integer& a, uint64_t b) {
     uint64_t m = a.abs % b;
-    return a.is_negative() ? b - m : m;
+    return (a.is_negative() && m) ? (b - m) : m;
 }
 
 // TODO this version doesn't use uint128_t %, is it faster?

@@ -97,3 +97,16 @@ TEST_CASE("inverse_mod") {
     REQUIRE(inverse_mod(3_n, big, out));
     REQUIRE((3_n * out) % big == 1);
 }
+
+TEST_CASE("in place mod is euclidean") {
+    auto m = [](long a, long b) { integer x = a; mod(x, integer(b)); return x; };
+    REQUIRE(m(-10, 5) == 0);
+    REQUIRE(m(-10, 3) == 2);
+    REQUIRE(m(10, 3) == 1);
+    REQUIRE(m(-9, 3) == 0);
+    REQUIRE(m(9, 3) == 0);
+    REQUIRE(m(0, 3) == 0);
+    REQUIRE(m(-1, 3) == 2);
+    REQUIRE(m(-10, -3) == 2);
+    REQUIRE(m(10, -3) == 1);
+}

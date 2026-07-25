@@ -652,3 +652,29 @@ TEST_CASE("parse with base") {
     REQUIRE(integer("-123") == -123);
     REQUIRE(integer(std::string_view("ff"), 16) == 255);
 }
+
+TEST_CASE("mod is euclidean") {
+    // mod() returns a value in [0, abs(b))
+    REQUIRE(mod(-1_i, 7u) == 6);
+    REQUIRE(mod(-6_i, 7u) == 1);
+    REQUIRE(mod(-7_i, 7u) == 0);
+    REQUIRE(mod(-14_i, 7u) == 0);
+    REQUIRE(mod(7_i, 7u) == 0);
+    REQUIRE(mod(0_i, 7u) == 0);
+
+    REQUIRE(mod(integer(-10), integer(5)) == 0);
+    REQUIRE(mod(integer(-10), integer(3)) == 2);
+    REQUIRE(mod(integer(10), integer(3)) == 1);
+    REQUIRE(mod(integer(-10), integer(-3)) == 2);
+    REQUIRE(mod(integer(10), integer(-3)) == 1);
+    REQUIRE(mod(integer(-9), integer(3)) == 0);
+    REQUIRE(mod(integer(0), integer(3)) == 0);
+
+    // large operands
+    integer big = 1;
+    big <<= 200;
+    REQUIRE(mod(big, big) == 0);
+    integer nbig = -big;
+    REQUIRE(mod(nbig, big) == 0);
+    REQUIRE(mod(nbig - 1, big) == big - 1);
+}
