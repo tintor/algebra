@@ -15,11 +15,14 @@ using cent = __int128;
 using ulong = unsigned long;
 using uint = unsigned int;
 
+// Workaround for a libc++ std::print() issue; not present (and not compilable) with libstdc++.
+#ifdef _LIBCPP_VERSION
 namespace std {
 inline namespace __1 {
 bool __is_posix_terminal(__sFILE*) { return true; }
 }
 }
+#endif
 
 class Random {
 public:
