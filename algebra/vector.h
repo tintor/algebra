@@ -220,11 +220,11 @@ constexpr bool loose_order(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c)
 
 template<typename T>
 constexpr bool same_sign(const T& a, const T& b) {
-    if (sign(a) > 0)
-        return sign(b) > 0;
-    if (sign(a) < 0)
-        return sign(b) < 0;
-    return sign(b) == 0;
+    if (signum(a) > 0)
+        return signum(b) > 0;
+    if (signum(a) < 0)
+        return signum(b) < 0;
+    return signum(b) == 0;
 }
 
 template<int D, typename T>

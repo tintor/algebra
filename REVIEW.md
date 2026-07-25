@@ -176,7 +176,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.19 Non-x86-64 build is broken** — `util.h:60`: `m = a % b;` references an undeclared
   `m` (should be `r`).
 
-- [ ] **2.20 `geometry.h` does not compile if instantiated**: `operator*(Plane3,Plane3)` uses
+- [x] **2.20 `geometry.h` does not compile if instantiated**: `operator*(Plane3,Plane3)` uses
   `a.x/a.y/a.z` on a type with members `n,d,den` (`:27`); `line_plane_intersection` uses
   `p.origin` where the member is `orig` (`:71`); `plane_intersection` calls `solve_linear` with
   scalars and `std::get<Vec3<T>>` on a `variant<None,T,Any>` (`:61-62`), needs a nonexistent

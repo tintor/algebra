@@ -23,8 +23,9 @@ struct Plane3 {
     T den; // n is not divided to avoid imprecise irrational numbers
 };
 
+// same set of points, opposite orientation
 template<typename T>
-constexpr Vec3<T> operator*(const Plane3<T>& a, const Plane3<T>& b) { return {a.x * b.x, a.y * b.y, a.z * b.z}; }
+constexpr Plane3<T> operator-(const Plane3<T>& a) { return {-a.n, -a.d, a.den}; }
 
 template<typename T>
 constexpr bool operator==(const Plane3<T>& a, const Plane3<T>& b) {
@@ -45,35 +46,59 @@ constexpr bool are_parallel(const Vec3<T>& a, const Vec3<T>& b) {
 
 // result can be:
 // - empty
-// - line
-// - plane
+// - point
+// - line (when the line lies inside the plane)
 template<typename T>
-std::variant<None, Line3<T>, Plane3<T>> plane_intersection(const Plane3<T>& a, const Plane3<T>& b) {
-    if (are_parallel(a.n, b.n))
-        return (a == b || a == -b) ? a : None();
-
-    // result is a line
-    Vec3<T> dir = cross(a.n, b.n);
-    simplify(dir.x, dir.y, dir.z); // TODO generalize this (for floats it would be normalization, for bigints division by gcd)
-
-    const T ad = dot(a.n, dir);
-    const T bd = dot(b.n, dir);
-    const auto origin = solve_linear(a.d * bd - b.d * ad, a.n * bd - b.n * ad);
-    return Line3<T>{std::get<Vec3<T>>(origin), dir};
+std::variant<None, Vec3<T>, Line3<T>> line_plane_intersection(const Line3<T>& p, const Plane3<T>& q) {
+    // q.n * (p.orig + p.dir * t) + q.d == 0
+    const T den = dot(p.dir, q.n);
+    const T num = dot(q.n, p.orig) + q.d;
+    if (den == 0) {
+        if (num == 0)
+            return p; // whole line is inside the plane
+        return None();
+    }
+    return p.orig + p.dir * (-num / den);
 }
 
 // result can be:
 // - empty
-// - point
 // - line
+// - plane
+// Note: the point on the resulting line generally has non-integer coordinates,
+// so T needs exact division (rational) even though Plane3 itself works with integers.
 template<typename T>
-std::variant<None, Vec3<T>, Line3<T>> line_plane_intersection(const Line3<T>& p, const Plane3<T>& q) {
-    auto res = solve_linear(dot(q.n, p.origin) + q.d, dot(p.dir, q.n));
-    if (std::holds_alternative<None>(res))
+std::variant<None, Line3<T>, Plane3<T>> plane_intersection(const Plane3<T>& a, const Plane3<T>& b) {
+    if (are_parallel(a.n, b.n)) {
+        if (a == b || a == -b)
+            return a;
         return None();
-    if (std::holds_alternative<Any>(res))
-        return p;
-    return p.orig + p.dir * std::get<T>(res);
+    }
+
+    // result is a line
+    Vec3<T> dir = cross(a.n, b.n);
+    // point on both planes (note: this uses dir before it is scaled down below)
+    const Vec3<T> orig = (cross(b.n, dir) * -a.d + cross(dir, a.n) * -b.d) / dot(dir, dir);
+    simplify(dir.x, dir.y, dir.z); // TODO generalize this (for floats it would be normalization, for bigints division by gcd)
+    return Line3<T>{orig, dir};
+}
+
+template<typename T>
+constexpr std::variant<None, Vec3<T>, Line3<T>, Plane3<T>> __widen(const std::variant<None, Line3<T>, Plane3<T>>& a) {
+    if (const Line3<T>* e = std::get_if<Line3<T>>(&a))
+        return *e;
+    if (const Plane3<T>* e = std::get_if<Plane3<T>>(&a))
+        return *e;
+    return None();
+}
+
+template<typename T>
+constexpr std::variant<None, Vec3<T>, Line3<T>, Plane3<T>> __widen(const std::variant<None, Vec3<T>, Line3<T>>& a) {
+    if (const Vec3<T>* e = std::get_if<Vec3<T>>(&a))
+        return *e;
+    if (const Line3<T>* e = std::get_if<Line3<T>>(&a))
+        return *e;
+    return None();
 }
 
 // result can be:
@@ -89,25 +114,39 @@ std::variant<None, Vec3<T>, Line3<T>, Plane3<T>> plane_intersection(const Plane3
     Vec3<T> Z{a.n.z, b.n.z, c.n.z};
     Vec3<T> m;
     T det;
+    // D + X*m.x + Y*m.y + Z*m.z == 0 is the three plane equations
     if (__solve_linear(D, X, Y, Z, m.x, m.y, m.z, det))
-        return m / D;
+        return m / det;
 
     const bool ab = are_parallel(a.n, b.n);
     const bool bc = are_parallel(b.n, c.n);
 
     // all three planes parallel
-    if (ab && bc)
-        return ((a == b || a == -b) && (c == b || c == -b)) ? a : None();
+    if (ab && bc) {
+        if ((a == b || a == -b) && (c == b || c == -b))
+            return a;
+        return None();
+    }
 
-    if (ab)
-        return (a == b || a == -b) ? plane_intersection(a, c) : None();
-    if (bc)
-        return (b == c || b == -c) ? plane_intersection(a, b) : None();
-    if (are_parallel(a, c))
-        return (a == c || a == -c) ? plane_intersection(a, b) : None();
+    if (ab) {
+        if (a == b || a == -b)
+            return __widen(plane_intersection(a, c));
+        return None();
+    }
+    if (bc) {
+        if (b == c || b == -c)
+            return __widen(plane_intersection(a, b));
+        return None();
+    }
+    if (are_parallel(a.n, c.n)) {
+        if (a == c || a == -c)
+            return __widen(plane_intersection(a, b));
+        return None();
+    }
 
+    // normals are linearly dependent, but no two planes are parallel
     auto res = plane_intersection(a, b); // res must be a line
-    return line_plane_intersection(std::get<Line3<T>>(res), c);
+    return __widen(line_plane_intersection(std::get<Line3<T>>(res), c));
 }
 
 }
