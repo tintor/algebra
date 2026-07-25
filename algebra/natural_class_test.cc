@@ -1104,3 +1104,23 @@ TEST_CASE("divide_bz matches div") {
         REQUIRE(r1 == r2);
     }
 }
+
+TEST_CASE("compare with uint128") {
+    natural big = 1;
+    big <<= 100;
+
+    REQUIRE(static_cast<uint128_t>(5) < big);
+    REQUIRE(!(big < static_cast<uint128_t>(5)));
+    REQUIRE(static_cast<uint128_t>(0) < big);
+
+    natural small = 5;
+    REQUIRE(!(static_cast<uint128_t>(5) < small));
+    REQUIRE(static_cast<uint128_t>(4) < small);
+    REQUIRE(!(static_cast<uint128_t>(6) < small));
+
+    const uint128_t huge = (static_cast<uint128_t>(1) << 100) + 1;
+    REQUIRE(big < huge);
+    REQUIRE(!(huge < big));
+    REQUIRE(small < huge);
+    REQUIRE(!(huge < small));
+}

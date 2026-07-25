@@ -66,7 +66,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   integer digits than `N`.** `rational_class.h:451-452`: `s[i + s.size() - r]` with `r > s.size()`;
   needs zero padding. `{:.3}` of `1/1000` → `'0.  1'`. **[confirmed]**
 
-- [ ] **1.13 `operator<(uint128_t, natural)` compares `b` with itself.**
+- [x] **1.13 `operator<(uint128_t, natural)` compares `b` with itself.**
   `natural_class.h:390`: `return static_cast<uint64_t>(b) < b;` — should be
   `static_cast<uint64_t>(a) < b`, and it throws for naturals > 64 bits. **[confirmed]**
 

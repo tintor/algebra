@@ -387,7 +387,7 @@ constexpr bool operator<(const natural& a, const uint128_t b) {
 
 constexpr bool operator<(const uint128_t a, const natural& b) {
     if (a <= UINT64_MAX)
-        return static_cast<uint64_t>(b) < b;
+        return static_cast<uint64_t>(a) < b;
     if (b.words.size() < 2)
         return false;
     if (b.words.size() > 2)
