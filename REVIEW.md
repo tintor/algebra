@@ -157,7 +157,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.13 `xrational::operator/=(xrational&, rational_like)` returns `b`, not `a`**
   (`xrational.h:243`) — ill-formed as soon as it is instantiated.
 
-- [ ] **2.14 `operator==(xrational, xrational)`** — `xrational.h:276`: `bs *= a.base.num.abs`
+- [x] **2.14 `operator==(xrational, xrational)`** — `xrational.h:276`: `bs *= a.base.num.abs`
   should be `b.base.num.abs`.
 
 - [ ] **2.15 `isqrt3`** — `natural.h:408`: `v -= a` runs on a freshly-constructed (zero)

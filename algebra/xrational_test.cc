@@ -72,3 +72,21 @@ TEST_CASE("compound assignment with rational") {
         REQUIRE(a == 2_x);
     }
 }
+
+TEST_CASE("equality with different roots") {
+    // (2/3)*sqrt(245) == (14/3)*sqrt(5), since sqrt(245) == 7*sqrt(5)
+    const xrational a(2/3_q, natural(245));
+    const xrational b(14/3_q, natural(5));
+    REQUIRE(sqr(a) == sqr(b));
+    REQUIRE(a == b);
+    REQUIRE(b == a);
+
+    const xrational c(15/3_q, natural(5));
+    REQUIRE(!(a == c));
+    REQUIRE(!(c == a));
+
+    const xrational d(-2/3_q, natural(245));
+    const xrational e(-14/3_q, natural(5));
+    REQUIRE(d == e);
+    REQUIRE(!(a == e));
+}

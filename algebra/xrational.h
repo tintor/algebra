@@ -270,10 +270,11 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     as.words.reserve_bits(ra.max);
     bs.words.reserve_bits(rb.max);
 
+    // a == b  <=>  a.num * as * b.den == b.num * bs * a.den
     as *= b.base.den.abs;
     as *= a.base.num.abs;
     bs *= a.base.den.abs;
-    bs *= a.base.num.abs;
+    bs *= b.base.num.abs;
     return as == bs;
 }
 
