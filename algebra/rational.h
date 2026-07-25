@@ -254,7 +254,7 @@ constexpr void simplify(rational& x, rational& y) {
 }
 
 constexpr void simplify(rational& x, rational& y, rational& z) {
-    simplify(x.num, y.num, z.den);
+    simplify(x.num, y.num, z.num);
     simplify(x.den, y.den, z.den);
 }
 

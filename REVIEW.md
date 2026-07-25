@@ -151,7 +151,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   (`integer.h:73`) where every other branch means `result * base^exp` → should return `result`.
   It also tests `base == 2` before the `exp < 0` check.
 
-- [ ] **2.12 `simplify(rational&, rational&, rational&)`** — `rational.h:254` passes `z.den`
+- [x] **2.12 `simplify(rational&, rational&, rational&)`** — `rational.h:254` passes `z.den`
   where `z.num` is meant.
 
 - [ ] **2.13 `xrational::operator/=(xrational&, rational_like)` returns `b`, not `a`**
