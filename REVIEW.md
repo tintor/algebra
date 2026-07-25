@@ -25,7 +25,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `util.h:100`: `return 1 << exp;` — `int` shift (UB for exp >= 31).
   Should be `uint64_t(1) << exp`. `pow(2,40)` → `0`. **[confirmed]**
 
-- [ ] **1.4 `++integer` / `--integer` change the value by 2.**
+- [x] **1.4 `++integer` / `--integer` change the value by 2.**
   `integer_class.h:194-221` — `++abs` already increments, then
   `__increment_and_return_carry(*this)` increments the *same* storage again
   (`operator inatural()` returns `abs.words`). `++integer(5)` → 7. **[confirmed]**

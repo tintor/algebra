@@ -191,31 +191,23 @@ struct integer {
     constexpr operator vnatural() { return {{abs.words.data(), abs.words.size()}, abs.words.capacity()}; }
     constexpr operator inatural() { return {abs.words.data(), abs.words.size()}; }
 
+    // TODO update words
     constexpr integer& operator++() {
-        if (is_negative()) {
+        // natural::operator++/-- work on the magnitude and preserve the sign of abs.words
+        if (is_negative())
             --abs;
-            inatural a = *this;
-            __decrement(a);
-            words.downsize(a.size);
-        } else {
+        else
             ++abs;
-            if (__increment_and_return_carry(*this))
-                words.push_back(1);
-        }
         return *this;
     }
 
+    // TODO update words
     constexpr integer& operator--() {
-        if (is_negative()) {
+        if (is_negative())
             ++abs;
-            if (__increment_and_return_carry(*this))
-                words.push_back(1);
-        } else if (abs.words.size() > 0) {
+        else if (abs.words.size() > 0)
             --abs;
-            inatural a = *this;
-            __decrement(a);
-            words.downsize(a.size);
-        } else
+        else
             *this = -1;
         return *this;
     }

@@ -564,3 +564,47 @@ constexpr std::string os() {
 TEST_CASE("constexpr ostream") {
     REQUIRE(os() == "-15");
 }
+
+TEST_CASE("increment / decrement") {
+    integer a = 5;
+    REQUIRE(++a == 6);
+    REQUIRE(a == 6);
+    REQUIRE(a++ == 6);
+    REQUIRE(a == 7);
+
+    integer b = 5;
+    REQUIRE(--b == 4);
+    REQUIRE(b == 4);
+    REQUIRE(b-- == 4);
+    REQUIRE(b == 3);
+
+    integer c = -5;
+    REQUIRE(++c == -4);
+    REQUIRE(--c == -5);
+
+    integer z = 0;
+    REQUIRE(++z == 1);
+    REQUIRE(--z == 0);
+    REQUIRE(--z == -1);
+    REQUIRE(++z == 0);
+    REQUIRE(z.sign() == 0);
+
+    // carry across a word boundary
+    integer w2_64 = 1;
+    w2_64 <<= 64;
+    integer w = w2_64;
+    --w;
+    ++w;
+    REQUIRE(w == w2_64);
+    ++w;
+    --w;
+    REQUIRE(w == w2_64);
+
+    integer n = w2_64;
+    n.negate();
+    integer nw = n;
+    ++nw;
+    REQUIRE(nw == n + 1);
+    --nw;
+    REQUIRE(nw == n);
+}
