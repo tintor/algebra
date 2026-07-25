@@ -219,7 +219,13 @@ constexpr expr_ptr operator*(expr_ptr a, std_int auto b) { return a * make_integ
 constexpr expr_ptr operator/(std_int auto a, expr_ptr b) { return make_integer(a) / b; }
 constexpr expr_ptr operator/(expr_ptr a, std_int auto b) { return a / make_integer(b); }
 
+// structural equality; note that operator==(expr_ptr, expr_ptr) below compares by value
+// (via sign of the difference) and must not be used by the simplification code, which runs
+// while the value comparison is still being built up.
 constexpr bool identical(expr_ptr a, expr_ptr b) {
+    if (a.get() == b.get())
+        return true;
+
     auto ai = dcast<expr_integer>(a);
     if (ai) {
         auto bi = dcast<expr_integer>(b);
@@ -263,7 +269,25 @@ constexpr bool identical(expr_ptr a, expr_ptr b) {
     auto an = dcast<expr_negation>(a);
     if (an) {
         auto bn = dcast<expr_negation>(b);
-        return bn && an->value == bn->value;
+        return bn && identical(an->value, bn->value);
+    }
+
+    auto asin = dcast<expr_sin>(a);
+    if (asin) {
+        auto bsin = dcast<expr_sin>(b);
+        return bsin && identical(asin->value, bsin->value);
+    }
+
+    auto acos = dcast<expr_cos>(a);
+    if (acos) {
+        auto bcos = dcast<expr_cos>(b);
+        return bcos && identical(acos->value, bcos->value);
+    }
+
+    auto av = dcast<expr_var>(a);
+    if (av) {
+        auto bv = dcast<expr_var>(b);
+        return bv && av->name == bv->name;
     }
 
     if (dcast<expr_e>(a))
@@ -271,7 +295,7 @@ constexpr bool identical(expr_ptr a, expr_ptr b) {
     if (dcast<expr_pi>(a))
         return dcast<expr_pi>(b);
 
-    throw std::runtime_error("unreachable");
+    return false; // not provably identical
 }
 
 constexpr std::optional<int> safe_sign(expr_ptr a);
@@ -353,19 +377,19 @@ constexpr expr_ptr operator+(expr_ptr a, expr_ptr b) {
     if (is_sum(b))
         return make_sum(a + sum_values(b));
 
-    if (a == b)
+    if (identical(a, b))
         return 2 * a;
 
-    if (is_negation(a) && negation_value(a) == b)
+    if (is_negation(a) && identical(negation_value(a), b))
         return ZERO_EXPR;
-    if (is_negation(b) && negation_value(b) == a)
+    if (is_negation(b) && identical(negation_value(b), a))
         return ZERO_EXPR;
 
-    if (is_product_rx(a) && is_product_rx(b) && product_values(a)[1] == product_values(b)[1])
+    if (is_product_rx(a) && is_product_rx(b) && identical(product_values(a)[1], product_values(b)[1]))
         return make_rational(rational_value(product_values(a)[0]) + rational_value(product_values(b)[0])) * product_values(a)[1];
-    if (is_product_rx(a) && product_values(a)[1] == b)
+    if (is_product_rx(a) && identical(product_values(a)[1], b))
         return make_rational(rational_value(product_values(a)[0]) + 1) * b;
-    if (is_product_rx(b) && product_values(b)[1] == a)
+    if (is_product_rx(b) && identical(product_values(b)[1], a))
         return make_rational(rational_value(product_values(b)[0]) + 1) * a;
 
     return std::make_shared<expr_sum>(std::vector<expr_ptr>{a, b});
@@ -446,14 +470,16 @@ constexpr expr_ptr operator*(expr_ptr a, expr_ptr b) {
         return -b;
     if (safe_sign(a) == 0 || safe_sign(b) == 0)
         return ZERO_EXPR;
-    if (a == b)
+    if (identical(a, b))
         return pow(a, 2);
 
-    if (is_power(a) && is_power(b) && power_base(a) == power_base(b))
+    if (is_power(a) && is_power(b) && identical(power_base(a), power_base(b)))
         return pow(power_base(a), power_exp(a) + power_exp(b));
-    if (is_power(a) && power_base(a) == b)
+    // not for a rational operand: keep 2*sqrt(2) as a product with a coefficient rather
+    // than folding it into 2**(3/2), which the "c * x" simplifications rely on
+    if (is_power(a) && !is_rational(b) && identical(power_base(a), b))
         return pow(b, power_exp(a) + 1);
-    if (is_power(b) && power_base(b) == a)
+    if (is_power(b) && !is_rational(a) && identical(power_base(b), a))
         return pow(a, power_exp(b) + 1);
 
     if (is_product(a) && is_product(b))

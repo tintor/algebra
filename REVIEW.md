@@ -184,9 +184,15 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `m / D` where Cramer's rule needs `m / det` (`:93`, leaving `det` unused).
   `same_sign` (`vector.h:222`) calls a free `sign()` that the library never defines.
 
-- [ ] **2.21 `expr.h`: `a == b` on `expr_ptr` can infinitely recurse.** `EXPR_CMP(==)` defines
-  it as `(a-b)->sign() == 0`; `operator+` calls `a == b`, which calls `operator-` → `a + -b`
-  → `a == -b` → ... for operands whose sign is decidable but which aren't rationals/sums.
+- [x] **2.21 `expr.h`: `==` inside the simplification code silently means pointer identity.**
+  Corrected after testing: `EXPR_CMP(==)` defines a *value* comparison as `(a-b)->sign() == 0`,
+  which would recurse (`operator+` → `==` → `operator-` → `operator+` → ...), but that
+  declaration comes *after* `operator+`/`operator*` in the header, so their `a == b` resolves to
+  `std::shared_ptr`'s pointer comparison instead. So there is no recursion today — but the
+  meaning of `==` there depends on declaration order, and structurally equal nodes were not
+  being simplified (`sqrt(2) + sqrt(2)` built from two nodes stayed a sum). Fixed by using
+  `identical()` explicitly, and by making `identical()` total (it threw "unreachable" for
+  `sin`/`cos`/variable nodes).
 
 - [x] **2.22 `rational::invert()` does not reject zero.** `rational_class.h:96` swaps `num` and
   `den` unconditionally, producing a rational with a zero denominator, even though the README

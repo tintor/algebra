@@ -69,3 +69,15 @@ constexpr std::string os() {
 TEST_CASE("constexpr ostream") {
     REQUIRE(os() == "-15");
 }
+
+TEST_CASE("structural simplification") {
+    // structurally equal but distinct nodes have to simplify too
+    REQUIRE(format("{}", sqrt(2_e) + sqrt(2_e)) == "2*sqrt(2)");
+    REQUIRE(format("{}", sqrt(2_e) * sqrt(2_e)) == "2");
+    REQUIRE(format("{}", sin(2_e) + sin(2_e)) == "2*sin(2)");
+    REQUIRE(format("{}", sin(2_e) - sin(2_e)) == "0");
+    REQUIRE(format("{}", cos(2_e) - cos(2_e)) == "0");
+    REQUIRE(format("{}", sin(2_e) - sin(3_e)) == "sin(2) - sin(3)");
+    REQUIRE(format("{}", PI_EXPR + PI_EXPR) == "2*π");
+    REQUIRE(format("{}", 2 * sqrt(2_e) + sqrt(2_e)) == "3*sqrt(2)");
+}
