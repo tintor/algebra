@@ -948,3 +948,15 @@ TEST_CASE("add/sub_product stress") {
         }
     }
 }
+
+TEST_CASE("operator-= uint64 keeps high words") {
+    natural a = 1;
+    a <<= 64;
+    a += 5u; // 2**64 + 5
+    natural b = a;
+    b -= static_cast<uint64_t>(5);
+    REQUIRE(b == (natural(1) << 64));
+    natural c = a;
+    c -= static_cast<uint64_t>(6);
+    REQUIRE(c == (natural(1) << 64) - 1u);
+}

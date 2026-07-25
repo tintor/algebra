@@ -119,3 +119,45 @@ TEST_CASE("__add_and_return_carry - regression alt") {
     REQUIRE(a[0] == static_cast<uint64_t>(cc));
     REQUIRE(a[1] == static_cast<uint64_t>(cc >> 64));
 }
+
+TEST_CASE("__sub scalar - low word becomes zero") {
+    uint64_t a[] = {5, 1}; // 2**64 + 5
+    inatural ia {a, 2};
+    __sub(ia, static_cast<uint64_t>(5));
+    REQUIRE(ia.size == 2);
+    REQUIRE(a[0] == 0);
+    REQUIRE(a[1] == 1);
+}
+
+TEST_CASE("__sub scalar - result normalized after borrow") {
+    uint64_t a[] = {0, 1}; // 2**64
+    inatural ia {a, 2};
+    __sub(ia, static_cast<uint64_t>(1));
+    REQUIRE(ia.size == 1);
+    REQUIRE(a[0] == UINT64_MAX);
+}
+
+TEST_CASE("__sub scalar - result is zero") {
+    uint64_t a[] = {7};
+    inatural ia {a, 1};
+    __sub(ia, static_cast<uint64_t>(7));
+    REQUIRE(ia.size == 0);
+}
+
+TEST_CASE("__sub uint128 - no borrow out of low word") {
+    uint64_t a[] = {5, 9}; // 9 * 2**64 + 5
+    inatural ia {a, 2};
+    __sub(ia, static_cast<uint128_t>(1) << 64 | 3); // 2**64 + 3
+    REQUIRE(ia.size == 2);
+    REQUIRE(a[0] == 2);
+    REQUIRE(a[1] == 8);
+}
+
+TEST_CASE("__sub uint128 - borrow into third word") {
+    uint64_t a[] = {0, 0, 1}; // 2**128
+    inatural ia {a, 3};
+    __sub(ia, static_cast<uint128_t>(1)); // 2**128 - 1
+    REQUIRE(ia.size == 2);
+    REQUIRE(a[0] == UINT64_MAX);
+    REQUIRE(a[1] == UINT64_MAX);
+}

@@ -529,40 +529,22 @@ constexpr void __sub(inatural& a, cnatural b) {
 
 // assuming a >= b
 constexpr void __sub(inatural& a, const uint64_t b) {
-    const bool decrement = a[0] < b;
-    a[0] -= b;
-    if (!decrement) {
-        if (a[0] == 0)
-            a.size = 0;
+    if (b == 0)
         return;
+    const bool borrow = a[0] < b;
+    a[0] -= b;
+    if (borrow) {
+        int i = 0;
+        while (a[++i]-- == 0)
+            ;
     }
-    int i = 0;
-    while (true)
-        if (a[++i]--)
-            return;
-    a.size--;
+    a.normalize();
 }
 
+// assuming a >= b
 constexpr void __sub(inatural& a, const uint128_t b) {
-    const bool subtract = a[0] < b;
-    a[0] -= static_cast<uint64_t>(b);
-    if (!subtract) {
-        if (a[0] == 0)
-            a.size = 0;
-        return;
-    }
-    const bool decrement = a[1] < (b >> 64);
-    a[1] -= static_cast<uint64_t>(b >> 64);
-    if (!decrement) {
-        if (a[1] == 0)
-            a.size = 1;
-        return;
-    }
-    int i = 1;
-    while (true)
-        if (a[++i]--)
-            return;
-    a.size--;
+    const uint64_t words[2] = {static_cast<uint64_t>(b), static_cast<uint64_t>(b >> 64)};
+    __sub(a, cnatural{words, (words[1] != 0) ? 2 : 1});
 }
 
 // A = A * b + c

@@ -10,7 +10,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 1. Wrong results / crashes — confirmed by running
 
-- [ ] **1.1 `natural -= uint64_t` destroys the value when the low word becomes 0.**
+- [x] **1.1 `natural -= uint64_t` destroys the value when the low word becomes 0.**
   `kernels.h:531-544` — `__sub(inatural&, uint64_t)` sets `a.size = 0` whenever `a[0] == 0`
   after the subtract, regardless of higher words. Same bug in the `uint128_t` overload
   (`:546`), which additionally reads `a[1]` when `size == 1`.
