@@ -163,7 +163,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - [x] **2.15 `isqrt3`** — `natural.h:408`: `v -= a` runs on a freshly-constructed (zero)
   `natural`, i.e. an out-of-bounds underflow, before `v` is overwritten. Leftover from `isqrt2`.
 
-- [ ] **2.16 `try_fermat_factorize`** (`natural.h:715-736`) — `isqrt(b_sq)` binds the
+- [x] **2.16 `try_fermat_factorize`** (`natural.h:715-736`) — `isqrt(b_sq)` binds the
   `uint64_t` overload, truncating a `uint128_t`; and `b * b == b_sq` computes `b*b` in 64-bit.
   Broken for any `n` where `a^2` exceeds 64 bits.
 

@@ -215,6 +215,24 @@ constexpr uint64_t isqrt(const uint64_t x) {
     return q;
 }
 
+// returns the largest Q such that Q*Q <= x
+constexpr uint64_t __isqrt_u128(const uint128_t x) {
+    if (x <= UINT64_MAX)
+        return isqrt(static_cast<uint64_t>(x));
+
+    const double d = std::sqrt(static_cast<double>(x));
+    // double has 53 bits of mantissa, so the estimate can be off by up to ~2**11
+    uint64_t q = (d >= 18446744073709551616.0) ? UINT64_MAX : static_cast<uint64_t>(d);
+    if (q == 0)
+        return 0;
+    q = static_cast<uint64_t>(std::min<uint128_t>((static_cast<uint128_t>(q) + x / q) / 2, UINT64_MAX)); // newton step
+    while (q > 0 && static_cast<uint128_t>(q) * q > x)
+        q -= 1;
+    while (q != UINT64_MAX && static_cast<uint128_t>(q + 1) * (q + 1) <= x)
+        q += 1;
+    return q;
+}
+
 /*
 constexpr natural isqrt(const natural& x) {
     using u128 = unsigned __int128;
@@ -727,10 +745,10 @@ inline uint64_t try_fermat_factorize(uint64_t n) {
         return a;
 
     for (int i = 0; i < 100'000; i++) {
-        uint128_t a_sq = (uint128_t)a * a;
-        uint128_t b_sq = a_sq - n;
-        uint64_t b = isqrt(b_sq);
-        if (b * b == b_sq)
+        const uint128_t a_sq = static_cast<uint128_t>(a) * a;
+        const uint128_t b_sq = a_sq - n;
+        const uint64_t b = __isqrt_u128(b_sq);
+        if (static_cast<uint128_t>(b) * b == b_sq)
             return a - b;
         if (a == UINT64_MAX)
             return 0;

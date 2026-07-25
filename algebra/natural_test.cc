@@ -586,3 +586,56 @@ TEST_CASE("isqrt uint64") {
         REQUIRE(static_cast<uint128_t>(q + 1) * (q + 1) > x);
     }
 }
+
+TEST_CASE("__isqrt_u128") {
+    REQUIRE(__isqrt_u128(0) == 0);
+    REQUIRE(__isqrt_u128(1) == 1);
+    REQUIRE(__isqrt_u128(3) == 1);
+    REQUIRE(__isqrt_u128(4) == 2);
+    REQUIRE(__isqrt_u128(8) == 2);
+    REQUIRE(__isqrt_u128(UINT64_MAX) == 4294967295ull);
+    REQUIRE(__isqrt_u128(static_cast<uint128_t>(UINT64_MAX) + 1) == 4294967296ull);
+
+    const uint128_t one = 1;
+    REQUIRE(__isqrt_u128((one << 64) + (one << 33)) == (one << 32));
+    REQUIRE(__isqrt_u128((one << 64) + (one << 33) + 1) == (one << 32) + 1);
+    REQUIRE(__isqrt_u128(static_cast<uint128_t>(UINT64_MAX) * UINT64_MAX) == UINT64_MAX);
+    REQUIRE(__isqrt_u128(UINT128_MAX) == UINT64_MAX);
+
+    std::mt19937_64 rng(2);
+    for (int i = 0; i < 2000; i++) {
+        const uint128_t x = (static_cast<uint128_t>(rng()) << 64) | rng();
+        const uint64_t q = __isqrt_u128(x);
+        REQUIRE(static_cast<uint128_t>(q) * q <= x);
+        if (q != UINT64_MAX)
+            REQUIRE(static_cast<uint128_t>(q + 1) * (q + 1) > x);
+    }
+    for (int i = 0; i < 2000; i++) {
+        const uint128_t x = static_cast<uint128_t>(rng());
+        const uint64_t q = __isqrt_u128(x);
+        REQUIRE(static_cast<uint128_t>(q) * q <= x);
+        REQUIRE(static_cast<uint128_t>(q + 1) * (q + 1) > x);
+    }
+}
+
+TEST_CASE("try_fermat_factorize") {
+    REQUIRE(try_fermat_factorize(4) == 2);
+    REQUIRE(try_fermat_factorize(9) == 3);
+    REQUIRE(try_fermat_factorize(25) == 5);
+    REQUIRE(try_fermat_factorize(15) == 3);
+    REQUIRE(try_fermat_factorize(5959) == 59); // 59 * 101
+    REQUIRE(try_fermat_factorize(4294967291ull * 4294967279ull) == 4294967279ull);
+
+    // whatever it returns has to be a proper divisor (or 0 for "not found")
+    std::mt19937_64 rng(1);
+    for (int i = 0; i < 300; i++) {
+        const uint64_t p = std::uniform_int_distribution<uint64_t>(3, 4294967291ull)(rng) | 1;
+        const uint64_t q = std::uniform_int_distribution<uint64_t>(3, 4294967291ull / p * 2 + 3)(rng) | 1;
+        const uint64_t n = p * q;
+        const uint64_t f = try_fermat_factorize(n);
+        if (f) {
+            REQUIRE(f > 1);
+            REQUIRE(n % f == 0);
+        }
+    }
+}
