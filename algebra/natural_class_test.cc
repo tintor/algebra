@@ -1045,3 +1045,62 @@ TEST_CASE("mul_karatsuba with sparse operands") {
     REQUIRE(mul_karatsuba(a, b) == a * b);
     REQUIRE(mul_karatsuba(b, a) == a * b);
 }
+
+TEST_CASE("divide_bz matches div") {
+    Random rng(7);
+    natural q1, r1, q2, r2;
+
+    // small / trivial cases
+    for (auto [an, dn] : {std::pair{1, 1}, {2, 1}, {5, 3}, {9, 4}, {20, 8}, {33, 8}, {40, 16}, {64, 9}, {17, 17}, {18, 17}}) {
+        for (int rep = 0; rep < 8; rep++) {
+            natural a = rand_natural(an, an, rng);
+            natural d = rand_natural(dn, dn, rng);
+            if (!d)
+                continue;
+            div(a, d, q1, r1);
+            divide_bz(a, d, q2, r2);
+            REQUIRE(q1 == q2);
+            REQUIRE(r1 == r2);
+            REQUIRE(q2 * d + r2 == a);
+            REQUIRE(r2 < d);
+        }
+    }
+
+    // random sizes
+    for (int rep = 0; rep < 60; rep++) {
+        natural a = rand_natural(1, 60, rng);
+        natural d = rand_natural(1, 30, rng);
+        if (!d)
+            continue;
+        div(a, d, q1, r1);
+        divide_bz(a, d, q2, r2);
+        REQUIRE(q1 == q2);
+        REQUIRE(r1 == r2);
+    }
+
+    // divisor with a single top bit set (shift == 0 path) and with a low top bit
+    natural a = rand_natural(40, 40, rng);
+    natural d = 1;
+    d <<= 64 * 8;
+    divide_bz(a, d, q2, r2);
+    div(a, d, q1, r1);
+    REQUIRE(q1 == q2);
+    REQUIRE(r1 == r2);
+
+    d = rand_natural(8, 8, rng);
+    d.words.back() = 1; // maximal normalization shift
+    divide_bz(a, d, q2, r2);
+    div(a, d, q1, r1);
+    REQUIRE(q1 == q2);
+    REQUIRE(r1 == r2);
+
+    // deeper recursion
+    for (auto [an, dn] : {std::pair{200, 40}, {130, 32}, {300, 64}}) {
+        natural aa = rand_natural(an, an, rng);
+        natural dd = rand_natural(dn, dn, rng);
+        div(aa, dd, q1, r1);
+        divide_bz(aa, dd, q2, r2);
+        REQUIRE(q1 == q2);
+        REQUIRE(r1 == r2);
+    }
+}

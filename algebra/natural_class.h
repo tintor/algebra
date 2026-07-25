@@ -947,72 +947,6 @@ constexpr void mod(natural& a, const natural& b) {
 
 constexpr natural& operator>>=(natural& a, int64_t b);
 
-const int BZ_BASE_CASE_SIZE = 2;
-
-// recursively divide A by D, and accumulate quotient into Q (with shift) and return remainder R
-// p is a stack of temporaries, one for each recursion depth
-void __divide_2n1n(cnatural a, cnatural d, int n, natural& q, int q_shift, natural& r, natural* p) {
-    if (n <= BZ_BASE_CASE_SIZE) {
-        __div(a, d, *p, r);
-        __add(q, p->words.data(), p->words.size(), q_shift);
-        return;
-    }
-
-    const int an = std::min(n, a.size);
-    __divide_2n1n({a.words, an}, d, n/2, q, q_shift + n, *p, p + 1);
-    p->words.insert_first_n_words(n);
-    __add(*p, a.words + an, a.size - an);
-    __divide_2n1n(*p, d, n/2, q, q_shift, r, p + 1);
-}
-
-constexpr void __divide_bz(natural a, natural d, natural& q, natural& r) {
-    const auto D = d.words.size();
-    const auto A = a.words.size();
-
-    natural new_r;
-    q.words.reserve_and_set_zero(div_max_size(a, d));
-    r.words.reserve_and_set_zero(D);
-    new_r.words.reserve_and_set_zero(D);
-
-    const int shift = std::countl_zero(d.words.back());
-    a <<= shift;
-    d <<= shift;
-
-    const int target_size = ((A + 2*D - 1) / (2*D)) * 2*D;
-
-    static_assert(sizeof(decltype(A)) == 4);
-    // TODO even better: precompute total sizes of all p needed, and allocate into one contiguous work buffer instead of p_stack
-    natural p_stack[32]; // is enough for natural with at most UINT32_MAX words
-
-    for (int i = target_size; i > 0; i -= 2*D) {
-        r.words.insert_first_n_words(2*D); // TODO it might be possible to optimize this
-        const int start = (i >= 2*D) ? i - 2*D : 0;
-        const int end = std::min(i, A);
-        std::copy(a.words.data() + start, a.words.data() + end, r.words.data());
-
-        q.words.insert_first_n_words(2*D); // TODO it might be possible to optimize this with non-zero q_shift param below (q_shoft = i-2*D)
-        __divide_2n1n(r, d, D, q, 0, new_r, p_stack);
-        std::swap(r, new_r);
-    }
-
-    r >>= shift;
-}
-
-constexpr void divide_bz(const natural& a, const natural& d, natural& q, natural& r) {
-    Check(!d.words.empty(), "division by zero");
-    if (d > a) {
-        q.set_zero();
-        r = a;
-        return;
-    }
-    if (d == a) {
-        q = 1;
-        r.set_zero();
-        return;
-    }
-    __divide_bz(a, d, q, r);
-}
-
 constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const bool upper) const {
     char* p = buffer;
     const char* end = buffer + buffer_size;
@@ -1248,6 +1182,104 @@ constexpr natural& operator^=(natural& a, uint64_t b) {
         a.words.normalize();
     }
     return a;
+}
+
+// Below this divisor size (in words) recursive division falls back to schoolbook division.
+constexpr int BZ_BASE_CASE_SIZE = 8;
+
+// returns the low N words of A, i.e. A mod 2**(64*n)
+constexpr natural __low_words(const natural& a, int n) {
+    const int s = std::min<int>(n, a.words.size());
+    natural c;
+    c.words.reset(s, /*initialize*/false);
+    for (int i = 0; i < s; i++)
+        c.words[i] = a.words[i];
+    c.words.normalize();
+    return c;
+}
+
+// A / B, assuming B has 2n words with its top bit set, A has at most 3n words and A / B < 2**(64*n)
+constexpr void __divide_3n2n(const natural& a, const natural& b, int n, natural& q, natural& r);
+
+// A / B, assuming B has n words with its top bit set, A has at most 2n words and (A >> 64*n) < B
+constexpr void __divide_2n1n(const natural& a, const natural& b, int n, natural& q, natural& r) {
+    if ((n & 1) || n <= BZ_BASE_CASE_SIZE) {
+        div(a, b, /*out*/q, /*out*/r);
+        return;
+    }
+    const int h = n / 2;
+
+    // A = [a1 a2 a3 a4] and B = [b1 b2], each part of h words
+    natural q1, r1;
+    __divide_3n2n(a >> (64 * h), b, h, /*out*/q1, /*out*/r1); // [a1 a2 a3] / B
+
+    natural t = r1 << (64 * h);
+    t += __low_words(a, h); // [r1 a4]
+
+    natural q2;
+    __divide_3n2n(t, b, h, /*out*/q2, /*out*/r);
+
+    q = q1 << (64 * h);
+    q += q2;
+}
+
+constexpr void __divide_3n2n(const natural& a, const natural& b, int n, natural& q, natural& r) {
+    // A = [a1 a2 a3] and B = [b1 b2], each part of n words
+    const natural b1 = b >> (64 * n);
+    const natural a12 = a >> (64 * n);
+
+    natural r1;
+    if ((a12 >> (64 * n)) < b1) { // a1 < b1
+        __divide_2n1n(a12, b1, n, /*out*/q, /*out*/r1);
+    } else {
+        // quotient would not fit into n words, so use the largest value that does
+        q = 1;
+        q <<= 64 * n;
+        q -= 1u;
+        // r1 = [a1 a2] - b1 * q = [a1 a2] - (b1 << 64*n) + b1
+        r1 = a12;
+        r1 -= b1 << (64 * n);
+        r1 += b1;
+    }
+
+    // r = [r1 a3] - q * b2, with at most two corrections
+    r = r1 << (64 * n);
+    r += __low_words(a, n);
+    const natural qb2 = q * __low_words(b, n);
+    while (r < qb2) {
+        q -= 1u;
+        r += b;
+    }
+    r -= qb2;
+}
+
+// A / D, using recursive (Burnikel-Ziegler) division
+constexpr void divide_bz(const natural& a, const natural& d, natural& q, natural& r) {
+    Check(!d.words.empty(), "division by zero");
+    const int n = d.words.size();
+    if (n <= BZ_BASE_CASE_SIZE || a.words.size() <= n) {
+        div(a, d, /*out*/q, /*out*/r);
+        return;
+    }
+
+    // normalize, so that the top bit of the divisor is set
+    const int shift = std::countl_zero(d.words.back());
+    const natural an = a << shift;
+    const natural dn = d << shift;
+
+    // divide chunk by chunk, most significant chunk first
+    const int chunks = (an.words.size() + n - 1) / n;
+    q.set_zero();
+    r.set_zero();
+    natural qi, t;
+    for (int i = chunks; i-- > 0;) {
+        t = r << (64 * n);
+        t += __low_words(an >> (64 * n * i), n);
+        __divide_2n1n(t, dn, n, /*out*/qi, /*out*/r);
+        q <<= 64 * n;
+        q += qi;
+    }
+    r >>= shift;
 }
 
 namespace literals {

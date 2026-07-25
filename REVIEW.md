@@ -58,7 +58,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   case writes into an uninitialized `W` slice. Existing tests only use dense/all-ones operands.
   `Check failed ... vnatural::push_back`. **[confirmed]**
 
-- [ ] **1.11 `divide_bz` produces the wrong quotient/remainder.**
+- [x] **1.11 `divide_bz` produces the wrong quotient/remainder.**
   One concrete cause: `natural_class.h:970` captures `A = a.words.size()` *before* `a <<= shift`
   (`:979`), so if `a` grows a word, `end = min(i, A)` never copies the top word. **[confirmed]**
 
