@@ -1124,3 +1124,42 @@ TEST_CASE("compare with uint128") {
     REQUIRE(small < huge);
     REQUIRE(!(huge < small));
 }
+
+// Counts outstanding new[] allocations, to detect leaks in integer_backend.
+static int64_t g_array_allocs = 0;
+void* operator new[](std::size_t n) {
+    void* p = std::malloc(n ? n : 1);
+    if (!p)
+        throw std::bad_alloc();
+    g_array_allocs += 1;
+    return p;
+}
+void operator delete[](void* p) noexcept {
+    if (p) {
+        g_array_allocs -= 1;
+        std::free(p);
+    }
+}
+void operator delete[](void* p, std::size_t) noexcept { operator delete[](p); }
+
+TEST_CASE("move assignment does not leak") {
+    const int64_t before = g_array_allocs;
+    {
+        natural a = 1;
+        a <<= 200; // heap allocated
+        natural b = 1;
+        b <<= 300; // heap allocated
+        a = std::move(b);
+        REQUIRE(a == (natural(1) << 300));
+    }
+    REQUIRE(g_array_allocs == before);
+
+    {
+        natural a = 1;
+        a <<= 200;
+        natural b = 7; // small buffer, no allocation
+        a = std::move(b);
+        REQUIRE(a == 7u);
+    }
+    REQUIRE(g_array_allocs == before);
+}

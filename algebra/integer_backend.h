@@ -95,6 +95,8 @@ public:
     constexpr void operator=(integer_backend&& o) {
         if (this == &o)
             return;
+        if (_capacity)
+            delete[] _words;
         _words = o._words;
         _size = o._size;
         _capacity = o._capacity;

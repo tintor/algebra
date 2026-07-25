@@ -104,7 +104,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 2. Bugs found by reading (not exercised by tests)
 
-- [ ] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
+- [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
   overwrites `_words` without `delete[]`ing the current buffer. Every move-assign of a
   heap-sized `natural`/`integer` leaks.
 
