@@ -203,3 +203,14 @@ TEST_CASE("__sub_product by zero succeeds") {
     // and it still reports a violated precondition for a non-zero multiplier
     REQUIRE(!__sub_product(ia, cnatural{b, 3}, static_cast<uint64_t>(1)));
 }
+
+TEST_CASE("inatural back() constness") {
+    static_assert(std::is_same_v<decltype(std::declval<const inatural&>().back()), uint64_t>);
+    static_assert(std::is_same_v<decltype(std::declval<inatural&>().back()), uint64_t&>);
+
+    uint64_t w[] = {1, 2, 3};
+    inatural a {w, 3};
+    REQUIRE(a.back() == 3);
+    a.back() = 7;
+    REQUIRE(w[2] == 7);
+}
