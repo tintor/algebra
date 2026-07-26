@@ -250,6 +250,17 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   in the library calls this overload. Now verifies every component before returning. Found while
   reviewing test coverage. **[confirmed]**
 
+- [x] **1.38 The exponent overflow guard in `pow(real<B>, int64_t, real<B>)` never fired.**
+  `real.h:14` compared `static_cast<int>(static_cast<int64_t>(result.exp) + exp)` with
+  `result.exp + static_cast<int>(exp)`. Both sides truncate the sum to `int` in exactly the same way,
+  so the condition is always false and the truncated exponent is returned instead of throwing.
+  `pow(real<2>(2), int64_t(1) << 40)` returned `num=1, exp=0`, i.e. **1**;
+  `pow(real<2>(2), int64_t(1) << 31)` returned `exp=-2147483648`, i.e. `2**-2147483648` instead of
+  `2**2147483648`; and `pow(real<2>(2), 1<<30, real<2>(1, 1<<30))` reached the same value through
+  signed overflow of `int`, which is UB. `pow(decimal(10), int64_t(1) << 40)` was `1` as well.
+  Never caught because no test used an exponent above 10. Fixed by adding in `int64_t` and comparing
+  against the `int` range. Found while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
