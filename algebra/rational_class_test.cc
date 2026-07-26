@@ -90,6 +90,11 @@ TEST_CASE("format with fixed fraction digits") {
     REQUIRE(format("{:.2}", rational(12345, 1000)) == "12.35");
     REQUIRE(format("{:.3}", rational(-1, 1000)) == "-0.001");
     REQUIRE(format("{:.1}", rational(7)) == "7.0");
+
+    // trailing 'f' is accepted, like for floating point
+    REQUIRE(format("{:.2f}", rational(3, 4)) == "0.75");
+    REQUIRE(format("{:.3f}", rational(1, 1000)) == "0.001");
+    REQUIRE(format("{:.2f}", rational(15, 2)) == "7.50");
 }
 
 TEST_CASE("zero denominator throws") {

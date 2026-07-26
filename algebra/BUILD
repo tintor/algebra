@@ -39,7 +39,8 @@ library("dual")
 
 cc_library(
     name = "algebra",
-    deps = [":rational", ":real", ":expr", ":geometry", ":rational_vector"],
+    hdrs = ["algebra.h"],
+    deps = [":rational", ":real", ":expr", ":geometry", ":rational_vector", ":xrational", ":dual"],
 )
 
 cc_test(
