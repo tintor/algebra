@@ -1468,3 +1468,28 @@ TEST_CASE("operator+= with a builtin operand when the value is zero") {
     g += uint64_t(0);
     REQUIRE(g == 0u);
 }
+
+TEST_CASE("zero with a stale low word behaves like zero") {
+    // downsize() does not clear the word it drops, so construct a zero that keeps one
+    natural a = 12345;
+    a.words.downsize(0);
+
+    REQUIRE(a.words.size() == 0);
+    REQUIRE(!a);
+    REQUIRE(a == 0u);
+    REQUIRE(a == natural(0));
+    REQUIRE(!(a == 1u));
+    REQUIRE(a.is_even());
+    REQUIRE(!a.is_odd());
+    REQUIRE(!a.is_one());
+    REQUIRE(a.mod2() == 0);
+    REQUIRE(a.mod4() == 0);
+    REQUIRE(a.mod8() == 0);
+    REQUIRE(a.is_uint32());
+    REQUIRE(a < 1u);
+    REQUIRE(!(a < 0u));
+    REQUIRE(0u < natural(1));
+    REQUIRE(!(1u < a));
+    REQUIRE(static_cast<uint64_t>(a) == 0);
+    REQUIRE(a.str() == "0");
+}

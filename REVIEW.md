@@ -461,7 +461,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - **[fixed]** `sub_product(natural&,...)` and `__div`'s `__sub_product` call
   (`:863`) discard the `false` return that signals a violated precondition, leaving the operand
   half-modified.
-- `natural` relies on the invariant "`words[0] == 0` whenever `size() == 0`" in ~15 comparison
+- **[fixed]** `natural` relies on the invariant "`words[0] == 0` whenever `size() == 0`" in ~15 comparison
   operators that read `words[0]` before checking `size()`. `operator&=(natural&, uint64_t)`
   (`:1211`) writes `words[0]` with `size() == 0`, which can break it.
 - **[fixed]** `inatural::back()`: the `const` overload returns a mutable `uint64_t&`,

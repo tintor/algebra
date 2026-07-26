@@ -27,41 +27,46 @@ struct natural {
     constexpr void operator=(natural&& o) { words = std::move(o.words); }
     constexpr void operator=(const natural& o) { words = o.words; }
 
-    constexpr bool is_one() const { return words[0] == 1 && words.size() == 1; }
-    constexpr bool is_even() const { return (words[0] % 2) == 0; }
-    constexpr bool is_odd() const { return words[0] % 2; }
+    // words[0] is only meaningful when size() > 0: a zero natural can keep a stale word
+    // (downsize() and pop_back() do not clear it), so everything reading the low word of a
+    // possibly empty value goes through this.
+    constexpr uint64_t low_word() const { return words.size() ? words[0] : 0; }
+
+    constexpr bool is_one() const { return words.size() == 1 && words[0] == 1; }
+    constexpr bool is_even() const { return (low_word() % 2) == 0; }
+    constexpr bool is_odd() const { return low_word() % 2; }
 
     constexpr bool is_uint8() const;
     constexpr bool is_uint16() const;
-    constexpr bool is_uint32() const { return words.size() <= 1 && words[0] <= UINT32_MAX; }
+    constexpr bool is_uint32() const { return words.size() <= 1 && low_word() <= UINT32_MAX; }
     constexpr bool is_uint64() const { return words.size() <= 1; }
     constexpr bool is_uint128() const { return words.size() <= 2; }
 
     constexpr operator uint8_t() const {
         Check(is_uint8(), "integer is too large to fit in uint8");
-        return words[0];
+        return low_word();
     }
     constexpr operator uint16_t() const {
         Check(is_uint16(), "integer is too large to fit in uint16");
-        return words[0];
+        return low_word();
     }
     constexpr operator uint32_t() const {
         Check(is_uint32(), "integer is too large to fit in uint32");
-        return words[0];
+        return low_word();
     }
     constexpr operator unsigned long() const {
         static_assert(sizeof(unsigned long) == 8);
         Check(is_uint64(), "integer is too large to fit in uint64");
-        return words[0];
+        return low_word();
     }
     constexpr operator unsigned long long() const {
         static_assert(sizeof(unsigned long long) == 8);
         Check(is_uint64(), "integer is too large to fit in uint64");
-        return words[0];
+        return low_word();
     }
 
     uint128_t unsafe_u128() const {
-        uint128_t a = words[0];
+        uint128_t a = low_word();
         if (words.size() > 1)
             a |= static_cast<uint128_t>(words[1]) << 64;
         return a;
@@ -161,13 +166,13 @@ struct natural {
         return __mod(*this, b);
     }
 
-    constexpr int mod2() const { return words[0] % 2; }
+    constexpr int mod2() const { return low_word() % 2; }
     constexpr int mod3() const { return algebra::mod3(*this); }
-    constexpr int mod4() const { return words[0] % 4; }
+    constexpr int mod4() const { return low_word() % 4; }
     constexpr int mod5() const { return algebra::mod5(*this); }
     constexpr int mod6() const { return algebra::mod6(*this); }
     constexpr int mod7() const { return algebra::mod7(*this); }
-    constexpr int mod8() const { return words[0] % 8; }
+    constexpr int mod8() const { return low_word() % 8; }
     constexpr int mod9() const { return algebra::mod9(*this); }
     constexpr int mod10() const { return algebra::mod10(*this); }
 
@@ -283,8 +288,8 @@ constexpr natural operator-(natural a, const std_unsigned_int auto b) {
 
 constexpr natural operator-(const std_unsigned_int auto a, natural b) {
     if (a <= UINT64_MAX) {
-        Check(b.words.size() <= 1 && uint64_t(a) >= b.words[0], "natural can't be negative");
-        return uint64_t(a) - b.words[0];
+        Check(b.words.size() <= 1 && uint64_t(a) >= b.low_word(), "natural can't be negative");
+        return uint64_t(a) - b.low_word();
     }
     Check(a >= b, "natural can't be negative");
     return a - static_cast<uint128_t>(b);
@@ -316,8 +321,8 @@ constexpr natural& operator-=(natural& a, const std_signed_int auto b) {
 
 constexpr bool operator<(const natural& a, const natural& b) { return __less(a, b); }
 
-constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { return a.words[0] < b && a.words.size() <= 1; }
-constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
+constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { return a.words.size() <= 1 && a.low_word() < b; }
+constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return b.words.size() > 1 || a < b.low_word(); }
 
 constexpr bool operator<(const natural& a, const std_signed_int auto b) { return b >= 0 && a < static_cast<uint64_t>(b); }
 constexpr bool operator<(const std_signed_int auto a, const natural& b) { return a < 0 || static_cast<uint64_t>(a) < b; }
@@ -356,11 +361,13 @@ constexpr bool operator==(const natural& a, const natural& b) {
 }
 
 constexpr bool operator==(const natural& a, const std_unsigned_int auto b) {
-    if constexpr (sizeof(b) <= 8)
-        return a.words[0] == b && a.words.size() <= 1;
-    if (b <= UINT64_MAX)
-        return a.words[0] == b && a.words.size() <= 1;
-    return a.words.size() == 2 && a.words[1] == uint64_t(b >> 64) && a.words[0] == uint64_t(b);
+    if constexpr (sizeof(b) <= 8) {
+        return a.words.size() <= 1 && a.low_word() == b;
+    } else {
+        if (b <= UINT64_MAX)
+            return a.words.size() <= 1 && a.low_word() == b;
+        return a.words.size() == 2 && a.words[1] == uint64_t(b >> 64) && a.words[0] == uint64_t(b);
+    }
 }
 constexpr bool operator==(const natural& a, const std_signed_int auto b) { return b >= 0 && a == make_unsigned(b); }
 
@@ -1351,7 +1358,7 @@ constexpr natural::operator T() const {
     if (exponent >= std::numeric_limits<T>::max_exponent)
         return std::numeric_limits<T>::infinity();
     if (exponent <= 0)
-        return words[0];
+        return low_word();
     const auto m = extract_u64(*this, exponent);
     return std::ldexp(static_cast<T>(m), exponent);
 }
