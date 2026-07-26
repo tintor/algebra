@@ -179,3 +179,89 @@ TEST_CASE("pow into an aliased output") {
     REQUIRE(pow(rational(-2, 3), integer(-2)) == rational(9, 4));
     REQUIRE(pow(rational(2, 3), integer(3)) == rational(8, 27));
 }
+
+TEST_CASE("trunc") {
+    // round towards 0
+    REQUIRE(trunc(rational(7, 2)) == 3);
+    REQUIRE(trunc(rational(-7, 2)) == -3);
+    REQUIRE(trunc(rational(1, 2)) == 0);
+    REQUIRE(trunc(rational(-1, 2)) == 0);
+    REQUIRE(trunc(rational(4)) == 4);
+    REQUIRE(trunc(rational(-4)) == -4);
+    REQUIRE(trunc(rational(0)) == 0);
+    REQUIRE(trunc(rational(-1)) == -1);
+    // trunc and fract are not complements for negatives: fract is always non-negative
+    REQUIRE(fract(rational(-7, 2)) == rational(1, 2));
+}
+
+TEST_CASE("abs_greater(rational)") {
+    REQUIRE(abs_greater(rational(3), rational(2)));
+    REQUIRE(abs_greater(rational(-3), rational(2)));
+    REQUIRE(abs_greater(rational(-3), rational(-2)));
+    REQUIRE(!abs_greater(rational(2), rational(3)));
+    REQUIRE(!abs_greater(rational(2), rational(-2)));  // equal magnitude
+    REQUIRE(!abs_greater(rational(0), rational(0)));
+    REQUIRE(abs_greater(rational(1, 2), rational(1, 3)));       // same numerator path
+    REQUIRE(abs_greater(rational(-1, 2), rational(1, 3)));
+    REQUIRE(!abs_greater(rational(1, 3), rational(1, 2)));
+    REQUIRE(abs_greater(rational(5, 7), rational(2, 7)));        // shared denominator path
+    REQUIRE(abs_greater(rational(3), rational(5, 2)));           // den == 1 on the left
+}
+
+TEST_CASE("nth_root") {
+    // Newton, so the result approaches the root rather than hitting it exactly
+    auto close = [](const rational& value, const rational& target, const rational& eps) {
+        return abs(value - target) < eps;
+    };
+
+    // note: the iteration counts are deliberately small. Every iteration multiplies the size of the
+    // operands by abs(exp), so these grow doubly exponentially -- sqrt(x, 20) does not finish.
+    const rational eps(1, 1000000);
+
+    // exp == 2 and exp == -2 delegate to sqrt
+    REQUIRE(close(nth_root(rational(4), 2, 6), rational(2), eps));
+    REQUIRE(close(nth_root(rational(4), -2, 6), rational(1, 2), eps));
+
+    // an exact root is reached exactly, because the power of two seed already is the answer
+    REQUIRE(nth_root(rational(8), 3, 4) == 2);
+    REQUIRE(nth_root(rational(1, 8), 3, 4) == rational(1, 2));
+    REQUIRE(nth_root(rational(32), 5, 4) == 2);
+    REQUIRE(nth_root(rational(1024), 10, 4) == 2);
+
+    // a negative exponent gives the reciprocal root: 8^(-1/3) == 1/2. Newton diverges from a
+    // starting point of 1 here, so this only works with a seed near the root.
+    REQUIRE(nth_root(rational(8), -3, 4) == rational(1, 2));
+    REQUIRE(nth_root(rational(1, 8), -3, 4) == 2);
+
+    // roots that are not powers of two still have to converge
+    REQUIRE(close(nth_root(rational(1000), 3, 6), rational(10), eps));
+    REQUIRE(close(nth_root(rational(27), 3, 6), rational(3), eps));
+    REQUIRE(close(nth_root(rational(10000), 4, 6), rational(10), eps));
+    // 2^(1/3) == 1.2599210498948731...
+    REQUIRE(close(nth_root(rational(2), 3, 6), rational(12599210499LL, 10000000000LL), rational(1, 100000)));
+
+    // 1 is a fixed point for every exponent
+    REQUIRE(nth_root(rational(1), 3, 5) == 1);
+    REQUIRE(nth_root(rational(1), 7, 5) == 1);
+    REQUIRE(nth_root(rational(1), -3, 5) == 1);
+
+    // more iterations must not make it worse
+    const rational a = abs(nth_root(rational(1000), 3, 4) - 10);
+    const rational b = abs(nth_root(rational(1000), 3, 6) - 10);
+    REQUIRE(b <= a);
+
+    REQUIRE_THROWS(nth_root(rational(8), 0, 4));
+}
+
+TEST_CASE("pow(rational, rational)") {
+    auto close = [](const rational& value, const rational& target, const rational& eps) {
+        return abs(value - target) < eps;
+    };
+    // an integer exponent is exact
+    REQUIRE(pow(rational(2), rational(10), 5) == 1024);
+    REQUIRE(pow(rational(2, 3), rational(2), 5) == rational(4, 9));
+    // 8^(2/3) == 4, via a cube root and a square
+    REQUIRE(close(pow(rational(8), rational(2, 3), 5), rational(4), rational(1, 1000)));
+    // 4^(3/2) == 8
+    REQUIRE(close(pow(rational(4), rational(3, 2), 6), rational(8), rational(1, 1000)));
+}

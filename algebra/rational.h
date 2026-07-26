@@ -140,12 +140,20 @@ constexpr rational pow(const rational& base, const integer& exp) {
 }
 
 constexpr rational nth_root(const rational& base, const integer& exp, unsigned iterations) {
+    Check(exp != 0, "nth_root() with a zero exponent");
     if (exp == 2)
         return sqrt(base, iterations);
     if (exp == -2)
         return 1 / sqrt(base, iterations);
 
-    rational result = 1;
+    // Seed with the power of two closest to the root, from log2(root) == log2(base) / exp. Starting
+    // at 1 is far from the root for anything but a base near 1, and Newton diverges from there for
+    // a negative exp. Every iteration also multiplies the size of the operands by abs(exp), so the
+    // iterations that a poor start needs get expensive quickly.
+    // abs(shift) is at most abs(approx_log2(base)), so it fits
+    const int64_t shift = static_cast<int64_t>(integer(approx_log2(base)) / exp);
+    rational result = (shift >= 0) ? rational(exp2(shift)) : rational(integer(1), exp2(-shift));
+
     rational q;
     integer e = 1 - exp;
     while (iterations--) {
@@ -154,6 +162,7 @@ constexpr rational nth_root(const rational& base, const integer& exp, unsigned i
         q -= result;
         q /= exp;
         result += q;
+        result.simplify(); // the operands grow by a factor of abs(exp) per iteration otherwise
     }
     return result;
 }
