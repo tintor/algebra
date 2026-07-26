@@ -392,9 +392,7 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
         const int m = mul_max_size(b.abs, c.abs);
         a.abs.words.resize(m + 1);
         a.abs.words[m] = 1;
-        natural orig_a_abs = a.abs;
         sub_product(a.abs, b.abs, c.abs);
-        Check(orig_a_abs - b.abs * c.abs == a.abs);
         if (a.abs.words.size() > m) {
             a.abs.words[m] -= 1;
             a.abs.words.normalize();
@@ -422,7 +420,6 @@ constexpr void __add_product(integer& a, const integer& b, const uint64_t cu, co
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != c_negative;
 
-    integer aa = a;
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
         add_product(a.abs, b.abs, cu);
         a.abs.words.set_negative(a_negative);

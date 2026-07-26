@@ -214,7 +214,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   (both `static_assert`s are commented out); `integer(std_int)` (`:14`) double-negates `words`
   so the two disagree on sign; and most arithmetic carries a `// TODO update words`, leaving it
   stale. Largest structural issue in the repo.
-- **Debug validation left in a hot path** — `integer_class.h:403-405`:
+- **[fixed]** **Debug validation left in a hot path** — `integer_class.h:403-405`:
   `natural orig_a_abs = a.abs;` plus `Check(orig_a_abs - b.abs*c.abs == a.abs)` performs a full
   copy *and* a full multiplication inside `sub_product`, whose stated purpose is "without memory
   allocation". `integer_class.h:433`: `integer aa = a;` is an unused full copy.
