@@ -31,6 +31,10 @@ library("segment_segment_intersection",
     deps = [":solve_linear"],
     test_deps = [":rational_vector"])
 
+library("polygon2",
+    deps = [":vector", ":rational"],
+    test_deps = [":rational_vector"])
+
 library("geometry",
     deps = [":solve_linear", ":point_segment_squared_distance", ":segment_segment_squared_distance", ":segment_segment_intersection"],
     test_deps = [":rational_vector"])
@@ -40,7 +44,7 @@ library("dual")
 cc_library(
     name = "algebra",
     hdrs = ["algebra.h"],
-    deps = [":rational", ":real", ":expr", ":geometry", ":rational_vector", ":xrational", ":dual"],
+    deps = [":rational", ":real", ":expr", ":geometry", ":polygon2", ":rational_vector", ":xrational", ":dual"],
 )
 
 cc_test(
