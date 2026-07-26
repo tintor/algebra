@@ -146,7 +146,7 @@ constexpr natural uniform_sample(const natural& min, const natural& max, auto& r
 template<std_unsigned_int T>
 constexpr T __gcd_inner(T a, T b) {
     while (b) {
-        b >>= std::countr_zero(b); // since b is non-zero (__builtin_ctzl would truncate T to 64 bits)
+        b >>= countr_zero(b); // since b is non-zero (__builtin_ctzl would truncate T to 64 bits)
         if (a > b)
             std::swap(a, b);
         b -= a;
@@ -154,18 +154,18 @@ constexpr T __gcd_inner(T a, T b) {
     return a;
 }
 
-constexpr auto gcd(std_int auto a, std_int auto b) -> std::make_unsigned_t<larger_type<decltype(a), decltype(b)>> {
-    using T = std::make_unsigned_t<larger_type<decltype(a), decltype(b)>>;
+constexpr auto gcd(std_int auto a, std_int auto b) -> make_unsigned_t<larger_type<decltype(a), decltype(b)>> {
+    using T = make_unsigned_t<larger_type<decltype(a), decltype(b)>>;
     T ua = abs_unsigned(a);
     T ub = abs_unsigned(b);
     if (ua == 0)
         return ub;
     if (ub == 0)
         return ua;
-    auto az = std::countr_zero(ua);
+    auto az = countr_zero(ua);
     if (az == 0)
         return __gcd_inner(ua, ub);
-    auto common = std::min(az, std::countr_zero(ub));
+    auto common = std::min(az, countr_zero(ub));
     return __gcd_inner(ua >> az, ub >> common) << common;
 }
 
