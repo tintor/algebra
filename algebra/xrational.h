@@ -46,7 +46,7 @@ struct xrational {
         bool simplify = false;
         auto z = root.num_trailing_zeros();
         if (z > 1) {
-            root >>= z;
+            root >>= (z / 2) * 2; // only whole squares of 2 leave the root
             base.num <<= z / 2;
             simplify = true;
         }
@@ -56,13 +56,14 @@ struct xrational {
         natural q;
         if (root > 1 && root.mod9() == 0) {
             do {
-                if (div(root, 9, root))
+                if (div(root, 9, q))
                     break;
                 std::swap(root, q);
                 if (base.den.mod3() == 0)
                     base.den /= 3;
                 else
                     base.num *= 3;
+                simplify = true;
             } while (root > 1);
         }
 
@@ -330,6 +331,8 @@ constexpr xrational sqrt(const xrational& a) {
         throw std::runtime_error("sqrt() of negative");
     if (a.root != 1)
         throw std::runtime_error("sqrt of xrational with root");
+    if (a.base.is_zero())
+        return xrational{rational{0}};
     natural whole = 1, root = 1;
     exact_sqrt(a.base.num.to_natural(), whole, root);
     exact_sqrt(a.base.den.to_natural(), whole, root);
