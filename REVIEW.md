@@ -283,6 +283,28 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `mul_max_size` is used. Fixed by returning the other operand's size when one side is empty,
   and 0 for a zero divisor. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.36 `natural += uint64_t` returned 1 whenever the value was zero.**
+  `natural_class.h:80-83` pushed the literal `1` as the carry word. For a non-empty magnitude the
+  carry out of `__add_and_return_carry` really is 0 or 1, but for an empty (zero) magnitude the loop
+  never runs and the function returns `b` itself, which was then discarded.
+  `natural(0) + uint64_t(5)` → **1**, `natural(0) + (2**64 - 1)` → **1**, and through
+  `integer::__add` also `integer(0) + 5` → **1**, `real<2>(0) + 5` → **1** and
+  `decimal(0) + 5` → **1**. Never caught because no test adds a builtin to a zero `natural` or
+  `integer`; found by a randomized `real<B>`-versus-`rational` cross check. Fixed by pushing the
+  carry that was returned. **[confirmed]**
+
+- [x] **1.37 `integer` plus or minus a signed builtin was wrong in two cases.**
+  `integer_class.h:296-317` — (a) for `b < 0` the function subtracted `abs(b)` regardless of its
+  `plus` template argument, so subtracting a negative subtracted instead of adding:
+  `integer(10) - int64_t(-5)` → **5** and `real<2>(3) - (-5)` → **-2**; (b) in the mixed sign case
+  where `abs(a) < abs(b)` it always negated the magnitude difference, so adding a positive to a
+  negative gave the wrong sign: `integer(-3) + 5` → **-2** and `real<2>(-3) - (-5)` → **-2**
+  (both want 2). Never caught because the `integer` tests only add and subtract non-negative builtins,
+  or use `integer` on both sides (`operator+=(integer&, const integer&)` is a separate, correct
+  implementation); found by a randomized `real<B>`-versus-`rational` cross check. Fixed by flipping
+  `plus` for a negative `b` — which also fixes the integral promotion of `~ub + 1` for types narrower
+  than `int` — and by negating only when subtracting from a non-negative value. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

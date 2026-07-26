@@ -483,4 +483,89 @@ TEST_CASE("inexact conversion from rational") {
     REQUIRE(decimal(rational(1, 20)).exp == -2);
     REQUIRE(decimal(rational(1, 25)).num == 4);
     REQUIRE(decimal(rational(1, 25)).exp == -2);
+// real<B> adds and subtracts through natural and integer, so these exercise the fixes above
+}
+
+TEST_CASE("real with integral operand") {
+    const real<2> a(3, -2); // 3/4
+    const real<2> b(5, 1);  // 10
+
+    REQUIRE(to_rational(a + 2) == rational(11, 4));
+    REQUIRE(to_rational(2 + a) == rational(11, 4));
+    REQUIRE(to_rational(a - 2) == rational(-5, 4));
+    REQUIRE(to_rational(2 - a) == rational(5, 4));
+    REQUIRE(to_rational(a * 4) == rational(3));
+    REQUIRE(to_rational(4 * a) == rational(3));
+
+    REQUIRE(to_rational(b + 5) == rational(15));
+    REQUIRE(to_rational(5 + b) == rational(15));
+    REQUIRE(to_rational(b - 5) == rational(5));
+    REQUIRE(to_rational(5 - b) == rational(-5));
+    REQUIRE(to_rational(b * 3) == rational(30));
+
+    REQUIRE(to_rational(real<2>(7) + 5) == rational(12));
+    REQUIRE(to_rational(real<2>(7) - 5) == rational(2));
+    REQUIRE(to_rational(5 - real<2>(7)) == rational(-2));
+
+    // integer and natural operands
+    REQUIRE(to_rational(a + integer(2)) == rational(11, 4));
+    REQUIRE(to_rational(a - integer(2)) == rational(-5, 4));
+    REQUIRE(to_rational(a * integer(4)) == rational(3));
+    REQUIRE(to_rational(a * natural(4)) == rational(3));
+
+    const decimal p(3, -2); // 0.03
+    REQUIRE(to_rational(p + 2) == rational(203, 100));
+    REQUIRE(to_rational(2 + p) == rational(203, 100));
+    REQUIRE(to_rational(p - 2) == rational(-197, 100));
+    REQUIRE(to_rational(2 - p) == rational(197, 100));
+    REQUIRE(to_rational(p * 200) == rational(6));
+    REQUIRE(to_rational(decimal(5, 1) + 5) == rational(55));
+    REQUIRE(to_rational(decimal(5, 1) - 5) == rational(45));
+    REQUIRE(to_rational(5 - decimal(5, 1)) == rational(-45));
+
+    // zero on either side
+    REQUIRE(to_rational(real<2>(0) + 5) == rational(5));
+    REQUIRE(to_rational(5 + real<2>(0)) == rational(5));
+    REQUIRE(to_rational(real<2>(0) - 5) == rational(-5));
+    REQUIRE(to_rational(5 - real<2>(0)) == rational(5));
+    REQUIRE(to_rational(real<2>(0) * 5) == rational(0));
+    REQUIRE(to_rational(real<2>(7) + 0) == rational(7));
+    REQUIRE(to_rational(real<2>(7) - 0) == rational(7));
+    REQUIRE(to_rational(decimal(0) + 5) == rational(5));
+    REQUIRE(to_rational(decimal(0) - 5) == rational(-5));
+    REQUIRE(to_rational(real<2>(0) + integer(5)) == rational(5));
+
+    // a negative value plus a positive integral operand, and the other way round
+    REQUIRE(to_rational(real<2>(-3) + 5) == rational(2));
+    REQUIRE(to_rational(5 + real<2>(-3)) == rational(2));
+    REQUIRE(to_rational(real<2>(-3) + 3) == rational(0));
+    REQUIRE(to_rational(real<2>(3) - 5) == rational(-2));
+    REQUIRE(to_rational(real<2>(3) - 3) == rational(0));
+    REQUIRE(to_rational(decimal(-3) + 5) == rational(2));
+    REQUIRE(to_rational(decimal(3) - 5) == rational(-2));
+    REQUIRE(to_rational(real<2>(-3) + integer(5)) == rational(2));
+
+    // negative integral operands
+    REQUIRE(to_rational(real<2>(3) + (-5)) == rational(-2));
+    REQUIRE(to_rational(real<2>(3) - (-5)) == rational(8));
+    REQUIRE(to_rational(real<2>(-3) - (-5)) == rational(2));
+    REQUIRE(to_rational(real<2>(-3) + (-5)) == rational(-8));
+    REQUIRE(to_rational((-5) - real<2>(3)) == rational(-8));
+    REQUIRE(to_rational((-5) + real<2>(3)) == rational(-2));
+    REQUIRE(to_rational(real<2>(0) - (-5)) == rational(5));
+    REQUIRE(to_rational(real<2>(3, -2) - (-2)) == rational(11, 4));
+    REQUIRE(to_rational(real<2>(3, 2) - (-2)) == rational(14));
+    REQUIRE(to_rational(real<2>(3) * (-5)) == rational(-15));
+    REQUIRE(to_rational(decimal(3) - (-5)) == rational(8));
+    REQUIRE(to_rational(decimal(3, -2) - (-2)) == rational(203, 100));
+    REQUIRE(to_rational(decimal(3, 2) - (-2)) == rational(302));
+    REQUIRE(to_rational(real<2>(3) - integer(-5)) == rational(8));
+
+    real<2> q(1);
+    q += 2;
+    REQUIRE(q == real<2>(3));
+    q -= 5;
+    REQUIRE(q == real<2>(-2));
+    q *= 3;
+    REQUIRE(q == real<2>(-6));
 }

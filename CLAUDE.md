@@ -1,1 +1,2 @@
-don't mention Claude in git commits
+- Don't mention Claude in git commits.
+- Every change to `main` needs to go through Github PR. Let Marko decide to merge it OR request changes.

@@ -748,3 +748,49 @@ TEST_CASE("is_one") {
     REQUIRE(!integer(2).is_one());
     REQUIRE(!((integer(1) << 64) + 1).is_one());
 }
+
+TEST_CASE("plus and minus a signed builtin operand") {
+    // a - b with b < 0 must add abs(b), and the sign of a mixed-sign magnitude difference
+    // must only be flipped for subtraction
+    for (long x : {-12L, -5L, -1L, 0L, 1L, 5L, 12L})
+        for (long y : {-12L, -5L, -1L, 0L, 1L, 5L, 12L}) {
+            integer a = x;
+            a += y;
+            REQUIRE(a == x + y);
+
+            integer b = x;
+            b -= y;
+            REQUIRE(b == x - y);
+
+            REQUIRE(integer(x) + y == x + y);
+            REQUIRE(integer(x) - y == x - y);
+            REQUIRE(y + integer(x) == y + x);
+            REQUIRE(y - integer(x) == y - x);
+        }
+
+    // the cases that used to be wrong, spelled out
+    integer a = 10;
+    a -= -3;
+    REQUIRE(a == 13);
+    integer b = -10;
+    b -= -3;
+    REQUIRE(b == -7);
+    integer c = 0;
+    c -= -5;
+    REQUIRE(c == 5);
+    integer d = -3;
+    d += 5;
+    REQUIRE(d == 2);
+
+    // multi word, so the magnitude subtraction is not a single word operation
+    const integer big = integer(1) << 80;
+    integer e = big;
+    e -= -5;
+    REQUIRE(e == big + 5);
+    integer f = -big;
+    f -= -5;
+    REQUIRE(f == -(big - 5));
+    integer g = -big;
+    g += 5;
+    REQUIRE(g == -(big - 5));
+}

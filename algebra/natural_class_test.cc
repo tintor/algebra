@@ -1433,3 +1433,38 @@ TEST_CASE("str rejects an unusable base") {
     REQUIRE(a.str(36, false) == "9ix");
     REQUIRE(natural(0).str(2) == "0");
 }
+
+TEST_CASE("operator+= with a builtin operand when the value is zero") {
+    // __add_and_return_carry() returns the carry, which for an empty value is the operand itself
+    // and not 1, so the carry has to be pushed rather than a literal 1
+    natural a = 0;
+    a += uint64_t(5);
+    REQUIRE(a == 5u);
+
+    natural b = 0;
+    b += uint128_t(5);
+    REQUIRE(b == 5u);
+
+    // a zero that came out of a subtraction behaves the same
+    natural c = 7;
+    c -= 7u;
+    REQUIRE(c.words.size() == 0);
+    c += uint64_t(9);
+    REQUIRE(c == 9u);
+
+    // and the ordinary carry out of a full word still works
+    natural d = UINT64_MAX;
+    d += uint64_t(1);
+    REQUIRE(d == (uint128_t(UINT64_MAX) + 1));
+    natural e = UINT64_MAX;
+    e += uint64_t(UINT64_MAX);
+    REQUIRE(e == (uint128_t(UINT64_MAX) * 2));
+
+    // nonzero start, no carry
+    natural f = 10;
+    f += uint64_t(5);
+    REQUIRE(f == 15u);
+    natural g = 0;
+    g += uint64_t(0);
+    REQUIRE(g == 0u);
+}
