@@ -137,6 +137,20 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `types.h`. Before these, the suite could not run at all under its own build system.
   **[confirmed]**
 
+- [x] **1.24 Signed overflow when casting `integer` to the smallest `int`/`long`.**
+  `integer_class.h:111,119` — `operator int()`/`operator long()` returned
+  `-static_cast<long>(abs.words[0])`. For `INT_MIN`/`LONG_MIN` the magnitude is `2**31`/`2**63`,
+  which does not fit the signed type, so the cast wraps to the minimum and negating it is signed
+  overflow. `integer_class_test` asserted the right answer and passed anyway, because whether the
+  optimizer exploits the overflow depends on inlining: `static_cast<long>(integer(LONG_MIN)) ==
+  LONG_MIN` evaluates to `false` at `-O2`/`-O3` while both sides still print
+  `-9223372036854775808`. Found when PR #3 (which removes `integer`'s duplicated `words` member)
+  changed inlining enough for it to bite. The negation is now done in unsigned, as
+  `operator int128_t()` already did. The regression test is a `static_assert`, not a `REQUIRE`,
+  because undefined behaviour in a constant expression is ill-formed and therefore reliable.
+  Also dropped the dead `is_negative()` branch in `operator unsigned long`/`unsigned long long`,
+  which `is_uint64()` already excludes. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

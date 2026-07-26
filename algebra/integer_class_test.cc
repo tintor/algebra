@@ -98,6 +98,11 @@ TEST_CASE("parse") {
 }
 
 TEST_CASE("static_cast<int>") {
+    // INT_MIN is the case that used to negate a signed int that already held INT_MIN. The runtime
+    // REQUIREs below cannot catch that reliably (whether the optimizer exploits the overflow
+    // depends on inlining), but undefined behaviour in a constant expression is ill-formed, so
+    // these static_asserts fail to compile if the negation is done in a signed type.
+    static_assert(static_cast<int>(integer(std::numeric_limits<int>::min())) == std::numeric_limits<int>::min());
     REQUIRE(static_cast<int>(integer(0)) == 0);
     REQUIRE(static_cast<int>(integer(1)) == 1);
     REQUIRE(static_cast<int>(integer(-1)) == -1);
@@ -118,6 +123,7 @@ TEST_CASE("static_cast<uint>") {
 }
 
 TEST_CASE("static_cast<long>") {
+    static_assert(static_cast<long>(integer(std::numeric_limits<long>::min())) == std::numeric_limits<long>::min());
     REQUIRE(static_cast<long>(integer(0)) == 0);
     REQUIRE(static_cast<long>(integer(1)) == 1);
     REQUIRE(static_cast<long>(integer(-1)) == -1);

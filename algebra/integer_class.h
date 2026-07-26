@@ -108,7 +108,12 @@ struct integer {
     }
     constexpr operator int() const {
         Check(is_int32(), "integer -> int32 overflow");
-        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+        // negate in unsigned: for INT_MIN the magnitude is 2**31, which does not fit in an int,
+        // so negating after the cast is signed overflow. Converting an out of range unsigned
+        // value to a signed type is well defined (modular) since C++20, same as operator int128_t.
+        if (is_negative())
+            return static_cast<int>(-static_cast<uint32_t>(abs.words[0]));
+        return static_cast<int>(abs.words[0]);
     }
     constexpr operator unsigned() const {
         Check(is_uint32(), "integer -> uint32 overflow");
@@ -116,15 +121,18 @@ struct integer {
     }
     constexpr operator long() const {
         Check(is_int64(), "integer -> int64 overflow");
-        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+        // see operator int() for why the negation is done in unsigned
+        if (is_negative())
+            return static_cast<long>(-abs.words[0]);
+        return static_cast<long>(abs.words[0]);
     }
     constexpr operator unsigned long() const {
         Check(is_uint64(), "integer -> uint64 overflow");
-        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+        return abs.words[0]; // is_uint64() already rejected a negative value
     }
     constexpr operator unsigned long long() const {
         Check(is_uint64(), "integer -> uint64 overflow");
-        return is_negative() ? -static_cast<long>(abs.words[0]) : abs.words[0];
+        return abs.words[0]; // is_uint64() already rejected a negative value
     }
     static_assert(sizeof(long) == 8);
     static_assert(sizeof(long long) == 8);
