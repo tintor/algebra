@@ -444,7 +444,7 @@ TEST_CASE("REAL_FRACT_DIGITS") {
     REQUIRE(real<2>(3, -2).str() == "0.750");
     REQUIRE(format("{:.1}", real<2>(3, -2)) == "0.8"); // an explicit precision wins
     REAL_FRACT_DIGITS = 0;
-    REQUIRE(format("{}", real<2>(3, -2)) == "1.");
+    REQUIRE(format("{}", real<2>(3, -2)) == "1"); // no separator when there are no fraction digits
     REAL_FRACT_DIGITS = std::nullopt;
     REQUIRE(format("{}", real<2>(3, -2)) == "3/4");
 }
