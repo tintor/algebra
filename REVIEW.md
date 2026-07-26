@@ -151,6 +151,19 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   Also dropped the dead `is_negative()` branch in `operator unsigned long`/`unsigned long long`,
   which `is_uint64()` already excludes. **[confirmed]**
 
+- [x] **1.25 `segment_segment_intersection_param` returned wrong parameters for overlapping
+  collinear segments.** `segment_segment_intersection.h:91-93` — the `SegmentParams` branch emitted
+  only the endpoint parameters 0 and 1, and put a parameter of CD in the `s` slot (documented as
+  along AB) and one of AB in the `t` slot. Wrong in 5 of the 6 overlap shapes: for
+  `AB = (0,0)-(5,0)`, `CD = (4,0)-(10,0)` it returned the union hull `(0,0)-(10,0)` instead of the
+  overlap `(4,0)-(5,0)`, and for two identical but oppositely oriented segments it collapsed the
+  overlap to the single point `(3,0)-(3,0)`. The point returning overload
+  `segment_segment_intersection` computes the same two endpoints correctly, so the two disagreed.
+  Never caught because every existing test went through
+  `segment_segment_intersection_single_point`, which returns `false` for all overlap cases and so
+  never reaches this branch. Fixed by converting each endpoint into the parameter of the segment it
+  belongs to with `div_colinear`. Found while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

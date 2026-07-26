@@ -87,10 +87,13 @@ std::variant<None, PointParams<T>, SegmentParams<T>> segment_segment_intersectio
             return PointParams{T(swap_ab ? 0 : 1), T(swap_cd ? 1 : 0)};
         if (D == A)
             return PointParams{T(swap_ab ? 1 : 0), T(swap_cd ? 0 : 1)};
-        // overlap
-        return SegmentParams{
-            (A > C) ? T(swap_ab ? 1 : 0) : T(swap_cd ? 1 : 0),
-            (B < D) ? T(swap_ab ? 0 : 1) : T(swap_cd ? 0 : 1)};
+        // overlap: [m, n] are its endpoints, m the lower and n the upper one along axis i. Each is
+        // an endpoint of AB or of CD, whichever lies inside the other segment, so it can only be
+        // expressed as 0 or 1 in that segment's own parameter. s must parametrize AB and t must
+        // parametrize CD (see the comment above this function), so both need converting.
+        const Vec2<T> m = (A > C) ? (swap_ab ? b : a) : (swap_cd ? d : c);
+        const Vec2<T> n = (B < D) ? (swap_ab ? a : b) : (swap_cd ? c : d);
+        return SegmentParams{div_colinear(m - a, b - a), div_colinear(n - c, d - c)};
     }
 
     // parallel (non-colinear)
