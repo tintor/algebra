@@ -272,6 +272,17 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   compare the whole magnitude and were already correct. Never caught because no test exercised the
   two word boundary. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.34 `add_max_size`/`div_max_size` read a word before the buffer when an operand is zero.**
+  `kernels.h:57-71` — both call `back()` (which is `words[size - 1]`) without checking for
+  `size == 0`, unlike `mul_max_size` right next to them, so a zero operand indexes `words[-1]`.
+  `add_max_size(2**64 - 1, 0)` returned 2 instead of 1, and with both sizes zero it returned 1
+  instead of 0 (whatever `words[-1]` happens to hold decides it — the value read is out of bounds).
+  Adding zero cannot make the result longer, so the answer is simply the other operand's size.
+  `div_max_size(a, 0)` has the same out of bounds read of the divisor. No test caught it because
+  neither function had any test at all, and nothing inside the library calls them; only
+  `mul_max_size` is used. Fixed by returning the other operand's size when one side is empty,
+  and 0 for a zero divisor. Found while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
