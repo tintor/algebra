@@ -852,3 +852,16 @@ TEST_CASE("lcm") {
         REQUIRE(l * gcd(a, b) == a * b);
     }
 }
+
+TEST_CASE("invert_bits") {
+    natural a = UINT64_MAX;
+    invert_bits(a);
+    REQUIRE(a.words.size() == 0);
+    REQUIRE(a == 0u);
+
+    natural b = 0xF0F0u;
+    natural c = b;
+    invert_bits(c);
+    REQUIRE(c == ~b);
+    REQUIRE(c == (UINT64_MAX ^ 0xF0F0u));
+}

@@ -1,4 +1,5 @@
 #pragma once
+#include "algebra/util.h"
 #include <cstdint>
 #include <format>
 
@@ -253,12 +254,6 @@ constexpr T min(const T& a, const T& b) { return (a < b) ? a : b; }
 
 template<typename T>
 constexpr void minimize(T& a, const T& b) { if (b < a) a = b; }
-
-constexpr uint64_t hash_fn_64bit(uint64_t k) {
-    k ^= k >> 33;
-    k *= 0xff51afd7ed558ccdllu;
-    return k;
-}
 
 }
 

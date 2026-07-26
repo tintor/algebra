@@ -1395,3 +1395,15 @@ TEST_CASE("square matches multiplication") {
     mul(c, c);
     REQUIRE(c == b * b);
 }
+
+TEST_CASE("operator~ normalizes") {
+    natural a = UINT64_MAX;
+    natural b = ~a;
+    REQUIRE(b.words.size() == 0);
+    REQUIRE(b == 0u);
+    REQUIRE(!b);
+
+    natural d = 0xF0F0u;
+    natural e = ~d;
+    REQUIRE(e == (UINT64_MAX ^ 0xF0F0u));
+}

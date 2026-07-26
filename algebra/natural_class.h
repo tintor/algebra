@@ -160,73 +160,13 @@ struct natural {
     }
 
     constexpr int mod2() const { return words[0] % 2; }
-
-    // TODO move to kernels
-    constexpr int mod3() const {
-        uint64_t acc = 0;
-        for (int i = words.size(); i-- > 0;)
-            acc += words[i] % 3;
-        return acc % 3;
-    }
-
+    constexpr int mod3() const { return algebra::mod3(*this); }
     constexpr int mod4() const { return words[0] % 4; }
-
-    // TODO move to kernels
-    constexpr int mod5() const {
-        uint64_t acc = 0;
-        // acc overflow is not possible since 4 * UINT32_MAX < UINT64_MAX
-        static_assert(sizeof(words.size()) == 4);
-        // (2**64) mod 5 == 1
-        for (int i = words.size(); i-- > 0;)
-            acc += words[i] % 5;
-        return acc % 5;
-    }
-
-    // TODO move to kernels
-    constexpr int mod6() const {
-        uint64_t m = 0;
-        int i = words.size();
-        while (i > 0) {
-            m = m * 4 + words[--i] % 6;
-            m %= 6;
-        }
-        return m;
-    }
-
-    // TODO move to kernels
-    constexpr int mod7() const {
-        uint64_t m = 0;
-        int i = 0;
-        while (i + 2 < words.size()) {
-            m += words[i++] % 7;
-            m += words[i++] % 7 * 2;
-            m += words[i++] % 7 * 4;
-        }
-        if (i < words.size())
-            m += words[i++] % 7;
-        if (i < words.size())
-            m += words[i] % 7 * 2;
-        return m % 7;
-    }
-
+    constexpr int mod5() const { return algebra::mod5(*this); }
+    constexpr int mod6() const { return algebra::mod6(*this); }
+    constexpr int mod7() const { return algebra::mod7(*this); }
     constexpr int mod8() const { return words[0] % 8; }
-
-    // TODO move to kernels
-    constexpr int mod9() const {
-        uint64_t m = 0;
-        int i = 0;
-        while (i + 2 < words.size()) {
-            m += words[i++] % 9;
-            m += (words[i++] % 9) * 7;
-            m += (words[i++] % 9) * 4;
-        }
-        if (i < words.size())
-            m += words[i++] % 9;
-        if (i < words.size())
-            m += words[i] % 9 * 7;
-        return m % 9;
-    }
-
+    constexpr int mod9() const { return algebra::mod9(*this); }
     constexpr int mod10() const { return algebra::mod10(*this); }
 
     constexpr natural& operator%=(std_int auto b) { *this = operator%(b); return *this; }

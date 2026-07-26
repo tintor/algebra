@@ -377,9 +377,9 @@ template<>
 struct std::hash<algebra::xrational> {
     constexpr size_t operator()(const algebra::xrational& a) const {
         uint64_t seed = 0;
-        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.num));
-        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.den));
-        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::natural>()(a.root));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.num));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.den));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::natural>()(a.root));
         return seed;
     }
 };

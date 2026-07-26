@@ -600,6 +600,68 @@ constexpr uint128_t __mod(cnatural a, const uint128_t b) {
     return res;
 }
 
+// (2**64) mod 3 == 1
+constexpr int mod3(cnatural a) {
+    uint64_t acc = 0;
+    for (int i = a.size; i-- > 0;)
+        acc += a[i] % 3;
+    return acc % 3;
+}
+
+// (2**64) mod 5 == 1
+constexpr int mod5(cnatural a) {
+    // acc overflow is not possible since 4 * UINT32_MAX < UINT64_MAX
+    static_assert(sizeof(a.size) == 4);
+    uint64_t acc = 0;
+    for (int i = a.size; i-- > 0;)
+        acc += a[i] % 5;
+    return acc % 5;
+}
+
+// (2**64) mod 6 == 4
+constexpr int mod6(cnatural a) {
+    uint64_t m = 0;
+    int i = a.size;
+    while (i > 0) {
+        m = m * 4 + a[--i] % 6;
+        m %= 6;
+    }
+    return m;
+}
+
+// (2**64) mod 7 == 2, so the word weights cycle 1, 2, 4
+constexpr int mod7(cnatural a) {
+    uint64_t m = 0;
+    int i = 0;
+    while (i + 2 < a.size) {
+        m += a[i++] % 7;
+        m += a[i++] % 7 * 2;
+        m += a[i++] % 7 * 4;
+    }
+    if (i < a.size)
+        m += a[i++] % 7;
+    if (i < a.size)
+        m += a[i] % 7 * 2;
+    return m % 7;
+}
+
+// (2**64) mod 9 == 7, so the word weights cycle 1, 7, 4
+constexpr int mod9(cnatural a) {
+    uint64_t m = 0;
+    int i = 0;
+    while (i + 2 < a.size) {
+        m += a[i++] % 9;
+        m += (a[i++] % 9) * 7;
+        m += (a[i++] % 9) * 4;
+    }
+    if (i < a.size)
+        m += a[i++] % 9;
+    if (i < a.size)
+        m += a[i] % 9 * 7;
+    return m % 9;
+}
+
+// (2**64) mod 10 == 6
 constexpr int mod10(cnatural a) {
     uint64_t m = 0;
     int i = a.size;
