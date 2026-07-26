@@ -3,6 +3,6 @@
 - [x] Fill the missing functions / methods in README.md and their description.
 - [] Review gaps in test coverage and add missing tests. If this uncovers new bugs add them to REVIEW.md and mark appropriate sections above as not yet done.
 - [] Figure out if it is possible on Free Github Account to setup a separate profile for Claude Code to use (instead of Claude Code using Marko's profile in PRs and comments)
-- [] Implement boolean (union, intersection, difference, sym-diff) operations and inversion for new 2d polygon: multi-polygon (with optional holes) type. The type will be c++ template on type of numbers it uses for coordinates (default is rational numbers).
+- [x] Implement boolean (union, intersection, difference, sym-diff) operations and inversion for new 2d polygon: multi-polygon (with optional holes) type. The type will be c++ template on type of numbers it uses for coordinates (default is rational numbers).
 - [] Extend the 2d multi-polygon type to also support edge that are circular arcs, and update boolean operations. Use TestDrivenDevelopment.
 - [] Implement positive and negative buffer (offset) operations on the 2d multi-polygon type.
