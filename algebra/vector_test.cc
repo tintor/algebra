@@ -44,3 +44,32 @@ TEST_CASE("dot and lerp") {
     REQUIRE(lerp(V2{1, 1}, V2{3, 5}, rational(0)) == V2{1, 1});
     REQUIRE(lerp(V2{1, 1}, V2{3, 5}, rational(1)) == V2{3, 5});
 }
+
+TEST_CASE("indexing") {
+    Vec2<rational> a{1, 2};
+    REQUIRE(a[0] == 1);
+    REQUIRE(a[1] == 2);
+    a[0] = 7;
+    REQUIRE(a.x == 7);
+
+    Vec3<rational> b{1, 2, 3};
+    REQUIRE(b[0] == 1);
+    REQUIRE(b[1] == 2);
+    REQUIRE(b[2] == 3);
+    b[2] = 9;
+    REQUIRE(b.z == 9);
+
+    Vec4<rational> c{1, 2, 3, 4};
+    REQUIRE(c[0] == 1);
+    REQUIRE(c[1] == 2);
+    REQUIRE(c[2] == 3);
+    REQUIRE(c[3] == 4);
+    c[3] = 8;
+    REQUIRE(c.w == 8);
+
+    REQUIRE(Vec3<rational>::dim == 3);
+
+    // usable in a constant expression
+    static_assert([]{ Vec2<int> v{3, 4}; return v[0] * 10 + v[1]; }() == 34);
+    static_assert([]{ Vec4<int> v{1, 2, 3, 4}; v[2] = 9; return v.z; }() == 9);
+}
