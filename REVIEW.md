@@ -210,6 +210,15 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   2.11 in `integer`: every other branch means `result * base**exp`, but the zero exponent case
   drops `result`. Found while documenting the API for the README.
 
+- [x] **2.25 `natural * natural` drops carries that travel more than two words.**
+  `kernels.h:370-379` — after each row of the schoolbook multiplication the carry into the
+  words above the partial product was propagated with two hard-coded steps instead of a loop,
+  so a carry that has to pass through two all-ones words was lost. The result is silently too
+  small by a power of 2**64. `mul_karatsuba()`, `square()` and `add_product()` all use different
+  code and were unaffected, which is how it was spotted. It also made `isqrt()` return
+  `floor(sqrt(a)) + 1` for 290 of the 771 powers of two between 2**129 and 2**899.
+  Found while working on `PI()`. **[confirmed]**
+
 ## 3. Correct today, but fragile
 
 - **`integer` carries a duplicate word buffer.** `integer_class.h:11` has both `natural abs`

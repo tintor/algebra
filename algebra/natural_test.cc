@@ -132,6 +132,7 @@ void test_isqrt(const auto& fn) {
 }
 
 constexpr natural isqrt_natural(const natural& x) { return isqrt(x); }
+TEST_CASE("isqrt stress") { test_isqrt(isqrt_natural); }
 TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
 TEST_CASE("isqrt3") { test_isqrt(isqrt3); }
 
@@ -653,4 +654,15 @@ TEST_CASE("gcd 128 bit") {
     const uint128_t p = (one << 89) - 1; // 618970019642690137449562111 = 618970019642690137449562111
     REQUIRE(gcd(p * 3, p * 5) == p);
     REQUIRE(gcd(p, p) == p);
+}
+
+TEST_CASE("isqrt of powers of two") {
+    // squaring these needs a carry that travels through several all-ones words
+    for (int e = 0; e < 900; e++) {
+        natural a = 1;
+        a <<= e;
+        const natural s = isqrt(a);
+        REQUIRE(s * s <= a);
+        REQUIRE((s + 1u) * (s + 1u) > a);
+    }
 }

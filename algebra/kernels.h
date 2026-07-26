@@ -375,15 +375,12 @@ constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init) {
             j += 1;
         }
 
-        if (acc) {
+        // the carry can travel further than two words, through words that are all ones
+        while (acc) {
             acc += qi[j];
             qi[j] = acc;
             acc >>= 64;
-            if (acc) {
-                j += 1;
-                acc += qi[j];
-                qi[j] = acc;
-            }
+            j += 1;
         }
     }
     q.normalize();
