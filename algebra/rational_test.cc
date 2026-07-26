@@ -126,3 +126,16 @@ TEST_CASE("simplify rationals") {
         REQUIRE(y == 2);
     }
 }
+
+TEST_CASE("sin and cos of large arguments") {
+    // range reduction must not cost accuracy
+    for (auto [x, terms] : {std::pair{100.0, 20u}, {1000.0, 24u}, {-30.0, 20u}, {7.0, 16u}}) {
+        const rational q(x);
+        REQUIRE(approx_log2(sin(q, terms) - rational(std::sin(x))) <= -45);
+        REQUIRE(approx_log2(cos(q, terms) - rational(std::cos(x))) <= -45);
+    }
+    // small arguments are not reduced at all, and stay exact rationals of small height
+    const rational s = sin(rational(1, 2), 12);
+    REQUIRE(s.den.num_bits() < 200);
+    REQUIRE(approx_log2(s - rational(std::sin(0.5))) <= -50);
+}

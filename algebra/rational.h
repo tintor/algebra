@@ -195,11 +195,25 @@ constexpr rational PI(unsigned n) {
     return sqrt(rational(10005), n) * rational{426880 * e.q, 13591409 * e.q + e.r};
 }
 
+// reduce x into [0, 2*PI). Note: expensive, since the denominator of PI(n) ends up in x,
+// and unnecessary for arguments that are already small - 6 < 2*PI, so the cheap test first.
+constexpr void __reduce_mod_two_pi(rational& x, unsigned n) {
+    if (x < 6)
+        return;
+    const rational two_pi = 2 * PI(n);
+    if (x < two_pi)
+        return;
+    x %= two_pi;
+    // The remainder carries the denominator of PI(n), which would make every term of the
+    // series that follows enormous. Keep the digits the series can actually use.
+    x = round(x, 10 * n);
+}
+
 constexpr rational sin(rational x, unsigned n) {
     const bool negate = x.num.is_negative();
     if (negate)
         x.num.negate();
-    x %= 2 * PI(10);
+    __reduce_mod_two_pi(x, 10);
 
     rational out = x;
     rational a = x;
@@ -220,7 +234,7 @@ constexpr rational sin(rational x, unsigned n) {
 constexpr rational cos(rational x, unsigned n) {
     if (x.num.is_negative())
         x.num.negate();
-    x %= 2 * PI(10);
+    __reduce_mod_two_pi(x, 10);
 
     rational out = 1;
     rational a = 1; // cos(x) = 1 - x^2/2! + x^4/4! - ...
