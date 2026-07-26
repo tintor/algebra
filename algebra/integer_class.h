@@ -296,8 +296,8 @@ constexpr integer& operator-=(integer& a, const integer& b) { return __add<false
 template<bool plus>
 constexpr integer& __add(integer& a, std_int auto b) {
     auto ub = make_unsigned(b);
-    if (b < 0)
-        return a -= ~ub + 1;
+    if (b < 0) // a + b == a - abs(b) and a - b == a + abs(b)
+        return __add<!plus>(a, static_cast<decltype(ub)>(~ub + 1));
 
     if (plus == !a.is_negative()) {
         a.abs += ub;
@@ -308,8 +308,11 @@ constexpr integer& __add(integer& a, std_int auto b) {
         a.abs -= ub;
         return a;
     }
+    // here plus == a.is_negative(), so the result of the magnitude subtraction is
+    // negative only for (a >= 0) - b
     a = ub - static_cast<decltype(ub)>(a.abs);
-    a.negate();
+    if constexpr (!plus)
+        a.negate();
     return a;
 }
 
