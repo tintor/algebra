@@ -1259,3 +1259,35 @@ TEST_CASE("str matches digit at a time conversion") {
         REQUIRE(a.str(7) == ref_str(a, 7));
     }
 }
+
+TEST_CASE("bitwise and with operands of different size") {
+    natural b = 1;
+    b <<= 200;
+    b += 0xFFFFu;
+
+    natural a = 0xF0F0F0F0ull;
+    natural c = a;
+    c &= b;
+    REQUIRE(c == 0xF0F0u);
+    REQUIRE(c == (a & b));
+
+    natural d = b;
+    d &= a;
+    REQUIRE(d == 0xF0F0u);
+
+    natural e = b;
+    e &= natural(0);
+    REQUIRE(e == 0u);
+    REQUIRE(e.words.size() == 0);
+
+    Random rng(31);
+    for (int i = 0; i < 100; i++) {
+        const natural x = rand_natural(1, 8, rng);
+        const natural y = rand_natural(1, 8, rng);
+        natural z = x;
+        z &= y;
+        REQUIRE(z == (x & y));
+        REQUIRE(z <= x);
+        REQUIRE(z <= y);
+    }
+}

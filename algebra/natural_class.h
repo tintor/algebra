@@ -374,7 +374,7 @@ constexpr bool operator<(const natural& a, const std_unsigned_int auto b) { retu
 constexpr bool operator<(const std_unsigned_int auto a, const natural& b) { return a < b.words[0] || b.words.size() > 1; }
 
 constexpr bool operator<(const natural& a, const std_signed_int auto b) { return b >= 0 && a < static_cast<uint64_t>(b); }
-constexpr bool operator<(const std_signed_int auto a, const natural b) { return a < 0 || static_cast<uint64_t>(a) < b; }
+constexpr bool operator<(const std_signed_int auto a, const natural& b) { return a < 0 || static_cast<uint64_t>(a) < b; }
 
 constexpr bool operator<(const natural& a, const uint128_t b) {
     if (b <= UINT64_MAX)
@@ -1163,10 +1163,14 @@ constexpr natural& operator&=(natural& a, uint64_t b);
 constexpr natural operator&(natural a, uint64_t b) { return a &= b; }
 
 constexpr natural& operator&=(natural& a, const natural& b) {
-    size_t bs = b.words.size();
-    if (bs > a.words.size())
-        a.words.resize(bs);
-    for (size_t i = 0; i < bs; i++)
+    // words of A above the size of B can only be zero in the result
+    const int n = std::min<int>(a.words.size(), b.words.size());
+    if (n == 0) {
+        a.words.set_zero(); // downsize(0) alone would leave a stale word behind
+        return a;
+    }
+    a.words.downsize(n);
+    for (int i = 0; i < n; i++)
         a.words[i] &= b.words[i];
     a.words.normalize();
     return a;
