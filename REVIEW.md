@@ -330,7 +330,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - **[fixed]** **Missing includes**, currently masked by clang/libc++ include order: `<cstdint>`
   (`integer_backend.h` — first error under g++), `<cstring>` (`kernels.h` uses `std::memcpy`),
   `<random>` (`natural.h` uses `std::uniform_int_distribution`), `<optional>`, `<array>`.
-- **`-std=c++23` fails with GCC.** In strict mode GCC's `__int128` is not `std::integral`, so
+- **[fixed]** **`-std=c++23` fails with GCC.** In strict mode GCC's `__int128` is not `std::integral`, so
   `std_int<uint128_t>` is false and everything taking a `uint128_t` fails to compile. The build
   works only with clang or `-std=gnu++23`. Either support GCC or document clang-only.
 - `constexpr` is claimed broadly but several functions can never be constant-evaluated:
