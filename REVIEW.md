@@ -448,8 +448,8 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 3. Correct today, but fragile
 
-- **`integer` carries a duplicate word buffer.** `integer_class.h:11` has both `natural abs`
-  and `integer_backend words`. `words` is a *deep copy* — so `integer(integer&&)` (`:15`)
+- **[fixed]** **`integer` carries a duplicate word buffer.** `integer_class.h:11` had both
+  `natural abs` and `integer_backend words`. `words` is a *deep copy* — so `integer(integer&&)` (`:15`)
   heap-allocates and copies, defeating the move; `sizeof(integer)` is 32, not the README's 16
   (both `static_assert`s are commented out); `integer(std_int)` (`:14`) double-negates `words`
   so the two disagree on sign; and most arithmetic carries a `// TODO update words`, leaving it

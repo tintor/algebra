@@ -7,21 +7,27 @@ struct integer;
 template<> struct IsNumberClass<integer> : std::true_type {};
 
 struct integer {
+    // Step 1 of moving integer onto a single integer_backend. The second buffer that used to sit
+    // here was a stale duplicate: it was copied on construction and assignment but not updated by
+    // the arithmetic, so it diverged from the real value after 13 of 21 operations tried. Nothing
+    // read it, so removing it changes no behaviour and halves the allocations per value.
+    //
+    // Next step is to replace this natural with the integer_backend itself, reaching the magnitude
+    // through the cnatural/vnatural/inatural conversions below, which is why they exist.
     natural abs;
-    integer_backend words;
 
     constexpr integer() {}
-    constexpr integer(std_int auto a) : abs(abs_unsigned(a)), words(a) { if (a < 0) negate(); }
-    constexpr integer(integer&& o) : abs(std::move(o.abs)) { words = abs.words; }
-    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); words = abs.words; }
-    constexpr integer(const integer& o) : abs(o.abs), words(o.words) { }
-    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); words = abs.words; }
+    constexpr integer(std_int auto a) : abs(abs_unsigned(a)) { if (a < 0) negate(); }
+    constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
+    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); }
+    constexpr integer(const integer& o) : abs(o.abs) { }
+    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); }
 
-    constexpr void operator=(std_int auto a) { abs.words = a; words = a; }
-    constexpr void operator=(integer&& o) { abs = std::move(o.abs); words = abs.words; }
-    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); words = abs.words; }
-    constexpr void operator=(const integer& o) { abs = o.abs; words = o.words; }
-    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); words = o.words; }
+    constexpr void operator=(std_int auto a) { abs.words = a; }
+    constexpr void operator=(integer&& o) { abs = std::move(o.abs); }
+    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); }
+    constexpr void operator=(const integer& o) { abs = o.abs; }
+    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); }
 
     constexpr auto sign() const { return abs.words.sign(); }
     constexpr bool is_negative() const { return sign() < 0; }
@@ -88,7 +94,6 @@ struct integer {
     constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s, base) {
         if (s.size() && s[0] == '-')
             abs.words.negate();
-        words = abs.words;
     }
     constexpr integer(const char* s, unsigned base = 10) : integer(std::string_view(s), base) {}
 
@@ -174,10 +179,7 @@ struct integer {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr void negate() {
-        abs.words.negate();
-        words.negate();
-    }
+    constexpr void negate() { abs.words.negate(); }
 
     constexpr size_t popcount() const {
         if (!is_negative())
@@ -201,7 +203,6 @@ struct integer {
     constexpr operator vnatural() { return {{abs.words.data(), abs.words.size()}, abs.words.capacity()}; }
     constexpr operator inatural() { return {abs.words.data(), abs.words.size()}; }
 
-    // TODO update words
     constexpr integer& operator++() {
         // natural::operator++/-- work on the magnitude and preserve the sign of abs.words
         if (is_negative())
@@ -211,7 +212,6 @@ struct integer {
         return *this;
     }
 
-    // TODO update words
     constexpr integer& operator--() {
         if (is_negative())
             ++abs;
@@ -235,7 +235,7 @@ struct integer {
         return (sign() < 0) ? -a : a;
     }
 
-    constexpr void swap(integer& o) { abs.swap(o.abs); words.swap(o.words); }
+    constexpr void swap(integer& o) { abs.swap(o.abs); }
 
     constexpr uint64_t mod2() const {
         return abs.mod2();
@@ -274,7 +274,6 @@ constexpr bool operator==(const integer& a, std_int auto b) {
 constexpr void negate(integer& a) { a.negate(); }
 constexpr integer operator-(integer a) { a.negate(); return a; }
 
-// TODO update words
 template<bool plus>
 constexpr integer& __add(integer& a, const integer& b) {
     integer a_copy = a;
@@ -294,7 +293,6 @@ constexpr integer& __add(integer& a, const integer& b) {
 constexpr integer& operator+=(integer& a, const integer& b) { return __add<true>(a, b); }
 constexpr integer& operator-=(integer& a, const integer& b) { return __add<false>(a, b); }
 
-// TODO update words
 template<bool plus>
 constexpr integer& __add(integer& a, std_int auto b) {
     auto ub = make_unsigned(b);
@@ -616,8 +614,7 @@ constexpr void operator<<=(integer& a, int64_t i) {
 
 ALGEBRA_SHIFT_OP(integer)
 
-// TODO uncommend once integer refactor is done, also in rational
-//static_assert(sizeof(integer) == 16);
+static_assert(sizeof(integer) == 16);
 
 }
 
