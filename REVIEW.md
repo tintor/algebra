@@ -206,6 +206,10 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   estimate could be one too small with no upward correction. Found while fixing 2.16.
   **[confirmed]**
 
+- [ ] **2.24 `pow(real<B>, exp, result)` returns 1 for `exp == 0`.** `real.h:16` — same defect as
+  2.11 in `integer`: every other branch means `result * base**exp`, but the zero exponent case
+  drops `result`. Found while documenting the API for the README.
+
 ## 3. Correct today, but fragile
 
 - **`integer` carries a duplicate word buffer.** `integer_class.h:11` has both `natural abs`

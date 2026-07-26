@@ -410,6 +410,9 @@ struct std::formatter<algebra::rational, char> {
             } else {
                 throw std::format_error("Expected digits after '.' in format specifier.");
             }
+
+            if (it != end && *it == 'f')
+                ++it; // fixed notation, same as without it
         }
 
         if (it == end || *it != '}')

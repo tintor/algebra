@@ -1,0 +1,12 @@
+#pragma once
+// Everything in one include. Individual headers can be included directly instead.
+#include "algebra/natural.h"
+#include "algebra/integer.h"
+#include "algebra/rational.h"
+#include "algebra/real.h"
+#include "algebra/xrational.h"
+#include "algebra/expr.h"
+#include "algebra/vector.h"
+#include "algebra/rational_vector.h"
+#include "algebra/geometry.h"
+#include "algebra/dual.h"
