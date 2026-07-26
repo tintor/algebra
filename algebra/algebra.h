@@ -10,4 +10,5 @@
 #include "algebra/rational_vector.h"
 #include "algebra/geometry.h"
 #include "algebra/polygon2.h"
+#include "algebra/polygon2_arc.h"
 #include "algebra/dual.h"
