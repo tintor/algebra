@@ -1,5 +1,6 @@
 #include <print>
 #include <random>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <thread>
