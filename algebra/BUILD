@@ -36,7 +36,7 @@ library("polygon2",
     test_deps = [":rational_vector"])
 
 library("polygon2_arc",
-    deps = [":polygon2", ":polygon2_arc", ":solve_linear"],
+    deps = [":polygon2", ":solve_linear"],
     test_deps = [":rational_vector"])
 
 library("geometry",
