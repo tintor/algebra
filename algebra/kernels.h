@@ -731,6 +731,8 @@ constexpr void __add_product(vnatural& a, cnatural b, cnatural c) {
 // Assumes A >= B * c (returns false otherwise)
 // A -= (B * c) << (shift * 64)
 constexpr bool __sub_product(inatural& a, cnatural b, const uint64_t c, int shift = 0) {
+    if (c == 0)
+        return true; // subtracting zero always fits, whatever the sizes are
     if (a.size < b.size + shift)
         return false;
     uint128_t carry = 0; // for bc

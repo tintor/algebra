@@ -222,7 +222,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `natural orig_a_abs = a.abs;` plus `Check(orig_a_abs - b.abs*c.abs == a.abs)` performs a full
   copy *and* a full multiplication inside `sub_product`, whose stated purpose is "without memory
   allocation". `integer_class.h:433`: `integer aa = a;` is an unused full copy.
-- `sub_product(natural&,...)` (`natural_class.h:782-806`) and `__div`'s `__sub_product` call
+- **[fixed]** `sub_product(natural&,...)` and `__div`'s `__sub_product` call
   (`:863`) discard the `false` return that signals a violated precondition, leaving the operand
   half-modified.
 - `natural` relies on the invariant "`words[0] == 0` whenever `size() == 0`" in ~15 comparison

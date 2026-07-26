@@ -1291,3 +1291,28 @@ TEST_CASE("bitwise and with operands of different size") {
         REQUIRE(z <= y);
     }
 }
+
+
+TEST_CASE("sub_product rejects a violated precondition") {
+    natural b = 1;
+    b <<= 200;
+    natural c = 3;
+
+    natural a = 5; // much smaller than b * c
+    REQUIRE_THROWS(sub_product(a, b, c));
+
+    natural a2 = 5;
+    REQUIRE_THROWS(sub_product(a2, b, static_cast<uint64_t>(7)));
+
+    // valid uses keep working
+    natural d = b * c;
+    d += 11u;
+    sub_product(d, b, c);
+    REQUIRE(d == 11u);
+
+    natural e = b;
+    e *= 7u;
+    e += 3u;
+    sub_product(e, b, static_cast<uint64_t>(7));
+    REQUIRE(e == 3u);
+}
