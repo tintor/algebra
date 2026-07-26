@@ -209,3 +209,19 @@ TEST_CASE("from non finite floating point") {
     REQUIRE_THROWS(rational(0.0f / fzero));
     REQUIRE_THROWS(rational(1.0f / fzero));
 }
+
+TEST_CASE("parse rejects malformed input") {
+    for (const char* s : {"", "-", "abc", "1.", "1/", "1..2", "1.2.3", "1e", "1e+", "1e-", "+1",
+                          "1 ", " 1", "1x", "--1", "1/2/3", "1.2e", ".5", "1e2x"})
+        REQUIRE_THROWS(rational(s));
+
+    REQUIRE(rational("0") == 0);
+    REQUIRE(rational("-0") == 0);
+    REQUIRE(rational("007") == 7);
+    REQUIRE(rational("1e0") == 1);
+    REQUIRE(rational("12345678901234567890123456789") == integer("12345678901234567890123456789"));
+    REQUIRE(rational("-12/8") == rational(-3, 2));
+    REQUIRE(rational("1e+3") == 1000);
+    REQUIRE(rational("2.5e-2") == rational(1, 40));
+    REQUIRE_THROWS(rational("1e999999999"));
+}

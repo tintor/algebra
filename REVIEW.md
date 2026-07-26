@@ -368,7 +368,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   analysis: the loop is only entered for a composite with no factor of 2 or 3 that is not a
   perfect power, and it stops at the first factor it finds, which is at most `sqrt(a)`. The
   missing exit costs nothing.
-- `#include <regex>` in `rational_class.h` for one parse pattern is a heavy compile-time and
+- **[fixed]** `#include <regex>` in `rational_class.h` for one parse pattern is a heavy compile-time and
   runtime cost for a "no dependencies" header-only library.
 
 ## 7. Build / portability
