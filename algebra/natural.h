@@ -1092,15 +1092,16 @@ constexpr bool is_power_of_three(natural a) {
         return false;
     natural m;
     while (a > 1) {
-        again:
         if (a.mod3())
             return false;
+        // a power of three that is also a perfect square stays a power of three when
+        // halved in exponent, and the square root is much cheaper to keep dividing
         if (is_possible_square(a)) {
             natural s = isqrt(a);
             mul(s, s, m);
             if (m == a) {
                 a = std::move(s);
-                goto again;
+                continue;
             }
         }
         a /= 3u;

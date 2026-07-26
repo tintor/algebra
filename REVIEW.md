@@ -272,13 +272,13 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   candidate; the margin is genuinely ~2 but nothing documents or asserts it.
 - `natural::str()` doesn't validate `base` — base 1 loops until the buffer check throws,
   base 0 divides by zero.
-- `__diff`/`__sub` (`kernels.h:467-528`) `goto` into the middle of a second `for` loop as a
+- **[documented]** `__diff`/`__sub` `goto` into the middle of a second `for` loop as a
   hand-rolled borrow state machine; correct, but no comment explains the scheme.
 - `pow(base, exp, out)` in `rational.h:96` assigns `out = 1` before copying `base`, so aliasing
   `out` with `base` silently corrupts it.
-- `is_power_of_three` (`natural.h:1065`) uses `goto again` that bypasses the `while (a > 1)`
+- **[fixed]** `is_power_of_three` uses `goto again` that bypasses the `while (a > 1)`
   condition.
-- `point_segment_squared_distance.h:11` — `if (d < 0)` on `dot(B,B)` is unreachable. Both
+- **[fixed]** `point_segment_squared_distance.h` - `if (d < 0)` on `dot(B,B)` is unreachable. Both
   distance functions truncate silently if instantiated with `T = integer`.
 - `SWIZZLE4`'s macro parameter `D` shadows the template parameter `int D` (`vector.h:168`);
   unused today, broken on first use.

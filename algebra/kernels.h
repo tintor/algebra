@@ -470,6 +470,11 @@ constexpr void __add(vnatural& a, cnatural b, int shift = 0) {
 // a = abs(a - b)
 // return a < b = is_negative(a - b)
 // NOTE: caller needs to normalize A
+//
+// The two loops below are one state machine with the borrow as its state: the first loop
+// subtracts without a borrow, the second one with. `goto borrow` and `goto no_borrow` jump
+// between them (into the body of the other loop, which is legal here because no variable
+// initialization is skipped), so each word costs one comparison and one subtraction.
 constexpr bool __diff(inatural a, cnatural b) {
     Check(a.size >= b.size);
     int i = 0;
@@ -508,6 +513,7 @@ constexpr uint64_t __add_and_return_carry(inatural a, bool& a_neg, cnatural b, b
 }
 
 // assuming a >= b
+// (same borrow state machine as __diff() above)
 constexpr void __sub(inatural& a, cnatural b) {
     int i = 0;
     for (; i < b.size; ++i) {

@@ -814,3 +814,19 @@ TEST_CASE("number theory helpers") {
     complement(c2);
     REQUIRE(c2 == natural(UINT64_MAX) - 4u);
 }
+
+
+TEST_CASE("is_power_of_three more") {
+    REQUIRE(!is_power_of_three(natural(0)));
+    REQUIRE(is_power_of_three(natural(1)));
+    REQUIRE(is_power_of_three(natural(3)));
+    REQUIRE(is_power_of_three(natural(9)));
+    REQUIRE(is_power_of_three(natural(81)));
+    REQUIRE(is_power_of_three(pow(natural(3), 40)));
+    REQUIRE(is_power_of_three(pow(natural(3), 64)));  // a perfect square
+    REQUIRE(!is_power_of_three(natural(2)));
+    REQUIRE(!is_power_of_three(natural(6)));
+    REQUIRE(!is_power_of_three(natural(12)));
+    REQUIRE(!is_power_of_three(pow(natural(3), 20) + 1u));
+    REQUIRE(!is_power_of_three(pow(natural(3), 20) * 2u));
+}
