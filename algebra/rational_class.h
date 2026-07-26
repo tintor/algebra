@@ -1,7 +1,5 @@
 #pragma once
 #include "algebra/integer.h"
-#include <regex>
-#include <charconv>
 #include <random>
 
 namespace algebra {
@@ -51,38 +49,63 @@ public:
     template<std::floating_point T>
     constexpr rational(T x);
 
+    // grammar: [-] digits [ ('.' | '/') digits ] [ 'e' [+-] digits ]
     constexpr rational(std::string_view s) {
-        static std::regex pattern(R"(([-]?\d+)([./]\d+)?(e[-+]?(\d+))?)");
-        std::match_results<std::string_view::const_iterator> match;
-        if (!std::regex_match(s.begin(), s.end(), match, pattern))
+        auto is_digit = [](char c) { return '0' <= c && c <= '9'; };
+        size_t i = 0;
+        const bool negative = i < s.size() && s[i] == '-';
+        if (negative)
+            i += 1;
+
+        const size_t int_begin = i;
+        while (i < s.size() && is_digit(s[i]))
+            i += 1;
+        if (i == int_begin)
             throw std::runtime_error("syntax error parsing rational");
+        num = integer(s.substr(0, i));
 
-        std::string_view group1(match[1].first, match[1].second - match[1].first);
-        num = integer(group1);
-        // integer("-0") is +0, so the sign has to come from the text
-        const bool negative = group1.size() && group1[0] == '-';
-
-        std::string_view group2(match[2].first, match[2].second - match[2].first);
-        if (group2.empty()) {
-            den = 1;
-        } else if (group2[0] == '/') {
-            den = integer(group2.substr(1));
-        } else if (group2[0] == '.') {
-            den = pow(integer(10), group2.size() - 1);
-            num *= den;
-            integer frac(group2.substr(1));
-            if (negative) num -= frac; else num += frac;
-        } else
-            throw std::runtime_error("unreachable");
-
-        std::string_view group3(match[3].first, match[3].second - match[3].first);
-        if (!group3.empty()) {
-            std::string_view group4(match[4].first, match[4].second - match[4].first);
-            unsigned long e;
-            std::from_chars(match[4].first, match[4].second, e);
-            integer exp = pow(integer(10), e);
-            if (group3[1] == '-') den *= exp; else num *= exp;
+        den = 1;
+        if (i < s.size() && (s[i] == '.' || s[i] == '/')) {
+            const char kind = s[i++];
+            const size_t frac_begin = i;
+            while (i < s.size() && is_digit(s[i]))
+                i += 1;
+            if (i == frac_begin)
+                throw std::runtime_error("syntax error parsing rational");
+            const std::string_view digits = s.substr(frac_begin, i - frac_begin);
+            if (kind == '/') {
+                den = integer(digits);
+            } else {
+                den = pow(integer(10), digits.size());
+                num *= den;
+                const integer frac(digits);
+                // integer("-0") is +0, so the sign has to come from the text
+                if (negative) num -= frac; else num += frac;
+            }
         }
+
+        if (i < s.size() && s[i] == 'e') {
+            i += 1;
+            bool negative_exponent = false;
+            if (i < s.size() && (s[i] == '+' || s[i] == '-')) {
+                negative_exponent = s[i] == '-';
+                i += 1;
+            }
+            const size_t exp_begin = i;
+            uint64_t e = 0;
+            while (i < s.size() && is_digit(s[i])) {
+                e = e * 10 + (s[i] - '0');
+                Check(e <= 100'000'000, "exponent too large parsing rational");
+                i += 1;
+            }
+            if (i == exp_begin)
+                throw std::runtime_error("syntax error parsing rational");
+            const integer p = pow(integer(10), e);
+            if (negative_exponent) den *= p; else num *= p;
+        }
+
+        if (i != s.size())
+            throw std::runtime_error("syntax error parsing rational");
 
         simplify();
     }
