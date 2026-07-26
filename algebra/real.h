@@ -3,10 +3,11 @@
 
 namespace algebra {
 
+// returns result * (base ** exp)
 template<int B>
 real<B> pow(real<B> base, int64_t exp, real<B> result = 1) {
     if (exp < 0)
-        return 1 / pow(base, -exp, result);
+        return result / pow(base, -exp, real<B>(1));
 
     if (base == B) {
         static_assert(sizeof(result.exp) == 4);
@@ -15,9 +16,9 @@ real<B> pow(real<B> base, int64_t exp, real<B> result = 1) {
         return {result.num, result.exp + static_cast<int>(exp)};
     }
     if (exp == 0)
-        return 1;
+        return result;
     if (exp == 1)
-        return base;
+        return result * base;
 
     if (exp & 1)
         result *= base;
