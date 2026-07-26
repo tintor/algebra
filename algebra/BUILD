@@ -44,6 +44,13 @@ cc_library(
 )
 
 cc_test(
+    name = "integer_backend_test",
+    srcs = ["integer_backend_test.cc"],
+    deps = [":natural_class", ":__test"],
+    args = ["-d=yes"],
+)
+
+cc_test(
     name = "portable_divq_test",
     srcs = ["portable_divq_test.cc"],
     deps = [":kernels", ":__test"],

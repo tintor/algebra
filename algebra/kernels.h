@@ -55,6 +55,11 @@ private:
 };
 
 constexpr int64_t add_max_size(cnatural a, cnatural b) {
+    // adding zero can't grow the result, and back() would read out of bounds
+    if (a.size == 0)
+        return b.size;
+    if (b.size == 0)
+        return a.size;
     if (a.size > b.size)
         return (a.back() == UINT64_MAX) ? a.size + 1 : a.size;
     if (a.size < b.size)
@@ -67,6 +72,8 @@ constexpr int64_t mul_max_size(cnatural a, cnatural b) {
 }
 
 constexpr int64_t div_max_size(cnatural a, cnatural b) {
+    if (a.size == 0 || b.size == 0) // b == 0 has no quotient, and back() would read out of bounds
+        return 0;
     return (a.size >= b.size) ? a.size - b.size + (64 + b.countl_zero() - a.countl_zero()) / 64 : 0;
 }
 
