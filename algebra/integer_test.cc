@@ -170,3 +170,50 @@ TEST_CASE("less_ab_c / less_a_bc / less_ab_cd") {
         REQUIRE(less_a_bc(ab - 1, a, b) == (ab - 1 < ab));
     }
 }
+
+TEST_CASE("exp2") {
+    REQUIRE(exp2(0) == 1);
+    REQUIRE(exp2(1) == 2);
+    REQUIRE(exp2(10) == 1024);
+    REQUIRE(exp2(64) == pow(integer(2), 64));
+    REQUIRE(exp2(200) == pow(integer(2), 200));
+    REQUIRE_THROWS(exp2(-1));
+}
+
+TEST_CASE("pow(integer, natural)") {
+    REQUIRE(pow(integer(3), 4_n) == 81);
+    REQUIRE(pow(integer(-3), 3_n) == -27);
+    REQUIRE(pow(integer(-3), 4_n) == 81);
+    REQUIRE(pow(integer(2), 100_n) == exp2(100));
+    REQUIRE(pow(integer(-2), 101_n) == -exp2(101));
+    REQUIRE(pow(integer(7), 0_n) == 1);
+    REQUIRE(pow(integer(0), 5_n) == 0);
+}
+
+TEST_CASE("binominal_mod") {
+    // reference values: C(10,3) = 120, C(20,5) = 15504, C(6,4) = 15, C(10,5) = 252, C(8,3) = 56
+    natural out;
+    binominal_mod(10_n, 3, 7_n, out);
+    REQUIRE(out == 120u % 7u);
+    binominal_mod(20_n, 5, 101_n, out);
+    REQUIRE(out == 15504u % 101u);
+    binominal_mod(10_n, 0, 7_n, out);
+    REQUIRE(out == 1u);
+
+    // a modulus sharing a factor with some i+1 in [1, k] has no modular inverse for it, which
+    // must not silently produce a wrong answer
+    binominal_mod(6_n, 4, 4_n, out);
+    REQUIRE(out == 15u % 4u);
+    binominal_mod(6_n, 4, 6_n, out);
+    REQUIRE(out == 15u % 6u);
+    binominal_mod(10_n, 5, 10_n, out);
+    REQUIRE(out == 252u % 10u);
+    binominal_mod(8_n, 3, 9_n, out);
+    REQUIRE(out == 56u % 9u);
+
+    // m == 1 reduces everything to 0
+    binominal_mod(10_n, 3, 1_n, out);
+    REQUIRE(out == 0u);
+    binominal_mod(10_n, 0, 1_n, out);
+    REQUIRE(out == 0u);
+}

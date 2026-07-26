@@ -177,6 +177,17 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `real` and `xrational`; `abs` now uses comparisons instead of `signum`. The derivative formulas
   themselves were all correct. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.27 `binominal_mod` silently returned wrong answers for most moduli.**
+  `integer.h:139-153` — it multiplied by the modular inverse of each `i+1`, but ignored the `bool`
+  that `inverse_mod` returns. When `m` is not coprime with `k!` the inverse does not exist, so `inv`
+  kept its previous value and the result was quietly wrong: `C(6,4) mod 4` gave 0 instead of 3,
+  `C(10,5) mod 10` gave 0 instead of 2, and `C(8,3) mod 9` gave 3 instead of 2. `m == 1` was also
+  wrong for `k == 0`, returning 1 rather than 0. README documents the function as `(n k) mod m` with
+  no precondition on `m`, and nothing inside the library calls it, so the fix makes it correct for
+  every `m`: when an inverse is missing it falls back to computing the coefficient exactly (each
+  division is exact, since the partial product is `C(n, j+1)`) and reduces once at the end. Found
+  while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

@@ -137,19 +137,36 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
 
 // returns (n k) mod m
 constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, natural& out) {
+    // Fast path: multiply by the modular inverse of each i+1, which keeps out below m. It needs
+    // every i+1 in [1, k] to be invertible mod m, i.e. m coprime with k!, so inverse_mod can fail.
     out = 1;
     natural e, inv;
     for (uint64_t i = 0; i < k; i++) {
+        e = i;
+        e += 1;
+        if (!inverse_mod(e, m, inv)) {
+            // i+1 shares a factor with m and has no inverse. Compute the coefficient exactly
+            // instead, where every division is exact because the partial product is C(n, j+1),
+            // and reduce only at the end. Slower, since the intermediate is not bounded by m.
+            out = 1;
+            for (uint64_t j = 0; j < k; j++) {
+                e = n;
+                e -= j;
+                out *= e;
+                e = j;
+                e += 1;
+                out /= e;
+            }
+            mod(out, m);
+            return;
+        }
+
         e = n;
         e -= i;
         out *= e;
-
-        e = i;
-        e += 1;
-        inverse_mod(e, m, inv);
-
         __mul_mod(out, inv, m);
     }
+    mod(out, m); // k == 0 leaves out == 1, which still has to be reduced
 }
 
 constexpr void mod(integer& a, const integer& b) {
