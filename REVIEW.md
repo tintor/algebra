@@ -337,7 +337,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   Newton iterate to the working precision and decouple the two parameters.
 - **[fixed]** `sin`/`cos` reduce with `x %= 2*PI(10)`, dragging a ~140-digit denominator through the series.
 - `integer` move constructor/assignment allocate (see section 3).
-- `__square`'s general branch (`natural_class.h:634-653`) restarts carry propagation per partial
+- **[fixed]** `__square`'s general branch restarts carry propagation per partial
   product and computes both `i*j` and `j*i`, so it is no faster than long multiplication — the
   usual 2x symmetry saving is not taken.
 - **[fixed]** `natural::str` converts one digit per full-precision division; chunking by
