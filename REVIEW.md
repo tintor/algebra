@@ -280,9 +280,9 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   condition.
 - **[fixed]** `point_segment_squared_distance.h` - `if (d < 0)` on `dot(B,B)` is unreachable. Both
   distance functions truncate silently if instantiated with `T = integer`.
-- `SWIZZLE4`'s macro parameter `D` shadows the template parameter `int D` (`vector.h:168`);
+- **[fixed]** `SWIZZLE4`'s macro parameter `D` shadows the template parameter `int D`;
   unused today, broken on first use.
-- `Vec::operator[]` (`vector.h:9-10`) `reinterpret_cast`s `this` to `T*`, so it is UB in
+- **[fixed]** `Vec::operator[]` `reinterpret_cast`s `this` to `T*`, so it is UB in
   principle and can never run in the `constexpr` evaluation it is marked for.
 
 ## 4. Duplicated code worth collapsing

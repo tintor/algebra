@@ -5,35 +5,40 @@
 namespace algebra {
 
 template<int D, typename T>
-struct _Vec {
-    static constexpr int dim = D;
-    constexpr const T& operator[](int i) const { return reinterpret_cast<const T*>(this)[i]; }
-    constexpr T& operator[](int i) { return reinterpret_cast<T*>(this)[i]; }
-};
-
-template<int D, typename T>
 struct Vec {
 };
 
+// Note: operator[] selects a member instead of indexing through a pointer to the first one:
+// casting `this` to T* is undefined behaviour and is not allowed in a constant expression.
+
 template<typename T>
-struct Vec<2, T> : public _Vec<2, T> {
+struct Vec<2, T> {
+    static constexpr int dim = 2;
     T x, y;
-    Vec() {}
-    Vec(const T& x, const T& y) : x(x), y(y) {}
+    constexpr Vec() {}
+    constexpr Vec(const T& x, const T& y) : x(x), y(y) {}
+    constexpr const T& operator[](int i) const { return (i == 0) ? x : y; }
+    constexpr T& operator[](int i) { return (i == 0) ? x : y; }
 };
 
 template<typename T>
-struct Vec<3, T> : public _Vec<3, T> {
+struct Vec<3, T> {
+    static constexpr int dim = 3;
     T x, y, z;
-    Vec() {}
-    Vec(const T& x, const T& y, const T& z) : x(x), y(y), z(z) {}
+    constexpr Vec() {}
+    constexpr Vec(const T& x, const T& y, const T& z) : x(x), y(y), z(z) {}
+    constexpr const T& operator[](int i) const { return (i == 0) ? x : (i == 1) ? y : z; }
+    constexpr T& operator[](int i) { return (i == 0) ? x : (i == 1) ? y : z; }
 };
 
 template<typename T>
-struct Vec<4, T> : public _Vec<4, T> {
+struct Vec<4, T> {
+    static constexpr int dim = 4;
     T x, y, z, w;
-    Vec() {}
-    Vec(const T& x, const T& y, const T& z, const T& w) : x(x), y(y), z(z), w(w) {}
+    constexpr Vec() {}
+    constexpr Vec(const T& x, const T& y, const T& z, const T& w) : x(x), y(y), z(z), w(w) {}
+    constexpr const T& operator[](int i) const { return (i == 0) ? x : (i == 1) ? y : (i == 2) ? z : w; }
+    constexpr T& operator[](int i) { return (i == 0) ? x : (i == 1) ? y : (i == 2) ? z : w; }
 };
 
 template<typename T> using Vec2 = Vec<2, T>;
@@ -166,7 +171,7 @@ constexpr Vec<D, T> lerp(const Vec<D, T>& a, const Vec<D, T>& b, const auto& t) 
 
 #define SWIZZLE2(A, B) template<int D, typename T> constexpr Vec<2, T> A ## B(const Vec<D, T>& v) { return {v.A, v.B}; }
 #define SWIZZLE3(A, B, C) template<int D, typename T> constexpr Vec<3, T> A ## B ## C(const Vec<D, T>& v) { return {v.A, v.B, v.C}; }
-#define SWIZZLE4(A, B, C, D) template<int D, typename T> constexpr Vec<4, T> A ## B ## C ## D(const Vec<D, T>& v) { return {v.A, v.B, v.C, v.D}; }
+#define SWIZZLE4(A, B, C, E) template<int D, typename T> constexpr Vec<4, T> A ## B ## C ## E(const Vec<D, T>& v) { return {v.A, v.B, v.C, v.E}; }
 
 SWIZZLE2(x, y)
 SWIZZLE2(x, z)
