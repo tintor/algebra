@@ -78,8 +78,10 @@ struct natural {
 
     constexpr size_t num_trailing_zeros() const { return algebra::num_trailing_zeros(*this); }
     constexpr natural& operator+=(const uint64_t b) {
-        if (__add_and_return_carry(*this, b))
-            words.push_back(1);
+        // note: for an empty (zero) value the carry is b itself, not 1
+        const uint64_t carry = __add_and_return_carry(*this, b);
+        if (carry)
+            words.push_back(carry);
         return *this;
     }
     constexpr natural& operator+=(const uint128_t b) {
