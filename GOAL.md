@@ -1,6 +1,6 @@
-- [] Fix all bugs from sections 1 and 2 of REVIEW.md. Use Test Driven Development. One commit per bug, and push to `main` branch.
-- [] Fix all other issues from sections 3+ of REVIEW.md. Use Test Driven Development (where it makes sense). Create one PR per issue fixed. For performance issues, measure timing difference and explain in PR description. Marko will review and merge.
-- [] Fill the missing functions / methods in README.md and their description.
+- [x] Fix all bugs from sections 1 and 2 of REVIEW.md. Use Test Driven Development. One commit per bug, and push to `main` branch.
+- [x] Fix all other issues from sections 3+ of REVIEW.md. (19 PRs open, awaiting review) Use Test Driven Development (where it makes sense). Create one PR per issue fixed. For performance issues, measure timing difference and explain in PR description. Marko will review and merge.
+- [x] Fill the missing functions / methods in README.md and their description.
 - [] Review gaps in test coverage and add missing tests. If this uncovers new bugs add them to REVIEW.md and mark appropriate sections above as not yet done.
 - [] Implement boolean (union, intersection, difference, sym-diff) operations and inversion for new 2d polygon: multi-polygon (with optional holes) type. The type will be c++ template on type of numbers it uses for coordinates (default is rational numbers).
 - [] Extend the 2d multi-polygon type to also support edge that are circular arcs, and update boolean operations. Use TestDrivenDevelopment.
