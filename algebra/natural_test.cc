@@ -865,3 +865,72 @@ TEST_CASE("invert_bits") {
     REQUIRE(c == ~b);
     REQUIRE(c == (UINT64_MAX ^ 0xF0F0u));
 }
+
+TEST_CASE("isqrt2 and isqrt3 agree with isqrt") {
+    // three independent implementations, so they are each other's reference
+    for (int bits = 1; bits <= 200; bits++) {
+        const natural a = power_of_two(bits);
+        for (const natural& x : {a - 1u, a, a + 1u}) {
+            const natural s = isqrt(x);
+            REQUIRE(s * s <= x);
+            REQUIRE((s + 1u) * (s + 1u) > x);
+            REQUIRE(isqrt2(x) == s);
+            REQUIRE(isqrt3(x) == s);
+        }
+    }
+    std::mt19937_64 rng(7);
+    for (int i = 0; i < 200; i++) {
+        const natural x = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
+        const natural s = isqrt(x);
+        REQUIRE(isqrt2(x) == s);
+        REQUIRE(isqrt3(x) == s);
+    }
+    for (unsigned i = 0; i <= 20; i++) {
+        REQUIRE(isqrt2(natural(i)) == isqrt(natural(i)));
+        REQUIRE(isqrt3(natural(i)) == isqrt(natural(i)));
+    }
+}
+
+TEST_CASE("isqrt_hardware") {
+    // documented as very fast but only approximate for large arguments, so exact only for small
+    for (unsigned i = 0; i <= 100; i++)
+        REQUIRE(isqrt_hardware(natural(i)) == isqrt(natural(i)));
+    // for large arguments it must still land close to the true root
+    for (int bits : {80, 130, 260, 500}) {
+        const natural a = power_of_two(bits);
+        const natural s = isqrt(a);
+        const natural h = isqrt_hardware(a);
+        const natural lo = s - s / natural(1000000u) - 1u;
+        const natural hi = s + s / natural(1000000u) + 1u;
+        REQUIRE(h >= lo);
+        REQUIRE(h <= hi);
+    }
+}
+
+TEST_CASE("is_one_of") {
+    REQUIRE(is_one_of(4, {0, 1, 4, 9}));
+    REQUIRE(is_one_of(0, {0, 1, 4, 9}));
+    REQUIRE(is_one_of(9, {0, 1, 4, 9}));
+    REQUIRE(!is_one_of(5, {0, 1, 4, 9}));
+    REQUIRE(!is_one_of(4, {}));
+}
+
+TEST_CASE("is_possible_square - every square passes the filter") {
+    // a filter: every real square must pass, non-squares may or may not
+    for (unsigned i = 0; i <= 300; i++)
+        REQUIRE(is_possible_square(natural(i) * natural(i)));
+    for (int bits : {40, 100, 250}) {
+        const natural a = power_of_two(bits);
+        REQUIRE(is_possible_square(a * a));
+    }
+    // zero is a square, including a zero that came out of a subtraction
+    REQUIRE(is_possible_square(0_n));
+    natural z = 5;
+    z -= 5u;
+    REQUIRE(is_possible_square(z));
+    // and it does reject: 2, 3, 5, 6 are not squares
+    REQUIRE(!is_possible_square(2_n));
+    REQUIRE(!is_possible_square(3_n));
+    REQUIRE(!is_possible_square(5_n));
+    REQUIRE(!is_possible_square(6_n));
+}
