@@ -261,7 +261,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `plus` for a negative `b` — which also fixes the integral promotion of `~ub + 1` for types narrower
   than `int` — and by negating only when subtracting from a non-negative value. **[confirmed]**
 
-- [x] **1.31 The exponent overflow guard in `pow(real<B>, int64_t, real<B>)` never fired.**
+- [x] **1.38 The exponent overflow guard in `pow(real<B>, int64_t, real<B>)` never fired.**
   `real.h:14` compared `static_cast<int>(static_cast<int64_t>(result.exp) + exp)` with
   `result.exp + static_cast<int>(exp)`. Both sides truncate the sum to `int` in exactly the same way,
   so the condition is always false and the truncated exponent is returned instead of throwing.
@@ -272,7 +272,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   Never caught because no test used an exponent above 10. Fixed by adding in `int64_t` and comparing
   against the `int` range. Found while reviewing test coverage. **[confirmed]**
 
-- [x] **1.32 `xrational::simplify()` dropped an odd factor of two out of the root.**
+- [x] **1.39 `xrational::simplify()` dropped an odd factor of two out of the root.**
   `xrational.h:47-52` shifted the root right by *all* of its trailing zeros while multiplying the base
   by only half of them, so a root with an odd number (>= 3) of factors of two silently lost a
   `sqrt(2)`: `xrational(1, natural(8))` became `2` instead of `2*sqrt(2)` (its `sqr()` was 4, not 8),
@@ -281,7 +281,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   such a root; the two-argument constructor was only ever called with 2, 4, 5 and 245.
   Fixed by shifting out only whole squares, `(z / 2) * 2`. **[confirmed]**
 
-- [x] **1.33 `xrational::simplify()` set the root to zero when it was divisible by 9.**
+- [x] **1.40 `xrational::simplify()` set the root to zero when it was divisible by 9.**
   `xrational.h:59-61` divided with the output aliasing the input (`div(root, 9, root)`) and then
   swapped `root` with the still-empty scratch value `q`, so `root` became 0 and the loop stopped after
   the first factor of 9. `xrational(1, natural(9))` printed `3*sqrt(0)` and compared equal to 0
@@ -291,7 +291,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   used a root divisible by 9. Fixed by dividing into `q`, as the comment above the loop already
   described. **[confirmed]**
 
-- [x] **1.34 `sqrt(xrational(0))` returned 1.** `xrational.h:333-339` seeds `whole = 1` and relies on
+- [x] **1.41 `sqrt(xrational(0))` returned 1.** `xrational.h:333-339` seeds `whole = 1` and relies on
   `exact_sqrt(a, whole, root)` to multiply it, but that function returns immediately for `a <= 1`, so a
   zero numerator left `whole = 1` and the result was `1/1 * sqrt(1)`. Nothing tested `sqrt()` of zero.
   Fixed by returning zero up front. **[confirmed]**
