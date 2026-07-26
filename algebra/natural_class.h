@@ -616,26 +616,53 @@ constexpr void __square(natural& a) {
         return;
     }
 
-    auto n = a.words.size();
-    a.words.resize(n << 1);
-    for (auto k = (n - 1) << 1; k >= 0; k--) {
-        auto w = a.words[k];
-        a.words[k] = 0;
-        auto i_min = std::max<int>(0, k - n + 1);
-        auto i_max = std::min<int>(n - 1, k);
-        for (auto i = i_min; i <= i_max; i++) {
-            auto j = k - i;
-            const auto ai = (i < k) ? a.words[i] : w;
-            const auto aj = (j < k) ? a.words[j] : w;
-            uint128_t carry = __mulq(ai, aj);
-            for (auto p = k; carry; p++) {
-                carry += a.words[p];
-                a.words[p] = carry;
-                carry >>= 64;
-            }
+    // a*a == sum(a[i]*a[i] << 2i) + 2 * sum(a[i]*a[j] << (i+j)) for i<j,
+    // which needs half the multiplications of a full a*a
+    const int n = a.words.size();
+    natural r;
+    r.words.reset(n * 2); // zero initialized
+
+    // cross products, each counted once
+    for (int i = 0; i < n; i++) {
+        const uint64_t ai = a.words[i];
+        if (ai == 0)
+            continue;
+        uint128_t carry = 0;
+        for (int j = i + 1; j < n; j++) {
+            carry += r.words[i + j];
+            carry += __mulq(ai, a.words[j]);
+            r.words[i + j] = carry;
+            carry >>= 64;
+        }
+        for (int k = i + n; carry; k++) {
+            carry += r.words[k];
+            r.words[k] = carry;
+            carry >>= 64;
         }
     }
-    a.words.normalize();
+
+    // double them (the sum of cross products is less than a*a/2, so this fits)
+    uint64_t shifted = 0;
+    for (int k = 0; k < n * 2; k++) {
+        const uint64_t w = r.words[k];
+        r.words[k] = (w << 1) | shifted;
+        shifted = w >> 63;
+    }
+
+    // add the squares of the individual words
+    uint128_t carry = 0;
+    for (int i = 0; i < n; i++) {
+        carry += r.words[i * 2];
+        carry += __mulq(a.words[i], a.words[i]);
+        r.words[i * 2] = carry;
+        carry >>= 64;
+        carry += r.words[i * 2 + 1];
+        r.words[i * 2 + 1] = carry;
+        carry >>= 64;
+    }
+
+    r.words.normalize();
+    a = std::move(r);
 }
 
 constexpr void square(natural& a) {

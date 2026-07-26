@@ -1358,3 +1358,40 @@ TEST_CASE("multiplication propagates a long carry") {
         REQUIRE(a * b == e);
     }
 }
+
+
+
+TEST_CASE("square matches multiplication") {
+    for (uint64_t v : {uint64_t(0), uint64_t(1), uint64_t(2), uint64_t(3), UINT64_MAX, UINT64_MAX - 1}) {
+        natural a = v;
+        natural x = a;
+        square(x);
+        REQUIRE(x == a * a);
+    }
+
+    Random rng(41);
+    for (int size = 1; size <= 40; size++) {
+        for (int rep = 0; rep < 3; rep++) {
+            const natural a = rand_natural(size, size, rng);
+            natural x = a;
+            square(x);
+            REQUIRE(x == a * a);
+        }
+    }
+
+    // sparse operands (interior zero words)
+    for (int shift : {64, 128, 1000}) {
+        natural a = 1;
+        a <<= shift;
+        a += 3u;
+        natural x = a;
+        square(x);
+        REQUIRE(x == a * a);
+    }
+
+    // in place multiplication of a value with itself goes through square()
+    natural b = rand_natural(9, 9, rng);
+    natural c = b;
+    mul(c, c);
+    REQUIRE(c == b * b);
+}
