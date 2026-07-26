@@ -24,8 +24,15 @@ constexpr std::variant<None, T, Any> solve_linear(const Vec<D, T> a, const Vec<D
     if (is_zero(a) && is_zero(b))
         return Any();
     for (int i = 0; i < D; i++)
-        if (b[i] != 0)
-            return -a[i] / b[i];
+        if (b[i] != 0) {
+            const T x = -a[i] / b[i];
+            // one component determines x, but every other one has to agree with it. Without this
+            // an inconsistent system returns the value that solves component i and violates the rest.
+            for (int j = 0; j < D; j++)
+                if (a[j] + b[j] * x != 0)
+                    return None();
+            return x;
+        }
     return None();
 }
 

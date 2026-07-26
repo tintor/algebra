@@ -239,6 +239,17 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   existing `{:.N}` test used `N >= 1`. Fixed by returning right after the integer digits when
   `N == 0`. Found while adding test coverage. **[confirmed]**
 
+- [x] **1.35 `solve_linear(A, B)` returned values that are not solutions.**
+  `solve_linear.h:23-30` — for `A + B*x == 0` over a `Vec<D, T>` it returned `-a[i]/b[i]` for the
+  first component with `b[i] != 0` and never checked the others, so an inconsistent system got a
+  number instead of `None`: for `A = (1,1)`, `B = (1,2)` it returned `x = -1`, which leaves the
+  second component at `-1`, and for `A = (1,5)`, `B = (1,1)` it returned `x = -1`, leaving `4`. The
+  return type is `std::variant<None, T, Any>` precisely so that "no solution" can be expressed, and
+  a caller has no way to tell the bogus answers apart from real ones. Never caught because the one
+  existing test used a consistent system, `(6,9) + (-2,-3)x`, where both components agree; nothing
+  in the library calls this overload. Now verifies every component before returning. Found while
+  reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
