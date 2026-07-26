@@ -592,7 +592,7 @@ constexpr void mul_mod(const natural& a, const natural& b, const natural& m, nat
             add_mod(out, aa, m); // result = (result + aa) % m
             return;
         }
-        if (bb.is_even())
+        if (bb.is_odd())
             add_mod(out, aa, m); // result = (result + aa) % m
         add_mod(aa, aa, m); // aa = (aa + aa) % m
         bb >>= 1;

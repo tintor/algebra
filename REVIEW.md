@@ -102,7 +102,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   was no carry out. This is what made `mul_karatsuba` throw on sparse operands (the
   `mul_max_size` bound leaves no spare word). Found while fixing 1.10. **[confirmed]**
 
-- [ ] **1.20 `mul_mod(natural, natural, natural, natural&)` adds on even bits.**
+- [x] **1.20 `mul_mod(natural, natural, natural, natural&)` adds on even bits.**
   `natural.h:569` — the double-and-add loop does `if (bb.is_even()) add_mod(out, aa, m);`, but a
   double-and-add adds when the current bit is *set*. Wrong for any operand pair that reaches the
   loop (both above 128 bits, or a product wider than the modulus). The `uint128_t` version in
