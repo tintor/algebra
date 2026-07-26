@@ -305,13 +305,13 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   debug prints).
 - **[fixed]** `operator|` / `&` / `^` and their `=` forms are six
   near-identical bodies.
-- `mod3/5/6/7/9` live in `natural_class.h:158-221` each marked `// TODO move to kernels`;
+- **[fixed]** `mod3/5/6/7/9` live in `natural_class.h` each marked `// TODO move to kernels`;
   `mod10` already lives in `kernels.h`.
 - **[fixed]** `std::formatter<integer>` copies the entire `format()` body from
   `std::formatter<natural>` instead of delegating.
 - **[fixed]** `__add(natural&, const uint64_t*, int, int)` duplicates
   `__add_and_return_carry(inatural, cnatural, shift)`; its carry loop also lacks the early exit.
-- `hash_fn_64bit` exists twice (`integer_backend.h:183`, `vector.h:250`); `int128_t`/`uint128_t`
+- **[fixed]** `hash_fn_64bit` exists twice; `int128_t`/`uint128_t`
   are typedef'd twice (`types.h:16-17`, `util.h:40-41`); `invert_bits` (`natural.h:1081`)
   duplicates `operator~`.
 - **[fixed]** `abs_greater(rational,rational)` special-cases `a.den == 1` to exactly

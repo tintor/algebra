@@ -38,8 +38,7 @@ constexpr bool operator==(std_int auto a, const __ncsi auto& b) { return b == a;
 
 constexpr uint128_t __mulq(uint64_t a, uint64_t b) { return uint128_t(a) * b; }
 
-using int128_t = __int128;
-using uint128_t = unsigned __int128;
+// int128_t and uint128_t come from types.h
 
 // x86-64 divq is a 128/64 -> 64 division, which the compiler does not generate on its own.
 // Define ALGEBRA_NO_ASM to use the portable implementation instead.
@@ -173,6 +172,12 @@ constexpr uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t m) {
 }
 
 constexpr int num_bits(std::unsigned_integral auto a) { return sizeof(a) * 8 - std::countl_zero(a); }
+
+constexpr uint64_t hash_fn_64bit(uint64_t k) {
+    k ^= k >> 33;
+    k *= 0xff51afd7ed558ccdllu;
+    return k;
+}
 
 constexpr bool can_overflow_with_carry(const uint64_t a, const uint64_t b) {
     return (b == UINT64_MAX) || (a > UINT64_MAX - b - 1);

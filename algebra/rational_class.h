@@ -477,8 +477,8 @@ template<>
 struct std::hash<algebra::rational> {
     constexpr size_t operator()(const algebra::rational& a) const {
         uint64_t seed = 0;
-        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.num));
-        seed = algebra::integer_backend::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.den));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.num));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.den));
         return seed;
     }
 };
