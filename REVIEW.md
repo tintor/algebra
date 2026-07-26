@@ -124,6 +124,19 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `integer_backend::size()` called `std::abs`, which libc++ does not make `constexpr`, so *no*
   operation could be constant-evaluated on the intended toolchain. **[confirmed]**
 
+- [x] **1.23 The project's own build system did not build it either.**
+  Running `bazel test //algebra:all` (which is clang at `-std=c++23`, per `.bazelrc`) for the
+  first time surfaced four more problems that no hand-rolled `clang++ -I.` command can catch,
+  because bazel only lets a target see headers its deps declare and does not add `-std=gnu++23`:
+  `std_int` rejected `unsigned __int128`, so `rational_class_test` and `integer_test` failed to
+  build outright — libstdc++ leaves `is_integral_v<unsigned __int128>` false in strict standard
+  mode, and clang uses libstdc++ by default on Linux (PR #29); `__stress_test.h` used
+  `std::stringstream` without including `<sstream>`; the Apple-only `__sFILE` workaround from
+  1.22 existed in *three* copies (`__test.h`, `__stress_test.h`, `isqrt_benchmark.cc`), and only
+  the first had been guarded; and the `__test` bazel library declared no dep providing
+  `types.h`. Before these, the suite could not run at all under its own build system.
+  **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
