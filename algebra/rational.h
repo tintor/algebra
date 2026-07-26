@@ -38,6 +38,21 @@ constexpr rational sqrt(const rational& x, unsigned iterations) {
     return s;
 }
 
+// returns sqrt(x) with an absolute error smaller than 2**-bits
+// (much cheaper than sqrt(x, iterations), whose operands double in size every iteration)
+constexpr rational sqrt_bits(const rational& x, int bits) {
+    Check(!x.num.is_negative(), "sqrt() of a negative number");
+    Check(bits >= 0, "sqrt_bits() with negative precision");
+    if (x.num.is_zero())
+        return 0;
+    // floor(sqrt(num * 2**(2*bits) / den)) / 2**bits
+    natural n = x.num.abs;
+    n.words.set_negative(false);
+    n <<= 2 * bits;
+    n /= x.den.abs;
+    return {integer(isqrt(n)), integer(power_of_two(bits))};
+}
+
 constexpr rational pow(const rational& base, long exp) {
     if (exp == 0)
         return rational{1};
@@ -198,9 +213,11 @@ constexpr BinarySplit __PI(unsigned a, unsigned b) {
 }
 
 // Chudnovsky algorithm
+// every term of the series is worth about 14.18 decimal digits (47.1 bits)
 constexpr rational PI(unsigned n) {
     BinarySplit e = __PI(1, std::max(2u, n));
-    return sqrt(rational(10005), n) * rational{426880 * e.q, 13591409 * e.q + e.r};
+    const int bits = static_cast<int>(n) * 48 + 64;
+    return sqrt_bits(rational(10005), bits) * rational{426880 * e.q, 13591409 * e.q + e.r};
 }
 
 // reduce x into [0, 2*PI). Note: expensive, since the denominator of PI(n) ends up in x,
