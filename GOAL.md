@@ -5,4 +5,4 @@
 - [] Figure out if it is possible on Free Github Account to setup a separate profile for Claude Code to use (instead of Claude Code using Marko's profile in PRs and comments)
 - [x] Implement boolean (union, intersection, difference, sym-diff) operations and inversion for new 2d polygon: multi-polygon (with optional holes) type. The type will be c++ template on type of numbers it uses for coordinates (default is rational numbers).
 - [] Extend the 2d multi-polygon type to also support edge that are circular arcs, and update boolean operations. Use TestDrivenDevelopment.
-- [] Implement positive and negative buffer (offset) operations on the 2d multi-polygon type.
+- [x] Implement positive and negative buffer (offset) operations on the 2d multi-polygon type.
