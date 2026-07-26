@@ -287,21 +287,21 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 4. Duplicated code worth collapsing
 
-- `isqrt`, `isqrt2`, `isqrt3` (`natural.h:311-434`) repeat identical 1-word and 2-word fast
+- **[fixed]** `isqrt`, `isqrt2`, `isqrt3` repeat identical 1-word and 2-word fast
   paths three times; `isqrt2`/`isqrt3` appear to be abandoned experiments (with commented-out
   debug prints).
-- `operator|` / `&` / `^` and their `=` forms (`natural_class.h:1151-1251`) are six
+- **[fixed]** `operator|` / `&` / `^` and their `=` forms are six
   near-identical bodies.
 - `mod3/5/6/7/9` live in `natural_class.h:158-221` each marked `// TODO move to kernels`;
   `mod10` already lives in `kernels.h`.
-- `std::formatter<integer>` (`integer_class.h:618-652`) copies the entire `format()` body from
+- **[fixed]** `std::formatter<integer>` copies the entire `format()` body from
   `std::formatter<natural>` instead of delegating.
-- `__add(natural&, const uint64_t*, int, int)` (`natural_class.h:419`) duplicates
+- **[fixed]** `__add(natural&, const uint64_t*, int, int)` duplicates
   `__add_and_return_carry(inatural, cnatural, shift)`; its carry loop also lacks the early exit.
 - `hash_fn_64bit` exists twice (`integer_backend.h:183`, `vector.h:250`); `int128_t`/`uint128_t`
   are typedef'd twice (`types.h:16-17`, `util.h:40-41`); `invert_bits` (`natural.h:1081`)
   duplicates `operator~`.
-- `abs_greater(rational,rational)` (`rational.h:158-160`) special-cases `a.den == 1` to exactly
+- **[fixed]** `abs_greater(rational,rational)` special-cases `a.den == 1` to exactly
   what the general line computes.
 
 ## 5. Comments and README that do not match the code
