@@ -11,9 +11,10 @@ real<B> pow(real<B> base, int64_t exp, real<B> result = 1) {
 
     if (base == B) {
         static_assert(sizeof(result.exp) == 4);
-        if (static_cast<int>(static_cast<int64_t>(result.exp) + exp) != result.exp + static_cast<int>(exp))
+        const int64_t e = static_cast<int64_t>(result.exp) + exp;
+        if (e < std::numeric_limits<int>::min() || e > std::numeric_limits<int>::max())
             throw std::runtime_error("exp overflow");
-        return {result.num, result.exp + static_cast<int>(exp)};
+        return {result.num, static_cast<int>(e)};
     }
     if (exp == 0)
         return result;
