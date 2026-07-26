@@ -1220,3 +1220,42 @@ TEST_CASE("division by zero throws") {
     REQUIRE_THROWS(small / zero);
     REQUIRE_THROWS(small % zero);
 }
+
+// simple digit at a time reference for natural::str()
+static std::string ref_str(natural a, unsigned base) {
+    if (!a)
+        return "0";
+    std::string s;
+    while (a)
+        s += "0123456789ABCDEF"[div(a, static_cast<uint64_t>(base), /*out*/a)];
+    std::reverse(s.begin(), s.end());
+    return s;
+}
+
+TEST_CASE("str matches digit at a time conversion") {
+    REQUIRE(natural(0).str() == "0");
+    REQUIRE(natural(1).str() == "1");
+    REQUIRE(natural(10).str() == "10");
+    REQUIRE(natural(19).str(10) == "19");
+
+    // exactly at a chunk boundary: 10**19 and 10**19 - 1
+    natural chunk = 10;
+    for (int i = 1; i < 19; i++)
+        chunk *= 10u;
+    REQUIRE(chunk.str() == "10000000000000000000");
+    REQUIRE((chunk - 1u).str() == "9999999999999999999");
+    REQUIRE((chunk + 1u).str() == "10000000000000000001");
+    REQUIRE((chunk * chunk).str() == ref_str(chunk * chunk, 10));
+
+    Random rng(21);
+    for (int i = 0; i < 100; i++) {
+        const natural a = rand_natural(1, 12, rng);
+        for (unsigned base : {2u, 3u, 7u, 8u, 10u, 15u, 16u})
+            REQUIRE(a.str(base) == ref_str(a, base));
+    }
+    for (int i = 0; i < 5; i++) {
+        const natural a = rand_natural(60, 80, rng);
+        REQUIRE(a.str() == ref_str(a, 10));
+        REQUIRE(a.str(7) == ref_str(a, 7));
+    }
+}

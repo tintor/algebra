@@ -983,9 +983,24 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
         }
     } else {
         if (base == 10 && buffer_size >= 20 * words.size()) {
+            // divide by 10**19 (the largest power of 10 that fits into uint64_t) and split
+            // the remainder with 64-bit arithmetic: 19x fewer full precision divisions
+            constexpr uint64_t CHUNK = 10'000'000'000'000'000'000ull;
             natural a = *this;
-            while (a)
-                *p++ = '0' + div(a, 10ul, /*out*/a);
+            while (a) {
+                uint64_t rem = div(a, CHUNK, /*out*/a);
+                if (a) {
+                    for (int i = 0; i < 19; i++) {
+                        *p++ = '0' + int(rem % 10);
+                        rem /= 10;
+                    }
+                } else {
+                    while (rem) {
+                        *p++ = '0' + int(rem % 10);
+                        rem /= 10;
+                    }
+                }
+            }
         } else if (base == 16 && buffer_size >= 16 * words.size()) {
             for (int i = 0; i < words.size(); i++) {
                 auto w = words[i];
@@ -1004,11 +1019,22 @@ constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const b
                 }
             }
         } else {
+            // same chunking as above, with the largest power of base that fits into uint64_t
+            uint64_t chunk = base;
+            int chunk_digits = 1;
+            while (chunk <= UINT64_MAX / base) {
+                chunk *= base;
+                chunk_digits += 1;
+            }
             natural n = *this;
             while (n) {
-                const int c = div(n, static_cast<uint64_t>(base), /*out*/n);
-                Check(p < end, "buffer too small");
-                *p++ = (c < 10) ? ('0' + c) : (A + c);
+                uint64_t rem = div(n, chunk, /*out*/n);
+                for (int i = 0; (n && i < chunk_digits) || (!n && rem); i++) {
+                    const int c = rem % base;
+                    Check(p < end, "buffer too small");
+                    *p++ = (c < 10) ? ('0' + c) : (A + c);
+                    rem /= base;
+                }
             }
         }
     }
