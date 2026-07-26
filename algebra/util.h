@@ -4,6 +4,7 @@
 #include <print>
 #include <stdexcept>
 #include <bit>
+#include <cstdint>
 #include <algorithm>
 #include "algebra/types.h"
 

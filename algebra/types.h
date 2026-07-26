@@ -1,5 +1,6 @@
 #pragma once
 #include <concepts>
+#include <cstdint>
 #include <limits>
 #include <cmath>
 #include <type_traits>

@@ -1,5 +1,7 @@
 #pragma once
 #include "algebra/types.h"
+#include <cstdint>
+#include <algorithm>
 
 namespace algebra {
 

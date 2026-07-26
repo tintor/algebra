@@ -1,6 +1,10 @@
 #pragma once
 #include "algebra/natural_class.h"
+#include <array>
+#include <optional>
+#include <random>
 #include <span>
+#include <vector>
 
 namespace algebra {
 
