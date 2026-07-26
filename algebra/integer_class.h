@@ -74,7 +74,9 @@ struct integer {
         uint64_t w = abs.words[1];
         if ((w & (uint64_t(1) << 63)) == 0)
             return true;
-        return sign() < 0 && w == uint64_t(1) << 63;
+        // only INT128_MIN itself reaches past the positive range, and its magnitude is exactly
+        // 2**127, so the low word has to be zero as well
+        return sign() < 0 && w == uint64_t(1) << 63 && abs.words[0] == 0;
     }
 
     constexpr bool is_uint8() const { return sign() >= 0 && abs.is_uint8(); }

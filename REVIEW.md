@@ -261,6 +261,17 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   Never caught because no test used an exponent above 10. Fixed by adding in `int64_t` and comparing
   against the `int` range. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.33 `is_int128()` accepted values below `INT128_MIN`, and the cast then flipped the sign.**
+  `integer_class.h:74-77` — for a two word magnitude it looked at the high word only: if the top bit
+  was set it returned `sign() < 0 && w == 2**63`, never checking the low word. Only `INT128_MIN` has
+  a magnitude past the positive range, and its magnitude is exactly `2**127`, so the low word must be
+  zero too. Without that, `-(2**127 + 1)` passed the check, and
+  `static_cast<int128_t>` then returned `+170141183460469231731687303715884105727` for it — a
+  positive number for a negative input, since negating the magnitude in `uint128_t` wraps.
+  `-(2**127 + 12345)` likewise returned a positive value. `is_int8`/`is_int16`/`is_int32`/`is_int64`
+  compare the whole magnitude and were already correct. Never caught because no test exercised the
+  two word boundary. Found while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

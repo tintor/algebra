@@ -684,3 +684,67 @@ TEST_CASE("mod is euclidean") {
     REQUIRE(mod(nbig, big) == 0);
     REQUIRE(mod(nbig - 1, big) == big - 1);
 }
+
+TEST_CASE("is_int8 / is_int16 / is_int32 / is_int64 boundaries") {
+    // the negative side reaches one further than the positive side
+    REQUIRE(integer(127).is_int8());
+    REQUIRE(!integer(128).is_int8());
+    REQUIRE(integer(-128).is_int8());
+    REQUIRE(!integer(-129).is_int8());
+
+    REQUIRE(integer(INT16_MAX).is_int16());
+    REQUIRE(!integer(int32_t(INT16_MAX) + 1).is_int16());
+    REQUIRE(integer(INT16_MIN).is_int16());
+    REQUIRE(!integer(int32_t(INT16_MIN) - 1).is_int16());
+
+    REQUIRE(integer(INT32_MAX).is_int32());
+    REQUIRE(!integer(int64_t(INT32_MAX) + 1).is_int32());
+    REQUIRE(integer(INT32_MIN).is_int32());
+    REQUIRE(!integer(int64_t(INT32_MIN) - 1).is_int32());
+
+    REQUIRE(integer(INT64_MAX).is_int64());
+    REQUIRE(!(integer(INT64_MAX) + 1).is_int64());
+    REQUIRE(integer(INT64_MIN).is_int64());
+    REQUIRE(!(integer(INT64_MIN) - 1).is_int64());
+
+    // zero fits everywhere, including a zero produced by subtraction
+    integer z = 5;
+    z -= 5;
+    REQUIRE(z.is_zero());
+    REQUIRE(z.is_int8());
+    REQUIRE(z.is_uint8());
+    REQUIRE(z.is_int128());
+}
+
+TEST_CASE("is_int128 boundaries") {
+    const integer two127 = (integer(1) << 127);
+
+    // INT128_MIN == -2**127 is representable, +2**127 is not
+    REQUIRE((-two127).is_int128());
+    REQUIRE(!two127.is_int128());
+    REQUIRE(static_cast<int128_t>(-two127) == std::numeric_limits<int128_t>::min());
+
+    // one below INT128_MIN is not representable, even though its high word matches
+    REQUIRE(!(-(two127 + 1)).is_int128());
+    REQUIRE(!(-(two127 + 12345)).is_int128());
+    REQUIRE_THROWS(static_cast<int128_t>(-(two127 + 1)));
+
+    // just inside the range on both sides
+    REQUIRE((two127 - 1).is_int128());
+    REQUIRE(static_cast<int128_t>(two127 - 1) == std::numeric_limits<int128_t>::max());
+    REQUIRE((-(two127 - 1)).is_int128());
+
+    // is_uint128 accepts anything up to two words, but nothing negative
+    REQUIRE(two127.is_uint128());
+    REQUIRE((two127 * 2 - 1).is_uint128());
+    REQUIRE(!(-two127).is_uint128());
+    REQUIRE(!(two127 * 2).is_uint128());
+}
+
+TEST_CASE("is_one") {
+    REQUIRE(integer(1).is_one());
+    REQUIRE(!integer(-1).is_one());
+    REQUIRE(!integer(0).is_one());
+    REQUIRE(!integer(2).is_one());
+    REQUIRE(!((integer(1) << 64) + 1).is_one());
+}
