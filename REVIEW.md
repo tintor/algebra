@@ -326,7 +326,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   every Newton step with no truncation, so `PI(20)` never finishes. `PI(4)` is off by **7.0**
   because the same `n` controls both the series length and the sqrt iterations. Truncate each
   Newton iterate to the working precision and decouple the two parameters.
-- `sin`/`cos` reduce with `x %= 2*PI(10)`, dragging a ~140-digit denominator through the series.
+- **[fixed]** `sin`/`cos` reduce with `x %= 2*PI(10)`, dragging a ~140-digit denominator through the series.
 - `integer` move constructor/assignment allocate (see section 3).
 - `__square`'s general branch (`natural_class.h:634-653`) restarts carry propagation per partial
   product and computes both `i*j` and `j*i`, so it is no faster than long multiplication — the
