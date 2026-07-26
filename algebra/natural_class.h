@@ -422,28 +422,6 @@ constexpr bool operator==(const natural& a, const std_unsigned_int auto b) {
 }
 constexpr bool operator==(const natural& a, const std_signed_int auto b) { return b >= 0 && a == make_unsigned(b); }
 
-// TODO move to kernels
-constexpr void __add(natural& a, const uint64_t* b, const int B, int shift = 0) {
-    // TODO optimize this
-    while (a.words.size() < B + shift)
-        a.words.push_back(0);
-
-    uint128_t acc = 0;
-    for (int i = 0; i < B; ++i) {
-        acc += a.words[shift + i];
-        acc += b[i];
-        a.words[shift + i] = acc;
-        acc >>= 64;
-    }
-    for (int i = shift + B; i < a.words.size(); ++i) {
-        acc += a.words[i];
-        a.words[i] = acc;
-        acc >>= 64;
-    }
-    if (acc)
-        a.words.push_back(acc);
-}
-
 constexpr natural& operator<<=(natural& a, int64_t b);
 
 constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(static_cast<cnatural>(a)); }
@@ -1110,103 +1088,63 @@ constexpr natural& operator<<=(natural& a, int64_t b) {
 ALGEBRA_SHIFT_OP(natural)
 
 constexpr natural operator~(natural a) {
-    for (size_t i = 0; i < a.words.size(); i++)
+    for (int i = 0; i < a.words.size(); i++)
         a.words[i] = ~a.words[i];
+    a.words.normalize(); // the top word can become zero
     return a;
 }
 
-constexpr natural operator|(const natural& a, const natural& b) {
-    natural c;
-    auto n = std::max(a.words.size(), b.words.size());
-    c.words.reset(n);
-    for (int i = 0; i < n; i++) {
-        auto aw = (i < a.words.size()) ? a.words[i] : 0;
-        auto bw = (i < b.words.size()) ? b.words[i] : 0;
-        c.words[i] = aw | bw;
+// a = op(a, b), for a bitwise op. GROW is false when no word of the result can be
+// longer than A, which is the case for AND.
+template<bool GROW, typename Op>
+constexpr natural& __bitwise_op(natural& a, const natural& b, Op op) {
+    const int bs = b.words.size();
+    if constexpr (GROW) {
+        if (bs > a.words.size())
+            a.words.resize(bs);
+        for (int i = 0; i < bs; i++)
+            a.words[i] = op(a.words[i], b.words[i]);
+    } else {
+        const int n = std::min<int>(a.words.size(), bs);
+        if (n == 0) {
+            a.words.set_zero(); // downsize(0) alone would leave a stale word behind
+            return a;
+        }
+        a.words.downsize(n);
+        for (int i = 0; i < n; i++)
+            a.words[i] = op(a.words[i], b.words[i]);
     }
-    return c;
+    a.words.normalize();
+    return a;
 }
-
-constexpr natural& operator|=(natural& a, uint64_t b);
-constexpr natural operator|(natural a, uint64_t b) { return a |= b; }
 
 constexpr natural& operator|=(natural& a, const natural& b) {
-    auto bs = b.words.size();
-    if (bs > a.words.size())
-        a.words.resize(bs);
-    for (int i = 0; i < bs; i++)
-        a.words[i] |= b.words[i];
-    a.words.normalize();
-    return a;
+    return __bitwise_op<true>(a, b, [](uint64_t x, uint64_t y) { return x | y; });
 }
+constexpr natural& operator&=(natural& a, const natural& b) {
+    return __bitwise_op<false>(a, b, [](uint64_t x, uint64_t y) { return x & y; });
+}
+constexpr natural& operator^=(natural& a, const natural& b) {
+    return __bitwise_op<true>(a, b, [](uint64_t x, uint64_t y) { return x ^ y; });
+}
+
+constexpr natural operator|(natural a, const natural& b) { return a |= b; }
+constexpr natural operator&(natural a, const natural& b) { return a &= b; }
+constexpr natural operator^(natural a, const natural& b) { return a ^= b; }
 
 constexpr natural& operator|=(natural& a, uint64_t b) {
-    if (a.words.size() == 0) {
+    if (a.words.size() == 0)
         a = b;
-    } else {
+    else
         a.words[0] |= b;
-    }
-    return a;
-}
-
-constexpr natural operator&(const natural& a, const natural& b) {
-    natural c;
-    int n = std::max(a.words.size(), b.words.size());
-    c.words.reset(n);
-    for (int i = 0; i < n; i++) {
-        auto aw = (i < a.words.size()) ? a.words[i] : 0;
-        auto bw = (i < b.words.size()) ? b.words[i] : 0;
-        c.words[i] = aw & bw;
-    }
-    c.words.normalize();
-    return c;
-}
-
-constexpr natural& operator&=(natural& a, uint64_t b);
-constexpr natural operator&(natural a, uint64_t b) { return a &= b; }
-
-constexpr natural& operator&=(natural& a, const natural& b) {
-    // words of A above the size of B can only be zero in the result
-    const int n = std::min<int>(a.words.size(), b.words.size());
-    if (n == 0) {
-        a.words.set_zero(); // downsize(0) alone would leave a stale word behind
-        return a;
-    }
-    a.words.downsize(n);
-    for (int i = 0; i < n; i++)
-        a.words[i] &= b.words[i];
-    a.words.normalize();
     return a;
 }
 
 constexpr natural& operator&=(natural& a, uint64_t b) {
+    if (a.words.size() == 0)
+        return a;
+    a.words.downsize(1);
     a.words[0] &= b;
-    a.words.normalize();
-    return a;
-}
-
-constexpr natural operator^(const natural& a, const natural& b) {
-    natural c;
-    size_t n = std::max(a.words.size(), b.words.size());
-    c.words.reset(n);
-    for (size_t i = 0; i < n; i++) {
-        auto aw = (i < a.words.size()) ? a.words[i] : 0;
-        auto bw = (i < b.words.size()) ? b.words[i] : 0;
-        c.words[i] = aw ^ bw;
-    }
-    c.words.normalize();
-    return c;
-}
-
-constexpr natural& operator^=(natural& a, uint64_t b);
-constexpr natural operator^(natural a, uint64_t b) { return a ^= b; }
-
-constexpr natural& operator^=(natural& a, const natural& b) {
-    size_t bs = b.words.size();
-    if (bs > a.words.size())
-        a.words.resize(bs);
-    for (size_t i = 0; i < bs; i++)
-        a.words[i] ^= b.words[i];
     a.words.normalize();
     return a;
 }
@@ -1220,6 +1158,10 @@ constexpr natural& operator^=(natural& a, uint64_t b) {
     }
     return a;
 }
+
+constexpr natural operator|(natural a, uint64_t b) { return a |= b; }
+constexpr natural operator&(natural a, uint64_t b) { return a &= b; }
+constexpr natural operator^(natural a, uint64_t b) { return a ^= b; }
 
 // Below this divisor size (in words) recursive division falls back to schoolbook division.
 constexpr int BZ_BASE_CASE_SIZE = 8;
@@ -1360,9 +1302,10 @@ struct std::formatter<algebra::natural, char> {
         return it;
     }
 
-    constexpr auto format(const algebra::natural& a, auto& ctx) const {
+    // shared by std::formatter<integer>
+    constexpr auto format_padded(const auto& a, auto& ctx) const {
         auto it = ctx.out();
-        int bound = a.str_size_upper_bound(base);
+        const int bound = a.str_size_upper_bound(base);
 
         char c_array[100];
         std::string str;
@@ -1374,7 +1317,7 @@ struct std::formatter<algebra::natural, char> {
             buffer = str.data();
         }
 
-        int n = a.str(buffer, bound, base, upper);
+        const int n = a.str(buffer, bound, base, upper);
         int pre = 0;
         int post = 0;
         if (width > n) {
@@ -1395,6 +1338,8 @@ struct std::formatter<algebra::natural, char> {
             *it++ = fill;
         return it;
     }
+
+    constexpr auto format(const algebra::natural& a, auto& ctx) const { return format_padded(a, ctx); }
 };
 
 constexpr std::ostream& operator<<(std::ostream& os, const algebra::natural& a) { return os << a.str(); }

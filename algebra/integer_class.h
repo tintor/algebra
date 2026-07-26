@@ -610,41 +610,7 @@ ALGEBRA_SHIFT_OP(integer)
 
 template <>
 struct std::formatter<algebra::integer, char> : public std::formatter<algebra::natural, char> {
-    constexpr auto format(const algebra::integer& a, auto& ctx) const {
-        auto it = ctx.out();
-        int bound = a.str_size_upper_bound(base);
-
-        char c_array[100];
-        std::string str;
-        char* buffer;
-        if (bound <= 100) {
-            buffer = c_array;
-        } else {
-            str.resize(bound);
-            buffer = str.data();
-        }
-
-        int n = a.str(buffer, bound, base, upper);
-        int pre = 0;
-        int post = 0;
-        if (width > n) {
-            if (align == '>')
-                pre = width - n;
-            if (align == '<')
-                post = width - n;
-            if (align == '^') {
-                pre = (width - n) / 2;
-                post = width - pre - n;
-            }
-        }
-        for (int i = 0; i < pre; i++)
-            *it++ = fill;
-        for (int i = 0; i < n; i++)
-            *it++ = buffer[i];
-        for (int i = 0; i < post; i++)
-            *it++ = fill;
-        return it;
-    }
+    constexpr auto format(const algebra::integer& a, auto& ctx) const { return format_padded(a, ctx); }
 };
 
 #if 0

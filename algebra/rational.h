@@ -158,9 +158,8 @@ constexpr rational abs(rational a) {
 constexpr bool abs_greater(const rational& a, const rational& b) {
     if (a.den == b.den)
         return abs_greater(a.num, b.num);
-    if (a.den == 1u)
-        return abs_greater(((b.den == 1u) ? a.num : (a.num * b.den)), b.num);
-    return abs_greater(((b.den == 1u) ? a.num : (a.num * b.den)), b.num * a.den);
+    return abs_greater((b.den == 1u) ? a.num : (a.num * b.den),
+                       (a.den == 1u) ? b.num : (b.num * a.den));
 }
 
 constexpr rational round(const rational& a, unsigned digits, unsigned base = 10) {

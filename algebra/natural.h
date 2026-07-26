@@ -335,19 +335,27 @@ constexpr uint128_t concat(const uint64_t a, const uint64_t b) {
     return (static_cast<uint128_t>(a) << 64) | b;
 }
 
-constexpr natural isqrt(const natural& a) {
+// exact result for values of at most two words, shared by the isqrt implementations
+constexpr bool __isqrt_small(const natural& a, natural& out) {
     if (a.words.size() <= 1) {
-        uint64_t iq = std::sqrt(a.words[0]);
-        if (__mulq(iq, iq) > a.words[0])
-            iq -= 1;
-        return iq;
+        uint64_t q = std::sqrt(static_cast<double>(a.words[0]));
+        if (__mulq(q, q) > a.words[0])
+            q -= 1;
+        out = q;
+        return true;
     }
-
     if (a.words.size() == 2) {
         const uint128_t ac = concat(a.words[1], a.words[0]);
-        const uint64_t iq = std::sqrt(ac);
-        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
+        out = __isqrt_u128(ac);
+        return true;
     }
+    return false;
+}
+
+constexpr natural isqrt(const natural& a) {
+    natural small;
+    if (__isqrt_small(a, small))
+        return small;
 
     natural y = power_of_two((a.num_bits() + 1) / 2);
     natural x, r;
@@ -368,18 +376,9 @@ constexpr natural isqrt(const natural& a) {
 }
 
 constexpr natural isqrt2(const natural& a) {
-    if (a.words.size() <= 1) {
-        uint64_t iq = std::sqrt(a.words[0]);
-        if (__mulq(iq, iq) > a.words[0])
-            iq -= 1;
-        return iq;
-    }
-
-    if (a.words.size() == 2) {
-        const uint128_t ac = concat(a.words[1], a.words[0]);
-        const uint64_t iq = std::sqrt(ac);
-        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
-    }
+    natural small;
+    if (__isqrt_small(a, small))
+        return small;
 
     natural x = power_of_two((a.num_bits() + 1) / 2);
     natural v = x * x;
@@ -412,18 +411,9 @@ constexpr natural isqrt2(const natural& a) {
 }
 
 constexpr natural isqrt3(const natural& a) {
-    if (a.words.size() <= 1) {
-        uint64_t iq = std::sqrt(a.words[0]);
-        if (__mulq(iq, iq) > a.words[0])
-            iq -= 1;
-        return iq;
-    }
-
-    if (a.words.size() == 2) {
-        const uint128_t ac = concat(a.words[1], a.words[0]);
-        const uint64_t iq = std::sqrt(ac);
-        return (iq + ac / iq) / 2; // TODO is __divq() safe and faster here?
-    }
+    natural small;
+    if (__isqrt_small(a, small))
+        return small;
 
     natural x = power_of_two((a.num_bits() + 1) / 2);
     natural x2 = x * x;
