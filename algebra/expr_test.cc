@@ -81,3 +81,193 @@ TEST_CASE("structural simplification") {
     REQUIRE(format("{}", PI_EXPR + PI_EXPR) == "2*π");
     REQUIRE(format("{}", 2 * sqrt(2_e) + sqrt(2_e)) == "3*sqrt(2)");
 }
+
+// expr_var is an aggregate with a base class, so make_shared() cannot forward the name to it
+static expr_ptr make_var(std::string name) {
+    auto v = std::make_shared<expr_var>();
+    v->name = std::move(name);
+    return v;
+}
+
+TEST_CASE("node predicates and accessors") {
+    using namespace algebra::literals;
+
+    // make_rational collapses an integral rational into an expr_integer node
+    REQUIRE(is_integer(make_rational(rational(4))));
+    REQUIRE(!is_rational(sqrt(2_e)));
+    REQUIRE(is_rational(make_rational(rational(1, 2))));
+    REQUIRE(!is_integer(make_rational(rational(1, 2))));
+    REQUIRE(integer_value(make_integer(7)) == 7);
+    REQUIRE(rational_value(make_rational(rational(1, 2))) == rational(1, 2));
+    // rational_value also accepts an integer node
+    REQUIRE(rational_value(make_integer(7)) == 7);
+
+    // sqrt and cbrt are powers with exponent 1/2 and 1/3
+    const expr_ptr r5 = sqrt(5_e);
+    REQUIRE(is_power(r5));
+    REQUIRE(is_sqrt(r5));
+    REQUIRE(!is_cbrt(r5));
+    REQUIRE(power_exp(r5) == rational(1, 2));
+    REQUIRE(is_integer(power_base(r5)));
+    REQUIRE(integer_value(power_base(r5)) == 5);
+
+    const expr_ptr c5 = pow(5_e, rational(1, 3));
+    REQUIRE(is_cbrt(c5));
+    REQUIRE(!is_sqrt(c5));
+
+    // a perfect square is folded, so it is no longer a power
+    REQUIRE(!is_power(sqrt(4_e)));
+    REQUIRE(is_integer(sqrt(4_e)));
+
+    // sum
+    const expr_ptr s = sqrt(2_e) + sqrt(3_e);
+    REQUIRE(is_sum(s));
+    REQUIRE(sum_values(s).size() == 2);
+    REQUIRE(!is_sum(r5));
+
+    // product, and the rational * x shape
+    const expr_ptr p = 3 * sqrt(2_e);
+    REQUIRE(is_product(p));
+    REQUIRE(is_product_rx(p));
+    REQUIRE(product_values(p).size() == 2);
+    REQUIRE(is_rational(product_values(p)[0]));
+    REQUIRE(rational_value(product_values(p)[0]) == 3);
+    REQUIRE(!is_product_rx(s));
+    REQUIRE(!is_product(s));
+}
+
+TEST_CASE("identical") {
+    using namespace algebra::literals;
+
+    // the same node
+    const expr_ptr a = sqrt(2_e);
+    REQUIRE(identical(a, a));
+    // distinct nodes with equal value
+    REQUIRE(identical(sqrt(2_e), sqrt(2_e)));
+    REQUIRE(identical(make_integer(3), make_integer(3)));
+    REQUIRE(identical(make_rational(rational(1, 2)), make_rational(rational(1, 2))));
+    REQUIRE(!identical(make_integer(3), make_integer(4)));
+    REQUIRE(!identical(make_rational(rational(1, 2)), make_rational(rational(1, 3))));
+    // different node kinds are never identical
+    REQUIRE(!identical(make_integer(3), sqrt(3_e)));
+    REQUIRE(!identical(E_EXPR, PI_EXPR));
+    REQUIRE(identical(E_EXPR, std::make_shared<expr_e>()));
+    REQUIRE(identical(PI_EXPR, std::make_shared<expr_pi>()));
+    // nested
+    REQUIRE(identical(sqrt(2_e) + sqrt(3_e), sqrt(2_e) + sqrt(3_e)));
+    REQUIRE(!identical(sqrt(2_e) + sqrt(3_e), sqrt(2_e) + sqrt(5_e)));
+    REQUIRE(identical(sin(2_e), sin(2_e)));
+    REQUIRE(!identical(sin(2_e), sin(3_e)));
+    REQUIRE(!identical(sin(2_e), cos(2_e)));
+    REQUIRE(identical(cos(2_e), cos(2_e)));
+    // a variable compares by name
+    REQUIRE(identical(make_var("x"), make_var("x")));
+    REQUIRE(!identical(make_var("x"), make_var("y")));
+}
+
+TEST_CASE("interval arithmetic") {
+    using I = interval<rational>;
+    auto eq = [](const I& a, const rational& lo, const rational& hi) { return a.min == lo && a.max == hi; };
+
+    REQUIRE(eq(-I{2, 5}, -5, -2));
+    REQUIRE(eq(I{1, 2} + I{10, 20}, 11, 22));
+    REQUIRE(eq(I{-3, 2} + I{-1, 1}, -4, 3));
+
+    // multiplication has to consider all four products, not just the corners in order
+    REQUIRE(eq(I{2, 3} * I{4, 5}, 8, 15));
+    REQUIRE(eq(I{-3, -2} * I{-5, -4}, 8, 15));
+    REQUIRE(eq(I{-2, 3} * I{-5, 4}, -15, 12));
+    REQUIRE(eq(I{-2, 3} * I{2, 4}, -8, 12));
+    REQUIRE(eq(I{0, 0} * I{-5, 4}, 0, 0));
+
+    // pow by repeated multiplication, so an even power is a sound over-approximation
+    REQUIRE(eq(pow(I{2, 3}, 2), 4, 9));
+    REQUIRE(eq(pow(I{2, 3}, 0), 1, 1));
+    REQUIRE(eq(pow(I{2, 3}, 3), 8, 27));
+    REQUIRE(eq(pow(I{-3, 2}, 2), -6, 9)); // the true range is [0, 9]; wider is still correct
+    REQUIRE(eq(pow(I{2, 4}, -1), rational(1, 4), rational(1, 2)));
+    REQUIRE(eq(pow(I{-4, -2}, -1), rational(-1, 2), rational(-1, 4)));
+    // a negative power of an interval straddling zero is a division by zero
+    REQUIRE_THROWS(pow(I{-1, 1}, -1));
+}
+
+TEST_CASE("bounds") {
+    using namespace algebra::literals;
+
+    auto b = [](expr_ptr e) { auto o = bounds(e); REQUIRE(o != std::nullopt); return *o; };
+
+    // a rational is a point interval
+    REQUIRE(b(make_rational(rational(3, 2))).min == rational(3, 2));
+    REQUIRE(b(make_rational(rational(3, 2))).max == rational(3, 2));
+
+    // the two constants must bracket their true values
+    REQUIRE(b(E_EXPR).min < rational(271828, 100000));
+    REQUIRE(b(E_EXPR).max > rational(271829, 100000));
+    REQUIRE(b(PI_EXPR).min < rational(314159, 100000));
+    REQUIRE(b(PI_EXPR).max > rational(314160, 100000));
+
+    // sin and cos are bounded by [-1, 1] without knowing the argument
+    REQUIRE(b(sin(sqrt(2_e))).min == -1);
+    REQUIRE(b(sin(sqrt(2_e))).max == 1);
+    REQUIRE(b(cos(E_EXPR)).min == -1);
+    REQUIRE(b(cos(E_EXPR)).max == 1);
+
+    // a sum adds the bounds, a negation flips them
+    REQUIRE(b(1 + sin(2_e)).min == 0);
+    REQUIRE(b(1 + sin(2_e)).max == 2);
+    REQUIRE(b(-sin(2_e)).min == -1);
+    // a product multiplies them
+    REQUIRE(b(2 * sin(2_e)).min == -2);
+    REQUIRE(b(2 * sin(2_e)).max == 2);
+
+    // an unbounded node has no bounds
+    REQUIRE(bounds(make_var("x")) == std::nullopt);
+    // and neither does a sum containing one
+    REQUIRE(bounds(1 + make_var("x")) == std::nullopt);
+    // a non integer exponent is not handled
+    REQUIRE(bounds(sqrt(2_e)) == std::nullopt);
+}
+
+TEST_CASE("safe_sign") {
+    using namespace algebra::literals;
+    REQUIRE(safe_sign(make_integer(5)) == 1);
+    REQUIRE(safe_sign(make_integer(-5)) == -1);
+    REQUIRE(safe_sign(make_integer(0)) == 0);
+    REQUIRE(safe_sign(E_EXPR) == 1);
+    REQUIRE(safe_sign(PI_EXPR) == 1);
+    // the sign of sin and cos is not known without evaluating the argument
+    REQUIRE(safe_sign(sin(2_e)) == std::nullopt);
+    REQUIRE(safe_sign(cos(2_e)) == std::nullopt);
+    // a sum whose terms all have a known sign
+    REQUIRE(safe_sign(sqrt(2_e) + sqrt(3_e)) == 1);
+    // a sum that needs bounds to decide: 2 + sin(x) is positive whatever sin is
+    REQUIRE(safe_sign(2 + sin(2_e)) == 1);
+    REQUIRE(safe_sign(-2 + sin(2_e)) == -1);
+}
+
+TEST_CASE("expr_var has no sign") {
+    REQUIRE_THROWS(make_var("x")->sign());
+    REQUIRE(safe_sign(make_var("x")) == std::nullopt);
+}
+
+TEST_CASE("expressions containing a variable can be built") {
+    const expr_ptr x = make_var("x");
+
+    // the simplification code asks for signs through safe_sign, so building these only works if
+    // an unknown sign is reported as unknown_sign_error rather than a plain std::runtime_error
+    const expr_ptr s = 1 + x;
+    REQUIRE(is_sum(s));
+    REQUIRE(sum_values(s).size() == 2);
+
+    const expr_ptr p = 2 * x;
+    REQUIRE(is_product(p));
+    REQUIRE(is_product_rx(p));
+
+    REQUIRE(is_sum(x + x + 1));
+    REQUIRE(is_power(pow(x, rational(1, 2))));
+
+    // the sign still cannot be decided, and that is reported as unknown rather than escaping
+    REQUIRE_THROWS_AS(x->sign(), unknown_sign_error);
+    REQUIRE_THROWS_AS(s->sign(), unknown_sign_error);
+    REQUIRE(safe_sign(s) == std::nullopt);
+}

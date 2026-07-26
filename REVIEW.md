@@ -202,6 +202,20 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   rejects a zero exponent, which used to divide by zero. Found while reviewing test coverage.
   **[confirmed]**
 
+- [x] **1.29 No expression containing a variable could be built.**
+  `expr.h:71` — `expr_var::sign()` threw a plain `std::runtime_error("indeterminate sign")`, but
+  `safe_sign()` only catches `unknown_sign_error`. Since `unknown_sign_error` *derives* from
+  `std::runtime_error`, the base-class catch does not match the derived handler, so the exception
+  escaped `safe_sign()` instead of becoming `std::nullopt`. `expr_sum::sign()` depends on that
+  `nullopt` to fall back to interval bounds, so the throw propagated all the way out of
+  `operator+`: even `1 + x` threw, and `bounds(1 + x)` and `safe_sign(x)` threw rather than
+  returning `nullopt`. The whole `expr_var` node type was therefore unusable. `expr_matrix::sign()`
+  had the same wording and the same problem. Fixed by moving `unknown_sign_error` above the node
+  definitions and throwing it from both; `expr_rel::sign()` is deliberately left a hard error,
+  because the sign of a relation is not a meaningful question rather than merely unknown. Never
+  caught because `expr_test.cc` never constructed an `expr_var`. Found while reviewing test
+  coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
