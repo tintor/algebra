@@ -274,7 +274,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   base 0 divides by zero.
 - `__diff`/`__sub` (`kernels.h:467-528`) `goto` into the middle of a second `for` loop as a
   hand-rolled borrow state machine; correct, but no comment explains the scheme.
-- `pow(base, exp, out)` in `rational.h:96` assigns `out = 1` before copying `base`, so aliasing
+- **[fixed]** `pow(base, exp, out)` assigns `out = 1` before copying `base`, so aliasing
   `out` with `base` silently corrupts it.
 - `is_power_of_three` (`natural.h:1065`) uses `goto again` that bypasses the `while (a > 1)`
   condition.

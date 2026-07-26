@@ -68,6 +68,11 @@ constexpr rational pow(const rational& base, long exp) {
 }
 
 constexpr void pow(const rational& base, const integer& exp, rational& out) {
+    if (&out == &base) { // the branches below overwrite out before they are done reading base
+        const rational b = base;
+        pow(b, exp, out);
+        return;
+    }
     if (exp.is_zero()) {
         out = 1;
         return;
@@ -86,6 +91,10 @@ constexpr void pow(const rational& base, const integer& exp, rational& out) {
     if (exp == -1) {
         out.num = base.den;
         out.den = base.num;
+        if (out.den.is_negative()) { // rational keeps the sign in the numerator
+            out.den.negate();
+            out.num.negate();
+        }
         return;
     }
     if (exp == -2) {

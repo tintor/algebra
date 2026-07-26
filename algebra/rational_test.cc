@@ -139,3 +139,21 @@ TEST_CASE("sin and cos of large arguments") {
     REQUIRE(s.den.num_bits() < 200);
     REQUIRE(approx_log2(s - rational(std::sin(0.5))) <= -50);
 }
+
+
+TEST_CASE("pow into an aliased output") {
+    for (int e : {-3, -2, -1, 0, 1, 2, 3, 5}) {
+        for (const rational& b : {rational(2, 3), rational(-2, 3), rational(5), rational(-1, 4)}) {
+            rational out = b;
+            pow(b, integer(e), out);      // out aliases nothing here
+            rational self = b;
+            pow(self, integer(e), self);  // out aliases base
+            REQUIRE(self == out);
+            REQUIRE(self == pow(b, integer(e)));
+            REQUIRE(!self.den.is_negative());
+        }
+    }
+    REQUIRE(pow(rational(-2, 3), integer(-1)) == rational(-3, 2));
+    REQUIRE(pow(rational(-2, 3), integer(-2)) == rational(9, 4));
+    REQUIRE(pow(rational(2, 3), integer(3)) == rational(8, 27));
+}
