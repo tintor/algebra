@@ -309,10 +309,10 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `10^19` would cut the divisions ~19x.
 - `lcm` (`natural.h:200`) forms `a*b` before dividing; `(a/gcd)*b` avoids the large intermediate
   (and `lcm(0,0)` currently divides by zero).
-- `operator&=`/`^=` resize the left operand to the right's length even though the extra words
-  can only be zero.
-- `operator<(std_signed_int, const natural b)` (`natural_class.h:374`) takes `natural` **by
-  value**; `solve_linear` (`solve_linear.h:23`) takes its first `Vec` by value while the rest are
+- **[fixed]** `operator&=` resizes the left operand to the right's length even though the extra
+  words can only be zero. (`^=` and `|=` do need the resize - corrected from the original note.)
+- **[fixed]** `operator<(std_signed_int, const natural b)` (`natural_class.h:374`) takes
+  `natural` **by value**; `solve_linear` (`solve_linear.h:23`) takes its first `Vec` by value while the rest are
   by reference.
 - `is_prime` rebuilds both base arrays on every call (`natural.h:608-609`); they could be
   `static constexpr`.
