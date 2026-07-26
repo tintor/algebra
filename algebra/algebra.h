@@ -12,4 +12,5 @@
 #include "algebra/polygon2.h"
 #include "algebra/polygon2_arc.h"
 #include "algebra/polygon2_boolean.h"
+#include "algebra/polygon2_buffer.h"
 #include "algebra/dual.h"
