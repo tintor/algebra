@@ -331,7 +331,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 6. Performance
 
-- `PI(n)` is intractable beyond ~n=12: `sqrt(rational, iterations)` doubles the operand size
+- **[fixed]** `PI(n)` is intractable beyond ~n=12: `sqrt(rational, iterations)` doubles the operand size
   every Newton step with no truncation, so `PI(20)` never finishes. `PI(4)` is off by **7.0**
   because the same `n` controls both the series length and the sqrt iterations. Truncate each
   Newton iterate to the working precision and decouple the two parameters.

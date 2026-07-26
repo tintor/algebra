@@ -60,6 +60,28 @@ TEST_CASE("pow with negative exponent") {
 
 TEST_CASE("PI") {
     REQUIRE(approx_log2(PI(11) - rational(M_PI)) <= -52);
+
+    // every term of the series is worth about 47 bits
+    for (unsigned n : {2u, 4u, 8u, 16u}) {
+        const rational e = abs(PI(n) - PI(n + 10));
+        REQUIRE(approx_log2(e) <= -45 * static_cast<int>(n));
+    }
+}
+
+TEST_CASE("sqrt_bits") {
+    REQUIRE(sqrt_bits(rational(0), 10) == 0);
+    REQUIRE(sqrt_bits(rational(4), 10) == 2);
+    REQUIRE(sqrt_bits(rational(1, 4), 10) == rational(1, 2));
+    REQUIRE_THROWS(sqrt_bits(rational(-1), 10));
+
+    for (int bits : {0, 1, 10, 64, 300}) {
+        for (const rational& x : {rational(2), rational(10005), rational(1, 3), rational(22, 7)}) {
+            const rational s = sqrt_bits(x, bits);
+            REQUIRE(s * s <= x);                       // never overestimates
+            const rational up = s + pow(rational(1, 2), bits);
+            REQUIRE(up * up > x);                      // within 2**-bits
+        }
+    }
 }
 
 TEST_CASE("exp") {
