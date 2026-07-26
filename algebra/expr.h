@@ -42,6 +42,14 @@ std::vector<T> subvec(const std::vector<T>& a, size_t start) {
     return c;
 }
 
+// thrown when the sign of an expression cannot be determined. safe_sign() turns it into
+// std::nullopt, and expr_sum::sign() relies on that to fall back to interval bounds, so every
+// "I don't know the sign" path has to throw this and not a plain std::runtime_error.
+class unknown_sign_error : public std::runtime_error {
+public:
+    unknown_sign_error(std::string m) : std::runtime_error(m) {}
+};
+
 struct expr;
 using expr_ptr = std::shared_ptr<expr>;
 
@@ -62,13 +70,13 @@ struct expr_matrix : public expr {
     virtual constexpr int sign() const {
         if (rows == 0 && cols == 0)
             return data[0]->sign();
-        throw std::runtime_error("indeterminate sign");
+        throw unknown_sign_error("indeterminate sign of a matrix");
     }
 };
 
 struct expr_var : public expr {
     std::string name;
-    virtual constexpr int sign() const { throw std::runtime_error("indeterminate sign"); }
+    virtual constexpr int sign() const { throw unknown_sign_error("indeterminate sign of a variable"); }
 };
 
 struct expr_rel : public expr {
@@ -687,11 +695,6 @@ struct std::formatter<algebra::expr_ptr, char> {
 constexpr std::ostream& operator<<(std::ostream& os, algebra::expr_ptr a) { return os << std::format("{}", a); }
 
 namespace algebra {
-
-class unknown_sign_error : public std::runtime_error {
-public:
-    unknown_sign_error(std::string m) : std::runtime_error(m) {}
-};
 
 template<typename T>
 struct interval {
