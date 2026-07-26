@@ -656,8 +656,10 @@ constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t
         vnatural r {{w, 0}, aa.size + bb.size + 1};
         w += r.capacity;
         Check(w <= we);
-        __mul_karatsuba_rec(aa, bb, r, w, we); // r = aa * bb
-        // TODO ^ How is this working? AA and BB are stored in Q and nested __mul_karatsuba_rec call will overwrite them? Tests are passing with 256 words.
+        // r = aa * bb. Note: aa and bb live in Q, but the nested call writes its result and
+        // its own temporaries into R and W, so it only reads Q. Q itself is overwritten below,
+        // by which point aa and bb have been consumed.
+        __mul_karatsuba_rec(aa, bb, r, w, we);
 
         vnatural p {{w, 0}, a1.size + b1.size};
         w += p.capacity;
@@ -827,7 +829,7 @@ constexpr uint64_t __saturated_div(cnatural a, cnatural b) {
         return 0;
     if (__equal(a, b))
         return 1;
-    if (a.size == 1) // since a > b  ==>  B == 1
+    if (a.size == 1) // a > b, so b is a single word too
         return a[0] / b[0];
     if (a.size == 2)
         return std::min<uint128_t>(__unsafe_u128(a) / __unsafe_u128(b), UINT64_MAX);
@@ -842,12 +844,15 @@ constexpr uint64_t __saturated_div(cnatural a, cnatural b) {
     if (q > UINT64_MAX)
         q = UINT64_MAX;
 
+    // The estimate can be too large, but never by more than 2: q is at most UINT64_MAX,
+    // and a has exactly 128 bits above e, so b >> e has at least 63 bits, which bounds the
+    // error of dividing the truncated values by q / (b >> e) <= 2.
     const uint64_t c = q;
-    // if (a >= b * c)
-    if (!__less_a_bc_scalar(a, b, c))
+    if (!__less_a_bc_scalar(a, b, c)) // a >= b * c
         return c;
     if (!__less_a_bc_scalar(a, b, c - 1))
         return c - 1;
+    Check(!__less_a_bc_scalar(a, b, c - 2), "__saturated_div() estimate was off by more than 2");
     return c - 2;
 }
 

@@ -448,7 +448,7 @@ constexpr natural& operator<<=(natural& a, int64_t b);
 
 constexpr bool is_power_of_two(const natural& a) { return is_power_of_two(static_cast<cnatural>(a)); }
 
-// no support for &a == &q
+// q must not alias a or b
 constexpr void mul_karatsuba(const natural& a, const natural& b, natural& q) {
     auto A = a.words.size();
     auto B = b.words.size();
@@ -839,7 +839,7 @@ constexpr void __div(cnatural a, cnatural b, natural& q, natural& r) {
     }
 
     // NOTE max word size of R is b.word.size + 1
-    const int Q = std::min(a.size, a.size - b.size + 1); //div_max_size(a, A, b, B); TODO
+    const int Q = a.size - b.size + 1; // b.size >= 2 here, so this is less than a.size
     if (a.words != q.words.data())
         q.words.reset(Q, /*initialize*/false);
 

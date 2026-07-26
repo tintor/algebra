@@ -268,7 +268,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - `natural_class.h:414`: `uint64_t(b >> 64)` sits in a branch made dead by
   `if constexpr (sizeof(b) <= 8)` *without an `else`* — still compiled, and GCC flags
   `-Wshift-count-overflow`.
-- `__saturated_div` (`kernels.h:834-861`) backs off by at most 2 without verifying the third
+- **[fixed]** `__saturated_div` backs off by at most 2 without verifying the third
   candidate; the margin is genuinely ~2 but nothing documents or asserts it.
 - `natural::str()` doesn't validate `base` — base 1 loops until the buffer check throws,
   base 0 divides by zero.
@@ -306,16 +306,16 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 
 ## 5. Comments and README that do not match the code
 
-- `kernels.h:671` — the `TODO ... How is this working? AA and BB are stored in Q and nested call
+- **[fixed]** `kernels.h` - the `TODO ... How is this working? AA and BB are stored in Q and nested call
   will overwrite them?` is answerable: the recursive call writes into the `W` slice `r`, and `q`
   is only overwritten after `aa`/`bb` are consumed. Replace with that explanation.
-- `util.h:123` — `// TODO this seems to be buggy!` on `mul_mod`: the swap preserves the invariant
+- **[fixed]** `util.h` - `// TODO this seems to be buggy!` on `mul_mod`: the swap preserves the invariant
   (`a*b == b*a`), and the loop is correct for `a,b in [0,m)`. The actual bug is next door in
   `__mod(cnatural, uint128_t)` (1.2) — the note is likely misattributed.
-- `kernels.h:839` — `// since a > b ==> B == 1` should say `b.size == 1`.
-- `natural_class.h:835` — `std::min(a.size, a.size - b.size + 1)` where the first argument is
+- **[fixed]** `kernels.h` - `// since a > b ==> B == 1` should say `b.size == 1`.
+- **[fixed]** `natural_class.h` - `std::min(a.size, a.size - b.size + 1)` where the first argument is
   always larger (`b.size >= 2` here); the `min` and its stale `TODO` are noise.
-- `natural_class.h:445` says `mul_karatsuba` has "no support for `&a == &q`" but the
+- **[fixed]** `natural_class.h` says `mul_karatsuba` has "no support for `&a == &q`" but the
   power-of-two branches also break for `&b == &q` (they `reset` `q` before `q = b`).
 - `algebra::round(rational, digits)` (`rational.h:163`) and `real::round` truncate toward zero —
   they do not round.

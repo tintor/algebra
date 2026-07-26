@@ -135,8 +135,8 @@ constexpr uint128_t add_mod(uint128_t a, uint128_t b, uint128_t m) {
     return (b >= m - a) ? (a + b - m) : (a + b);
 }
 
-// TODO this seems to be buggy!
 // assumes both A and B are in [0, M) range
+// (swapping a and b inside the loop is safe: the invariant is result + a*b, which is symmetric)
 constexpr uint128_t mul_mod(uint128_t a, uint128_t b, uint128_t m) {
     if (a == 0 || b == 0)
         return 0;
