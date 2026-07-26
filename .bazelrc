@@ -7,5 +7,9 @@ build --cxxopt=-O3
 
 build --cxxopt=-mfma
 build --cxxopt=-mavx2
-build --cxxopt=-ffast-math
-build --cxxopt=-ffp-contract=fast
+
+# Note: -ffast-math must not be used here. It implies -ffinite-math-only, which lets the
+# compiler assume no NaN or infinity, so the std::isnan() / std::isinf() guards in
+# rational(floating point) are removed and those values silently produce garbage instead of
+# throwing. The floating point in this library is only used for seeds and for exact
+# conversions, so there is nothing to gain from it either.

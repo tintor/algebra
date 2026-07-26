@@ -369,7 +369,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   runtime-only; `rational(std::string_view)` defines a `static std::regex` inside a `constexpr`
   function (`rational_class.h:54`); `__divide_2n1n` is not marked `constexpr` but `__divide_bz`
   is.
-- `.bazelrc` applies `-ffast-math` globally to an *exact* arithmetic library. It does not affect
+- **[fixed]** `.bazelrc` applies `-ffast-math` globally to an *exact* arithmetic library. It does not affect
   the integer paths, but it does affect `std::sqrt`/`frexp`/`ldexp` seeds in `isqrt`,
   `isqrt_hardware`, `round_to_zero` and `rational(float)` — where correctness depends on the FP
   result being within a known error bound.

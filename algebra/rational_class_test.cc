@@ -197,3 +197,15 @@ TEST_CASE("constexpr evaluation") {
     // the static_asserts above do the work; this keeps them visible in the test report
     SUCCEED("number types are usable in constant expressions");
 }
+
+
+TEST_CASE("from non finite floating point") {
+    // note: these guards are compiled away by -ffast-math, which is why the build must not use it
+    volatile double zero = 0.0;
+    REQUIRE_THROWS(rational(0.0 / zero));   // nan
+    REQUIRE_THROWS(rational(1.0 / zero));   // +inf
+    REQUIRE_THROWS(rational(-1.0 / zero));  // -inf
+    volatile float fzero = 0.0f;
+    REQUIRE_THROWS(rational(0.0f / fzero));
+    REQUIRE_THROWS(rational(1.0f / fzero));
+}
