@@ -188,6 +188,20 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   division is exact, since the partial product is `C(n, j+1)`) and reduces once at the end. Found
   while reviewing test coverage. **[confirmed]**
 
+- [x] **1.28 `nth_root` diverged for a negative exponent and barely converged for a large one.**
+  `rational.h:142-159` — Newton started from `result = 1` regardless of the base. For a negative
+  exponent that is outside the basin of convergence and the iteration runs away:
+  `nth_root(8, -3, 4)` returned about `-1.9e18` and `nth_root(8, -3, 6)` overflowed to `-inf`,
+  where the answer is `1/2`. For a large exponent it converges far too slowly to be usable:
+  `nth_root(32, 5, 6)` returned `2.478` instead of `2`, and `nth_root(1000, 3, 6)` returned `44.09`
+  instead of `10`. Raising the iteration count does not rescue it, because each iteration multiplies
+  the operand size by `abs(exp)` — at 6 iterations `32^(1/5)` already carries a 14294 bit
+  denominator and takes 27 ms. Fixed by seeding with the power of two nearest the root, taken from
+  `log2(base) / exp` on the bit lengths, and simplifying each iteration. Exact roots now come out
+  exactly and in far less time (`32^(1/5)`: 27 ms and wrong, to under 0.01 ms and exact). Also
+  rejects a zero exponent, which used to divide by zero. Found while reviewing test coverage.
+  **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
