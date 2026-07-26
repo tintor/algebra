@@ -342,17 +342,19 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   usual 2x symmetry saving is not taken.
 - **[fixed]** `natural::str` converts one digit per full-precision division; chunking by
   `10^19` would cut the divisions ~19x.
-- `lcm` (`natural.h:200`) forms `a*b` before dividing; `(a/gcd)*b` avoids the large intermediate
+- **[fixed]** `lcm` forms `a*b` before dividing; `(a/gcd)*b` avoids the large intermediate
   (and `lcm(0,0)` currently divides by zero).
 - **[fixed]** `operator&=` resizes the left operand to the right's length even though the extra
   words can only be zero. (`^=` and `|=` do need the resize - corrected from the original note.)
 - **[fixed]** `operator<(std_signed_int, const natural b)` (`natural_class.h:374`) takes
   `natural` **by value**; `solve_linear` (`solve_linear.h:23`) takes its first `Vec` by value while the rest are
   by reference.
-- `is_prime` rebuilds both base arrays on every call (`natural.h:608-609`); they could be
+- **[fixed]** `is_prime` rebuilds both base arrays on every call; they are now
   `static constexpr`.
-- `factorize(uint64_t)` has no `p*p > a` early exit, so a semiprime with a 2^32-ish factor walks
-  the full wheel.
+- **[not an issue]** `factorize(uint64_t)` has no `p*p > a` early exit. Corrected after
+  analysis: the loop is only entered for a composite with no factor of 2 or 3 that is not a
+  perfect power, and it stops at the first factor it finds, which is at most `sqrt(a)`. The
+  missing exit costs nothing.
 - `#include <regex>` in `rational_class.h` for one parse pattern is a heavy compile-time and
   runtime cost for a "no dependencies" header-only library.
 

@@ -202,8 +202,12 @@ constexpr natural gcd(std_int auto a, natural b) { return gcd(natural(abs_unsign
 
 // least common multiple
 constexpr natural lcm(const natural& a, const natural& b) {
-    natural m = a * b;
+    if (a.words.empty() || b.words.empty())
+        return 0;
+    // divide first: a * b would be twice as long as the result
+    natural m = a;
     m /= gcd(a, b);
+    m *= b;
     return m;
 }
 
@@ -625,10 +629,10 @@ constexpr bool is_prime(const uint64_t n) {
     const auto s = std::countr_zero(n - 1);
     const uint64_t d = (n - 1) >> s;
 
-    std::array<uint32_t, 3> bases32 = {2, 7, 61};
-    std::array<uint32_t, 7> bases64 = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
+    static constexpr std::array<uint32_t, 3> bases32 = {2, 7, 61};
+    static constexpr std::array<uint32_t, 7> bases64 = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
 
-    for (uint32_t a : (n <= UINT32_MAX) ? std::span<uint32_t>(bases32) : std::span<uint32_t>(bases64)) {
+    for (uint32_t a : (n <= UINT32_MAX) ? std::span<const uint32_t>(bases32) : std::span<const uint32_t>(bases64)) {
         if (a >= n)
             continue;
         uint64_t x = pow_mod(a, d, n);
