@@ -164,6 +164,19 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   never reaches this branch. Fixed by converting each endpoint into the parameter of the segment it
   belongs to with `div_colinear`. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.26 Every function in `dual.h` failed to compile for a floating point `T`.**
+  `dual.h` included only `<format>` and called `sqrt`, `pow`, `exp`, `log`, `sin`, `cos`, `tan`,
+  `atan` and `abs` unqualified. For `T = double` there is no candidate: ADL on `double` finds
+  nothing in namespace `algebra` and `std::sqrt` was never visible. All nine failed, so
+  `dual<double>` — the only instantiation that makes sense for automatic differentiation with
+  transcendentals, and the one the existing test used — could do nothing but add, subtract and
+  multiply. `abs` additionally called `signum`, which is declared in `integer_backend.h` and so is
+  not visible for a floating point `T` either. Never caught because `dual_test.cc` only checked the
+  members and the formatter, and nothing else in the library instantiates these. Fixed by including
+  `<cmath>` and adding a `using std::f;` in each function, which keeps ADL working for `rational`,
+  `real` and `xrational`; `abs` now uses comparisons instead of `signum`. The derivative formulas
+  themselves were all correct. Found while reviewing test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
