@@ -1,7 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 load(":library.bzl", "library")
 
-cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"])
+cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main", ":kernels"])
 
 library("kernels",       hdrs = ["util.h", "types.h"])
 library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])

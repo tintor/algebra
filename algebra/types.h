@@ -12,9 +12,11 @@ using int128_t = __int128;
 using uint128_t = unsigned __int128;
 static const auto UINT128_MAX = std::numeric_limits<uint128_t>::max();
 
-// gcc only treats __int128 as an integral type outside of strict standard mode
-// (-std=gnu++23 but not -std=c++23), and libstdc++ leaves std::make_unsigned and
-// std::countr_zero undefined for it either way, so both are named explicitly here.
+// libstdc++ only treats __int128 as an integral type outside of strict standard mode
+// (-std=gnu++23 but not -std=c++23), and leaves std::make_unsigned and std::countr_zero
+// undefined for it either way, so both are named explicitly here. This is a property of
+// the standard library, not the compiler: clang defaults to libstdc++ on Linux, so the
+// bazel build (which passes -std=c++23) hits it as well.
 template<typename T> concept __int128_like =
     std::same_as<std::remove_cv_t<T>, int128_t> || std::same_as<std::remove_cv_t<T>, uint128_t>;
 
