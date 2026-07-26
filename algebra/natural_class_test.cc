@@ -1407,3 +1407,18 @@ TEST_CASE("operator~ normalizes") {
     natural e = ~d;
     REQUIRE(e == (UINT64_MAX ^ 0xF0F0u));
 }
+
+TEST_CASE("resize clears the inline word") {
+    natural a = 12345;
+    a.words.downsize(0); // the word itself is left behind
+    a.words.resize(1);
+    REQUIRE(a.words[0] == 0);
+    REQUIRE(a == 0u);
+
+    natural b = 999;
+    b.words.downsize(0);
+    b.words.resize(3); // grows onto the heap
+    REQUIRE(b.words[0] == 0);
+    REQUIRE(b.words[1] == 0);
+    REQUIRE(b.words[2] == 0);
+}

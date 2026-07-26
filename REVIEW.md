@@ -286,11 +286,11 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - `natural` relies on the invariant "`words[0] == 0` whenever `size() == 0`" in ~15 comparison
   operators that read `words[0]` before checking `size()`. `operator&=(natural&, uint64_t)`
   (`:1211`) writes `words[0]` with `size() == 0`, which can break it.
-- `inatural::back()` (`kernels.h:23-24`): the `const` overload returns a mutable `uint64_t&`,
+- **[fixed]** `inatural::back()`: the `const` overload returns a mutable `uint64_t&`,
   the non-`const` one returns by value — exactly inverted.
-- `integer_backend::operator[](int i)` (`:141-142`) silently ignores `i` in small-buffer mode,
+- **[documented]** `integer_backend::operator[](int i)` silently ignores `i` in small-buffer mode,
   so out-of-range indices read/write word 0 instead of failing.
-- `integer_backend::resize()` doesn't zero the inline word when growing 0→1, so a stale value
+- **[fixed]** `integer_backend::resize()` doesn't zero the inline word when growing 0->1, so a stale value
   can resurrect after `pop_back()`.
 - `natural_class.h:414`: `uint64_t(b >> 64)` sits in a branch made dead by
   `if constexpr (sizeof(b) <= 8)` *without an `else`* — still compiled, and GCC flags

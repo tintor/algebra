@@ -143,6 +143,8 @@ public:
     constexpr bool allocated() const { return _capacity; }
     constexpr const uint64_t* data() const { return _capacity ? _words : &_single_word; }
     constexpr uint64_t* data() { return _capacity ? _words : &_single_word; }
+    // Note: without a heap buffer there is only one word, and i is ignored - an out of
+    // range index silently reads or writes word 0 instead of failing.
     constexpr uint64_t operator[](int i) const { return _capacity ? _words[i] : _single_word; }
     constexpr uint64_t& operator[](int i) { return _capacity ? _words[i] : _single_word; }
     constexpr uint64_t back() const { return operator[](size() - 1); }
@@ -296,10 +298,14 @@ constexpr void integer_backend::reserve(int capacity) {
 }
 
 constexpr void integer_backend::resize(int size) {
+    const int old_size = this->size();
     reserve(size);
-    if (_capacity)
-        for (int i = this->size(); i < size; i++)
+    if (_capacity) {
+        for (int i = old_size; i < size; i++)
             _words[i] = 0;
+    } else if (size > old_size) {
+        _single_word = 0; // the inline word can still hold a value from before
+    }
     _size = (_size >= 0) ? size : -size;
 }
 

@@ -20,8 +20,8 @@ struct inatural {
 
     constexpr uint64_t operator[](int i) const { return words[i]; }
     constexpr uint64_t& operator[](int i) { return words[i]; }
-    constexpr uint64_t back() { return words[size - 1]; }
-    constexpr uint64_t& back() const { return words[size - 1]; }
+    constexpr uint64_t back() const { return words[size - 1]; }
+    constexpr uint64_t& back() { return words[size - 1]; }
     constexpr void normalize() {
         while (size > 0 && back() == 0)
             size -= 1;
