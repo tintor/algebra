@@ -1422,3 +1422,14 @@ TEST_CASE("resize clears the inline word") {
     REQUIRE(b.words[1] == 0);
     REQUIRE(b.words[2] == 0);
 }
+
+TEST_CASE("str rejects an unusable base") {
+    natural a = 12345;
+    REQUIRE_THROWS(a.str(0));
+    REQUIRE_THROWS(a.str(1));
+    REQUIRE_THROWS(a.str(37));
+    REQUIRE(a.str(2) == "11000000111001");
+    REQUIRE(a.str(36) == "9IX");
+    REQUIRE(a.str(36, false) == "9ix");
+    REQUIRE(natural(0).str(2) == "0");
+}
