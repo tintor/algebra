@@ -102,6 +102,19 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   was no carry out. This is what made `mul_karatsuba` throw on sparse operands (the
   `mul_max_size` bound leaves no spare word). Found while fixing 1.10. **[confirmed]**
 
+- [ ] **1.20 `mul_mod(natural, natural, natural, natural&)` adds on even bits.**
+  `natural.h:569` — the double-and-add loop does `if (bb.is_even()) add_mod(out, aa, m);`, but a
+  double-and-add adds when the current bit is *set*. Wrong for any operand pair that reaches the
+  loop (both above 128 bits, or a product wider than the modulus). The `uint128_t` version in
+  `util.h` gets it right (`if (b & 1)`). Found while adding test coverage. **[confirmed]**
+
+- [ ] **1.21 `iroot()` can return a result one too large.**
+  `natural.h:450-459` — the binary search brackets the answer around a `std::pow` estimate with
+  `left -= m >> 30` and `right += m >> 19`. For a root below 2**30 both shifts are 0, so when the
+  floating point estimate rounds *up*, `left` starts above the true root and the search can never
+  reach it: `iroot(1000**7 - 1, 7)` returns 1000 instead of 999. Found while adding test
+  coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

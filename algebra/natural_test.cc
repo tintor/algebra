@@ -666,3 +666,148 @@ TEST_CASE("isqrt of powers of two") {
         REQUIRE((s + 1u) * (s + 1u) > a);
     }
 }
+
+TEST_CASE("modular arithmetic") {
+    std::mt19937_64 rng(3);
+    for (int i = 0; i < 200; i++) {
+        const int bits = std::uniform_int_distribution<int>(2, 300)(rng);
+        natural m = uniform_sample_bits(bits, rng);
+        if (m < 2u)
+            continue;
+        natural a = uniform_sample_bits(bits, rng) % m;
+        const natural b = uniform_sample_bits(bits, rng) % m;
+
+        natural s = a;
+        add_mod(s, b, m);
+        REQUIRE(s == (a + b) % m);
+
+        natural d = a;
+        sub_mod(d, b, m);
+        REQUIRE(d == (a + m - b) % m);
+
+        natural p;
+        mul_mod(a, b, m, p);
+        REQUIRE(p == (a * b) % m);
+
+        natural q = a;
+        __mul_mod(q, b, m);
+        REQUIRE(q == (a * b) % m);
+    }
+
+    // pow_mod against repeated multiplication
+    for (int i = 0; i < 40; i++) {
+        const natural m = uniform_sample_bits(std::uniform_int_distribution<int>(2, 90)(rng), rng) + 2u;
+        const natural a = uniform_sample_bits(60, rng) % m;
+        const uint64_t e = std::uniform_int_distribution<uint64_t>(0, 40)(rng);
+        natural expected = 1;
+        for (uint64_t k = 0; k < e; k++)
+            expected = (expected * a) % m;
+        REQUIRE(pow_mod(a, natural(e), m) == expected);
+        natural out;
+        pow_mod(a, natural(e), m, out);
+        REQUIRE(out == expected);
+    }
+
+    // the 128 bit helpers in util.h
+    for (int i = 0; i < 2000; i++) {
+        const uint128_t m = (static_cast<uint128_t>(rng()) << 64 | rng()) | 2;
+        const uint128_t a = (static_cast<uint128_t>(rng()) << 64 | rng()) % m;
+        const uint128_t b = (static_cast<uint128_t>(rng()) << 64 | rng()) % m;
+        const natural bignum = natural(a) + natural(b);
+        REQUIRE(natural(add_mod(a, b, m)) == bignum % natural(m));
+        REQUIRE(natural(mul_mod(a, b, m)) == (natural(a) * natural(b)) % natural(m));
+    }
+    for (int i = 0; i < 500; i++) {
+        const uint64_t m = rng() | 2;
+        const uint64_t a = rng() % m;
+        const uint64_t e = rng() % 64;
+        natural expected = 1;
+        for (uint64_t k = 0; k < e; k++)
+            expected = (expected * a) % m;
+        REQUIRE(pow_mod(a, e, m) == expected);
+    }
+}
+
+TEST_CASE("number theory helpers") {
+    // power_of_two
+    for (int e = 0; e < 300; e++) {
+        const natural p = power_of_two(e);
+        REQUIRE(p == pow(natural(2), e));
+        REQUIRE(p.num_bits() == e + 1);
+    }
+
+    // log_lower / log_upper
+    REQUIRE(log_lower(natural(0), 10) == 0);
+    REQUIRE(log_upper(natural(0), 10) == 0);
+    for (uint64_t base : {2ull, 3ull, 10ull}) {
+        for (int e = 0; e < 20; e++) {
+            const natural p = pow(natural(base), e);
+            REQUIRE(log_lower(p, base) == e);
+            REQUIRE(log_upper(p, base) == e + 1);
+            if (e > 0) {
+                REQUIRE(log_lower(p - 1u, base) == e - 1);
+                REQUIRE(log_upper(p - 1u, base) == e);
+            }
+        }
+    }
+
+    // binominal
+    natural out;
+    binominal(natural(5), 0, out);
+    REQUIRE(out == 1u);
+    binominal(natural(5), 2, out);
+    REQUIRE(out == 10u);
+    binominal(natural(10), 5, out);
+    REQUIRE(out == 252u);
+    binominal(natural(52), 5, out);
+    REQUIRE(out == 2598960u);
+    // symmetry: C(n, k) == C(n, n-k)
+    natural x, y;
+    binominal(natural(30), 12, x);
+    binominal(natural(30), 18, y);
+    REQUIRE(x == y);
+
+    // iroot
+    REQUIRE(iroot(natural(0), 3) == 0);
+    REQUIRE(iroot(natural(1), 5) == 1);
+    REQUIRE(iroot(natural(8), 3) == 2);
+    REQUIRE(iroot(natural(9), 3) == 2);
+    REQUIRE(iroot(natural(27), 3) == 3);
+    for (uint32_t n : {3u, 4u, 5u, 7u}) {
+        for (uint64_t v : {2ull, 5ull, 10ull, 1000ull}) {
+            const natural p = pow(natural(v), n);
+            REQUIRE(iroot(p, n) == v);
+            REQUIRE(iroot(p - 1u, n) == v - 1);
+            REQUIRE(iroot(p + 1u, n) == v);
+        }
+    }
+
+    // exact_sqrt, both forms
+    natural b;
+    REQUIRE(exact_sqrt(natural(144), b));
+    REQUIRE(b == 12u);
+    REQUIRE(!exact_sqrt(natural(145), b));
+    natural whole = 1, root = 1;
+    exact_sqrt(natural(72), whole, root); // sqrt(72) == 6 * sqrt(2)
+    REQUIRE(whole == 6u);
+    REQUIRE(root == 2u);
+    whole = 1;
+    root = 1;
+    exact_sqrt(natural(196), whole, root);
+    REQUIRE(whole == 14u);
+    REQUIRE(root == 1u);
+
+    // is_possible_square never rejects a real square
+    for (uint64_t v = 0; v < 3000; v++)
+        REQUIRE(is_possible_square(natural(v) * natural(v)));
+
+    // concat
+    REQUIRE(concat(0, 0) == 0);
+    REQUIRE(concat(1, 2) == ((static_cast<uint128_t>(1) << 64) | 2));
+
+    // complement
+    natural c = 1;
+    c <<= 64;
+    complement(c); // two's complement of 2**64 in 2 words
+    REQUIRE(c == (natural(1) << 64));
+}

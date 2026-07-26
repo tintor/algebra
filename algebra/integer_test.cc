@@ -125,3 +125,48 @@ TEST_CASE("pow with accumulator") {
     REQUIRE_THROWS(pow(2_i, -1, 5_i));
     REQUIRE_THROWS(pow(3_i, -1, 5_i));
 }
+
+TEST_CASE("less_ab_c / less_a_bc / less_ab_cd") {
+    // these are used by rational comparison and by the geometry predicates
+    std::mt19937_64 rng(0);
+    auto rnd = [&](int max_bits) {
+        integer a;
+        uniform_sample_bits(std::uniform_int_distribution<int>(0, max_bits)(rng), rng, a.abs);
+        if (std::uniform_int_distribution<int>(0, 1)(rng))
+            a.negate();
+        return a;
+    };
+
+    // exhaustive over small values, including zeros and both signs
+    for (int a = -3; a <= 3; a++)
+        for (int b = -3; b <= 3; b++)
+            for (int c = -9; c <= 9; c++) {
+                REQUIRE(less_ab_c(integer(a), integer(b), integer(c)) == (a * b < c));
+                REQUIRE(less_a_bc(integer(c), integer(a), integer(b)) == (c < a * b));
+            }
+
+    for (int a = -3; a <= 3; a++)
+        for (int b = -3; b <= 3; b++)
+            for (int c = -3; c <= 3; c++)
+                for (int d = -3; d <= 3; d++)
+                    REQUIRE(less_ab_cd(integer(a), integer(b), integer(c), integer(d)) == (a * b < c * d));
+
+    // random, multi word
+    for (int i = 0; i < 400; i++) {
+        const integer a = rnd(200), b = rnd(200), c = rnd(200), d = rnd(200);
+        REQUIRE(less_ab_c(a, b, c) == (a * b < c));
+        REQUIRE(less_a_bc(a, b, c) == (a < b * c));
+        REQUIRE(less_ab_cd(a, b, c, d) == (a * b < c * d));
+    }
+
+    // products that are equal or one apart, where the bit length shortcuts are tightest
+    for (int i = 0; i < 200; i++) {
+        const integer a = rnd(100), b = rnd(100);
+        const integer ab = a * b;
+        REQUIRE(!less_ab_c(a, b, ab));
+        REQUIRE(less_ab_c(a, b, ab + 1));
+        REQUIRE(!less_ab_c(a, b, ab - 1));
+        REQUIRE(!less_ab_cd(a, b, a, b));
+        REQUIRE(less_a_bc(ab - 1, a, b) == (ab - 1 < ab));
+    }
+}
