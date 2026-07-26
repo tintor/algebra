@@ -4,3 +4,4 @@ bazel-algebra
 bazel-out
 bazel-testlogs
 MODULE.bazel.lock
+.*.swp
