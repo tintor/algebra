@@ -1316,3 +1316,45 @@ TEST_CASE("sub_product rejects a violated precondition") {
     sub_product(e, b, static_cast<uint64_t>(7));
     REQUIRE(e == 3u);
 }
+
+TEST_CASE("multiplication propagates a long carry") {
+    // isqrt() produced this value; squaring it needs a carry that travels through
+    // two all-ones words of the partial product
+    natural s;
+    s.words.reset(5);
+    const uint64_t w[5] = {8296379691479107416ull, 8433445100458127462ull, 6328652237515477287ull,
+                           14740434617336491689ull, 24879108095803ull};
+    for (int i = 0; i < 5; i++)
+        s.words[i] = w[i];
+
+    natural expected;
+    add_product(expected, s, s); // independent implementation
+    REQUIRE(s * s == expected);
+    REQUIRE(mul_karatsuba(s, s) == expected);
+    natural sq = s;
+    square(sq);
+    REQUIRE(sq == expected);
+
+    // the same for a * b with b != a
+    natural t = s;
+    t += 1u;
+    natural expected2;
+    add_product(expected2, s, t);
+    REQUIRE(s * t == expected2);
+    REQUIRE(mul_karatsuba(s, t) == expected2);
+
+    // cross check the general multiplication against add_product for values that are
+    // likely to produce long carry chains
+    Random rng(51);
+    for (int i = 0; i < 300; i++) {
+        natural a = 1;
+        a <<= rng.Uniform<int>(64, 400);
+        a -= rng.Uniform<uint64_t>(1, 1000);
+        natural b = 1;
+        b <<= rng.Uniform<int>(64, 400);
+        b -= rng.Uniform<uint64_t>(1, 1000);
+        natural e;
+        add_product(e, a, b);
+        REQUIRE(a * b == e);
+    }
+}
