@@ -49,6 +49,11 @@ using uint128_t = unsigned __int128;
 
 #ifdef ALGEBRA_X86_DIVQ
 constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
+    if consteval { // inline assembly is not allowed in a constant expression
+        q = a / b;
+        r = a % b;
+        return;
+    }
     uint64_t hi = a >> 64;
     uint64_t lo = a;
     __asm__ (
@@ -63,6 +68,9 @@ constexpr void __divq(uint128_t a, uint64_t b, uint64_t& q, uint64_t& r) {
 }
 
 constexpr uint64_t __divq(uint128_t a, uint64_t b) {
+    if consteval { // inline assembly is not allowed in a constant expression
+        return a / b;
+    }
     uint64_t hi = a >> 64;
     uint64_t lo = a;
     // Assembly clobbers hi (RDX) but we don't need it anymore
@@ -77,6 +85,9 @@ constexpr uint64_t __divq(uint128_t a, uint64_t b) {
 }
 
 constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) {
+    if consteval { // inline assembly is not allowed in a constant expression
+        return a % b;
+    }
     uint64_t hi = a >> 64;
     uint64_t lo = a;
     uint64_t m;

@@ -1,39 +1,38 @@
 #pragma once
 #include "algebra/util.h"
-#include <cstring>
 #include <string>
 #include <vector>
 
 namespace algebra {
 
 struct cnatural {
-    const uint64_t* const words;
-    const int size;
+    const uint64_t* words; // the words are const, the reference to them is assignable
+    int size;
 
-    uint64_t operator[](int i) const { return words[i]; }
-    uint64_t back() const { return words[size - 1]; }
-    int countl_zero() const { return std::countl_zero(back()); }
+    constexpr uint64_t operator[](int i) const { return words[i]; }
+    constexpr uint64_t back() const { return words[size - 1]; }
+    constexpr int countl_zero() const { return std::countl_zero(back()); }
 };
 
 struct inatural {
     uint64_t* const words; // pointer address can't change, but words can
     int size;
 
-    uint64_t operator[](int i) const { return words[i]; }
-    uint64_t& operator[](int i) { return words[i]; }
-    uint64_t back() { return words[size - 1]; }
-    uint64_t& back() const { return words[size - 1]; }
-    void normalize() {
+    constexpr uint64_t operator[](int i) const { return words[i]; }
+    constexpr uint64_t& operator[](int i) { return words[i]; }
+    constexpr uint64_t back() { return words[size - 1]; }
+    constexpr uint64_t& back() const { return words[size - 1]; }
+    constexpr void normalize() {
         while (size > 0 && back() == 0)
             size -= 1;
     }
-    operator cnatural() const { return {words, size}; }
+    constexpr operator cnatural() const { return {words, size}; }
 };
 
 struct vnatural : public inatural {
     const int capacity;
 
-    void push_back(uint64_t a) {
+    constexpr void push_back(uint64_t a) {
         Check(size < capacity);
         words[size++] = a;
     }
@@ -617,10 +616,9 @@ constexpr int KARATSUBA_LIMIT = 32;
 // karatsuba 16384 with 64 limit takes  26ms*
 
 constexpr void swap(cnatural& a, cnatural& b) {
-    char buffer[sizeof(cnatural)];
-    std::memcpy(buffer, &a, sizeof(cnatural));
-    std::memcpy(&a, &b, sizeof(cnatural));
-    std::memcpy(&b, buffer, sizeof(cnatural));
+    const cnatural t = a;
+    a = b;
+    b = t;
 }
 
 // assuming a.size >= b.size

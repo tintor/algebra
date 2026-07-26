@@ -333,7 +333,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - **`-std=c++23` fails with GCC.** In strict mode GCC's `__int128` is not `std::integral`, so
   `std_int<uint128_t>` is false and everything taking a `uint128_t` fails to compile. The build
   works only with clang or `-std=gnu++23`. Either support GCC or document clang-only.
-- `constexpr` is claimed broadly but several functions can never be constant-evaluated:
+- **[fixed]** `constexpr` is claimed broadly but several functions can never be constant-evaluated:
   `swap(cnatural&,cnatural&)` uses `std::memcpy` (`kernels.h:625`), so all of Karatsuba is
   runtime-only; `rational(std::string_view)` defines a `static std::regex` inside a `constexpr`
   function (`rational_class.h:54`); `__divide_2n1n` is not marked `constexpr` but `__divide_bz`
