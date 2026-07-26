@@ -216,6 +216,29 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   caught because `expr_test.cc` never constructed an `expr_var`. Found while reviewing test
   coverage. **[confirmed]**
 
+- [x] **1.31 `rational -> float` / `rational -> double` returned 0 for every small value.**
+  `rational_class.h:276-290` — both conversions shifted `num` and `den` right by the *same*
+  amount (`den.num_bits() - 50` for `float`, `- 900` for `double`) to keep `den` from
+  overflowing the target type. When `den` is much larger than `num` that shift is wider than
+  `num`, so the numerator was truncated to zero and the quotient collapsed:
+  `float(rational(1, 2**50))` → `0` instead of `8.8817842e-16`, and
+  `double(rational(1, 2**900))` → `0` instead of `1.1830522e-271`. Every `float` below about
+  `2^-50` and every `double` below about `2^-900` was affected, so the round trip
+  `T(rational(x)) == x` — exact for every finite `float`/`double`, since each one *is* a
+  rational — failed: `float(rational(1e-30f))` → `0`, `double(rational(1e-300))` → `0`,
+  `double(rational(2.2250738585072014e-308))` → `0`. No test converted a `rational` to `float`
+  or `double` at all. Fixed by scaling the two terms independently (each keeps at most `keep`
+  significant bits, still far more than the target's precision) and putting the discarded powers
+  of two back with `ldexp`, so out of range values still saturate to `inf`/`0` while
+  representable ones come out exact. Found while adding test coverage. **[confirmed]**
+
+- [x] **1.32 `std::format("{:.0}", rational)` emitted a trailing `.`.**
+  `rational_class.h:488` wrote the decimal point unconditionally, so a request for zero fraction
+  digits produced `"2."` for `3/2` and `"1."` for `1/2`, where `printf("%.0f")` and `std::format`
+  of a floating point value both produce just the rounded integer. Not caught because every
+  existing `{:.N}` test used `N >= 1`. Fixed by returning right after the integer digits when
+  `N == 0`. Found while adding test coverage. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
