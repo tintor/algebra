@@ -39,11 +39,14 @@ dual<T> abs(const dual<T>& a) {
     using std::abs;
     // spelled out with comparisons instead of signum(), which is declared in integer_backend.h
     // and so is not visible for a floating point T. abs is not differentiable at 0.
-    if (a.real < T(0))
-        return {abs(a.real), -a.dual};
-    if (T(0) < a.real)
-        return {abs(a.real), a.dual};
-    return {abs(a.real), T(0)};
+    // note: copied into a local first. Writing `a.real <` would be parsed as the start of a
+    // template argument list, because algebra::real is a class template and a's type is dependent.
+    const T r = a.real;
+    if (r < T(0))
+        return {abs(r), -a.dual};
+    if (T(0) < r)
+        return {abs(r), a.dual};
+    return {abs(r), T(0)};
 }
 
 }
