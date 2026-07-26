@@ -190,3 +190,16 @@ TEST_CASE("__add with zero carry into a full buffer, shifted") {
     REQUIRE(a.size == 3);
     REQUIRE(w[2] == 4);
 }
+
+TEST_CASE("__sub_product by zero succeeds") {
+    uint64_t a[] = {7};
+    uint64_t b[] = {1, 2, 3};
+    inatural ia {a, 1};
+    // b is longer than a, but b * 0 is zero, so there is nothing to subtract
+    REQUIRE(__sub_product(ia, cnatural{b, 3}, static_cast<uint64_t>(0)));
+    REQUIRE(ia.size == 1);
+    REQUIRE(a[0] == 7);
+
+    // and it still reports a violated precondition for a non-zero multiplier
+    REQUIRE(!__sub_product(ia, cnatural{b, 3}, static_cast<uint64_t>(1)));
+}

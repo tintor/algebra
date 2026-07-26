@@ -789,10 +789,9 @@ constexpr void sub_product(natural& a, const natural& b, const natural& c) {
         return;
 
     inatural ia = a;
-    if (B < C)
-        __sub_product(ia, b, static_cast<cnatural>(c));
-    else
-        __sub_product(ia, c, static_cast<cnatural>(b));
+    const bool ok = (B < C) ? __sub_product(ia, b, static_cast<cnatural>(c))
+                            : __sub_product(ia, c, static_cast<cnatural>(b));
+    Check(ok, "sub_product() assumes A >= B * C");
     a.words.downsize(ia.size);
 }
 
@@ -804,7 +803,7 @@ constexpr void sub_product(natural& a, const natural& b, const uint64_t c) {
         return;
 
     inatural ia = a;
-    __sub_product(ia, b, c);
+    Check(__sub_product(ia, b, c), "sub_product() assumes A >= B * c");
     a.words.downsize(ia.size);
 }
 
@@ -864,7 +863,7 @@ constexpr void __div(cnatural a, cnatural b, natural& q, natural& r) {
 
         const uint64_t w = __saturated_div(r, b);
         vnatural vr = r;
-        __sub_product(vr, b, w);
+        Check(__sub_product(vr, b, w), "__saturated_div() overestimated the quotient");
         r.words.downsize(vr.size);
         q.words[i] = w;
     }
