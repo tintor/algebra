@@ -900,6 +900,8 @@ constexpr void mod(natural& a, const natural& b) {
 constexpr natural& operator>>=(natural& a, int64_t b);
 
 constexpr int natural::str(char* buffer, int buffer_size, unsigned base, const bool upper) const {
+    Check(base >= 2, "str() with base less than 2");
+    Check(base <= 36, "str() with base greater than 36");
     char* p = buffer;
     const char* end = buffer + buffer_size;
 
@@ -1336,7 +1338,7 @@ constexpr int natural::str_size_upper_bound(unsigned base) const {
     case 14: m = 17; break;
     case 15: m = 17; break;
     case 16: m = 16; break;
-    default: m = 16; // avoid dependency on log_upper()
+    default: m = 16; // enough for any base above 16, avoids a dependency on log_upper()
     }
     return words.size() * m;
 }

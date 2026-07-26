@@ -348,7 +348,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   `-Wshift-count-overflow`.
 - **[fixed]** `__saturated_div` backs off by at most 2 without verifying the third
   candidate; the margin is genuinely ~2 but nothing documents or asserts it.
-- `natural::str()` doesn't validate `base` — base 1 loops until the buffer check throws,
+- **[fixed]** `natural::str()` doesn't validate `base` - base 1 loops until the buffer check throws,
   base 0 divides by zero.
 - **[documented]** `__diff`/`__sub` `goto` into the middle of a second `for` loop as a
   hand-rolled borrow state machine; correct, but no comment explains the scheme.
