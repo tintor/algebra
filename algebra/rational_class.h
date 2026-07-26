@@ -34,11 +34,11 @@ public:
             return;
         }
 
-        using T = std::make_unsigned_t<larger_type<decltype(n), decltype(d)>>;
+        using T = make_unsigned_t<larger_type<decltype(n), decltype(d)>>;
         T un = abs_unsigned(n);
         T ud = abs_unsigned(d);
 
-        auto z = std::countr_zero(un | ud);
+        auto z = countr_zero(un | ud);
         un >>= z;
         ud >>= z;
         auto e = gcd(un, ud);

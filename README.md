@@ -37,7 +37,6 @@ int main(int argc, char* argv[]) {
 ### Limitations
 - multiplication and division currently use `O(N^2)` algorithms where N is number of 64-bit words used
   (`mul_karatsuba()` and `divide_bz()` are available, but are not used by the operators yet)
-- `__int128` support requires GNU extensions (`-std=gnu++23`, or clang, which accepts it in either mode)
 
 ### Headers
 
