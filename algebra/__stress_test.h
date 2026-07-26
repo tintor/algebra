@@ -219,8 +219,12 @@ void stress_test(const auto& fn, int max_errors = 6) {
     threads[0].join();
 }
 
+// Workaround for a libc++ std::print() issue on Apple platforms. __sFILE is a BSD type, so
+// this does not compile with libstdc++ or with libc++ on Linux.
+#if defined(_LIBCPP_VERSION) && defined(__APPLE__)
 namespace std {
 inline namespace __1 {
 bool __is_posix_terminal(__sFILE*) { return true; }
 }
 }
+#endif
