@@ -272,6 +272,30 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   Never caught because no test used an exponent above 10. Fixed by adding in `int64_t` and comparing
   against the `int` range. Found while reviewing test coverage. **[confirmed]**
 
+- [x] **1.32 `xrational::simplify()` dropped an odd factor of two out of the root.**
+  `xrational.h:47-52` shifted the root right by *all* of its trailing zeros while multiplying the base
+  by only half of them, so a root with an odd number (>= 3) of factors of two silently lost a
+  `sqrt(2)`: `xrational(1, natural(8))` became `2` instead of `2*sqrt(2)` (its `sqr()` was 4, not 8),
+  `xrational(1, natural(32))` became `4`, and `xrational(1, natural(200))` became `10` instead of
+  `10*sqrt(2)`. Never caught because every test built its roots with `sqrt()`, which cannot produce
+  such a root; the two-argument constructor was only ever called with 2, 4, 5 and 245.
+  Fixed by shifting out only whole squares, `(z / 2) * 2`. **[confirmed]**
+
+- [x] **1.33 `xrational::simplify()` set the root to zero when it was divisible by 9.**
+  `xrational.h:59-61` divided with the output aliasing the input (`div(root, 9, root)`) and then
+  swapped `root` with the still-empty scratch value `q`, so `root` became 0 and the loop stopped after
+  the first factor of 9. `xrational(1, natural(9))` printed `3*sqrt(0)` and compared equal to 0
+  instead of 3, `xrational(1, natural(18))` was 0 instead of `3*sqrt(2)`, and `sqrt(3_x) / sqrt(6_x)`
+  — whose intermediate root is 18 — was **0** instead of `sqrt(2)/2`. A zero root also breaks the
+  invariant the constructor itself enforces ("root must be positive"). Never caught because no test
+  used a root divisible by 9. Fixed by dividing into `q`, as the comment above the loop already
+  described. **[confirmed]**
+
+- [x] **1.34 `sqrt(xrational(0))` returned 1.** `xrational.h:333-339` seeds `whole = 1` and relies on
+  `exact_sqrt(a, whole, root)` to multiply it, but that function returns immediately for `a <= 1`, so a
+  zero numerator left `whole = 1` and the result was `1/1 * sqrt(1)`. Nothing tested `sqrt()` of zero.
+  Fixed by returning zero up front. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`
