@@ -305,7 +305,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
 - `__square`'s general branch (`natural_class.h:634-653`) restarts carry propagation per partial
   product and computes both `i*j` and `j*i`, so it is no faster than long multiplication — the
   usual 2x symmetry saving is not taken.
-- `natural::str`/`kernels.h:774` convert one digit per full-precision division; chunking by
+- **[fixed]** `natural::str` converts one digit per full-precision division; chunking by
   `10^19` would cut the divisions ~19x.
 - `lcm` (`natural.h:200`) forms `a*b` before dividing; `(a/gcd)*b` avoids the large intermediate
   (and `lcm(0,0)` currently divides by zero).
