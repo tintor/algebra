@@ -467,22 +467,26 @@ constexpr natural iroot(const natural& a, uint32_t n) {
     if (n == 2)
         return isqrt(a);
 
-    natural left = 1;
-    natural right = a;
+    // exact bracket from the bit length: 2**((bits-1)/n) <= root < 2**(bits/n + 1)
+    const auto bits = a.num_bits();
+    natural left = power_of_two((bits - 1) / n);
+    natural right = power_of_two(bits / n + 1);
 
     natural m, mn, t, t2;
 
-    // narrow initial guess using floating point
+    // narrow it with a floating point estimate, but only after verifying each bound: the
+    // estimate can land on either side of the root, and for small roots the window below
+    // used to be empty, which left the true root outside the bracket
     round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
-    left = m;
-    right = m;
-    left -= m >> 30;
-    right += m >> 19;
-    right += 1;
-    if (left < 1)
-        left = 1;
-    if (right > a)
-        right = a;
+    if (m > 1u) {
+        const natural w = (m >> 19) + 2;
+        natural lo = (m > w) ? (m - w) : natural(1);
+        if (lo > left && pow(lo, n) <= a)
+            left = std::move(lo);
+        natural hi = m + w;
+        if (hi < right && pow(hi, n) > a)
+            right = std::move(hi);
+    }
 
     while (left < right) {
         m = right;

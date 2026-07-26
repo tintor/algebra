@@ -108,7 +108,7 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   loop (both above 128 bits, or a product wider than the modulus). The `uint128_t` version in
   `util.h` gets it right (`if (b & 1)`). Found while adding test coverage. **[confirmed]**
 
-- [ ] **1.21 `iroot()` can return a result one too large.**
+- [x] **1.21 `iroot()` can return a result one too large.**
   `natural.h:450-459` — the binary search brackets the answer around a `std::pow` estimate with
   `left -= m >> 30` and `right += m >> 19`. For a root below 2**30 both shifts are 0, so when the
   floating point estimate rounds *up*, `left` starts above the true root and the search can never

@@ -805,9 +805,12 @@ TEST_CASE("number theory helpers") {
     REQUIRE(concat(0, 0) == 0);
     REQUIRE(concat(1, 2) == ((static_cast<uint128_t>(1) << 64) | 2));
 
-    // complement
+    // complement: two's complement over the words the value occupies
     natural c = 1;
     c <<= 64;
-    complement(c); // two's complement of 2**64 in 2 words
-    REQUIRE(c == (natural(1) << 64));
+    complement(c);
+    REQUIRE(c == (natural(1) << 128) - (natural(1) << 64));
+    natural c2 = 5;
+    complement(c2);
+    REQUIRE(c2 == natural(UINT64_MAX) - 4u);
 }
