@@ -137,7 +137,7 @@ public:
     }
 
     constexpr int capacity() const { return std::max(1, _capacity); }
-    constexpr int size() const { return std::abs(_size); }
+    constexpr int size() const { return (_size < 0) ? -_size : _size; } // std::abs is not constexpr in libc++
     constexpr bool empty() const { return _size == 0; }
     constexpr bool allocated() const { return _capacity; }
     constexpr const uint64_t* data() const { return _capacity ? _words : &_single_word; }
@@ -192,7 +192,7 @@ public:
 };
 
 constexpr void integer_backend::reset(int size, bool initialize) {
-    const int abs_size = std::abs(size);
+    const int abs_size = (size < 0) ? -size : size;
     if (_capacity) {
         // heap
         if (abs_size > _capacity) {

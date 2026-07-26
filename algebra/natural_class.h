@@ -109,7 +109,9 @@ struct natural {
     }
 
     constexpr natural& operator-=(uint64_t b) {
-        Check(*this >= b, "natural can't be negative");
+        // note: spelled out instead of *this >= b, because operator<(natural, unsigned) is
+        // declared further down this header and is not visible from inside the class
+        Check(words.size() > 1 || words[0] >= b, "natural can't be negative");
         inatural a = *this;
         __sub(a, b);
         words.downsize(a.size);
@@ -117,7 +119,9 @@ struct natural {
     }
 
     constexpr natural& operator-=(uint128_t b) {
-        Check(*this >= b, "natural can't be negative");
+        if (b <= UINT64_MAX)
+            return *this -= static_cast<uint64_t>(b);
+        Check(words.size() > 2 || (words.size() == 2 && unsafe_u128() >= b), "natural can't be negative");
         inatural a = *this;
         __sub(a, b);
         words.downsize(a.size);

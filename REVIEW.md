@@ -115,6 +115,15 @@ Checkboxes track fix progress. One bug per commit: failing test first, then fix.
   reach it: `iroot(1000**7 - 1, 7)` returns 1000 instead of 999. Found while adding test
   coverage. **[confirmed]**
 
+- [x] **1.22 The project's own toolchain (clang) did not build it.**
+  Three problems, found after switching the build from gcc to clang, which is what `.bazelrc`
+  selects: `Check(*this >= b, ...)` inside `natural::operator-=` resolved only against built-in
+  operators, because `operator<(natural, unsigned)` is declared further down the header and is
+  not visible from inside the class (gcc accepts it, clang does not, and clang is right);
+  `__test.h`'s libc++ workaround uses `__sFILE`, which only exists on Apple platforms; and
+  `integer_backend::size()` called `std::abs`, which libc++ does not make `constexpr`, so *no*
+  operation could be constant-evaluated on the intended toolchain. **[confirmed]**
+
 ## 2. Bugs found by reading (not exercised by tests)
 
 - [x] **2.1 Memory leak in `integer_backend`'s move assignment** — `integer_backend.h:95-104`

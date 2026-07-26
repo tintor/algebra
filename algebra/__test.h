@@ -15,8 +15,9 @@ using cent = __int128;
 using ulong = unsigned long;
 using uint = unsigned int;
 
-// Workaround for a libc++ std::print() issue; not present (and not compilable) with libstdc++.
-#ifdef _LIBCPP_VERSION
+// Workaround for a libc++ std::print() issue on Apple platforms. __sFILE is a BSD type, so
+// this does not compile with libstdc++ or with libc++ on Linux.
+#if defined(_LIBCPP_VERSION) && defined(__APPLE__)
 namespace std {
 inline namespace __1 {
 bool __is_posix_terminal(__sFILE*) { return true; }
