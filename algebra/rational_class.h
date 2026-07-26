@@ -273,21 +273,31 @@ constexpr void rational::simplify() {
     }
 }
 
-constexpr rational::operator float() const {
-    const auto num_bits = den.num_bits();
-    if (num_bits <= 50) return static_cast<float>(num) / static_cast<float>(den);
+// Converts num/den to T. Each term is scaled down to at most `keep` significant bits (which is
+// still far more than T's precision) so that neither of them overflows T on the way, and the
+// discarded powers of two are put back with ldexp. Both terms have to be scaled independently:
+// shifting them by the same amount loses the whole numerator when den is much larger than num.
+template<std::floating_point T>
+constexpr T __rational_to_float(const integer& num, const integer& den, int64_t keep) {
+    const int64_t nb = num.num_bits();
+    const int64_t db = den.num_bits();
+    if (nb <= keep && db <= keep)
+        return static_cast<T>(num) / static_cast<T>(den);
 
-    auto e = num_bits - 50;
-    return static_cast<float>(num >> e) / static_cast<float>(den >> e);
+    const int64_t ne = (nb > keep) ? (nb - keep) : 0;
+    const int64_t de = (db > keep) ? (db - keep) : 0;
+    const T q = static_cast<T>(num >> ne) / static_cast<T>(den >> de);
+
+    int64_t e = ne - de;
+    // the result over/underflows T long before this, and ldexp() takes an int
+    if (e > 1'000'000) e = 1'000'000;
+    if (e < -1'000'000) e = -1'000'000;
+    return std::ldexp(q, static_cast<int>(e));
 }
 
-constexpr rational::operator double() const {
-    const auto num_bits = den.num_bits();
-    if (num_bits <= 900) return static_cast<double>(num) / static_cast<double>(den);
+constexpr rational::operator float() const { return __rational_to_float<float>(num, den, 50); }
 
-    auto e = num_bits - 900;
-    return static_cast<double>(num >> e) / static_cast<double>(den >> e);
-}
+constexpr rational::operator double() const { return __rational_to_float<double>(num, den, 900); }
 
 constexpr rational& operator+=(rational& a, const rational& b) {
     if (a.den == b.den) {
@@ -485,6 +495,8 @@ struct std::formatter<algebra::rational, char> {
         } else {
             *it++ = '0';
         }
+        if (r == 0)
+            return it; // no fraction digits requested, and no trailing '.' either
         *it++ = '.';
         for (int i = len; i < r; i++) // fraction shorter than r digits
             *it++ = '0';

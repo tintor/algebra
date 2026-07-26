@@ -157,7 +157,45 @@ TEST_CASE("min and minimize") {
 }
 
 TEST_CASE("format Vec") {
-    REQUIRE(std::format("{}", V2(1, 2)) == std::format("{}", V2(1, 2)));
-    REQUIRE(std::format("{}", V2(1, 2)) != std::format("{}", V2(2, 1)));
-    REQUIRE(std::format("{}", V3(1, 2, 3)).size() > 0);
+    // components are separated by a single space, each formatted with its own formatter
+    REQUIRE(std::format("{}", V2(1, 2)) == "1 2");
+    REQUIRE(std::format("{}", V3(1, 2, 3)) == "1 2 3");
+    REQUIRE(std::format("{}", Vec4<rational>(1, 2, 3, 4)) == "1 2 3 4");
+    REQUIRE(std::format("{}", V2(rational(1, 2), rational(-3, 4))) == "1/2 -3/4");
+    REQUIRE(std::format("{}", Vec2<int>(3, 4)) == "3 4");
+    REQUIRE(std::format("{}", V2(2, 1)) == "2 1");
+
+    // and the rest of the format string is not disturbed
+    REQUIRE(std::format("[{}]", V2(1, 2)) == "[1 2]");
+    REQUIRE(std::format("{}|{}", V2(1, 2), V2(3, 4)) == "1 2|3 4");
+    REQUIRE(std::format("{}, {}", V3(1, 2, 3), 5) == "1 2 3, 5");
+}
+
+TEST_CASE("format Vec into other output iterators") {
+    std::string s;
+    std::format_to(std::back_inserter(s), "{}", V2(1, 2));
+    REQUIRE(s == "1 2");
+
+    char buf[32] = {};
+    auto r = std::format_to_n(buf, sizeof(buf), "{}", V2(1, 2));
+    REQUIRE(r.size == 3);
+    REQUIRE(std::string(buf, r.out) == "1 2");
+
+    // writing into a plain pointer: the formatter has to write through the iterator it is
+    // given and return the position past the last character it wrote
+    char raw[16] = {};
+    auto end = std::format_to(raw, "{}", V3(1, 2, 3));
+    REQUIRE(std::string(raw, end) == "1 2 3");
+
+    char raw2[16] = {};
+    auto end2 = std::format_to(raw2, "{};", V2(rational(1, 2), 3));
+    REQUIRE(std::string(raw2, end2) == "1/2 3;");
+}
+
+TEST_CASE("format Vec has no format spec") {
+    // std::format checks the specifier at compile time, so this needs the runtime interface
+    Vec2<int> v{1, 2};
+    REQUIRE(std::vformat("{}", std::make_format_args(v)) == "1 2");
+    REQUIRE(std::vformat("{:}", std::make_format_args(v)) == "1 2");
+    REQUIRE_THROWS_AS(std::vformat("{:d}", std::make_format_args(v)), std::format_error);
 }
