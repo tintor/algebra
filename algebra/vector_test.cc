@@ -73,3 +73,91 @@ TEST_CASE("indexing") {
     static_assert([]{ Vec2<int> v{3, 4}; return v[0] * 10 + v[1]; }() == 34);
     static_assert([]{ Vec4<int> v{1, 2, 3, 4}; v[2] = 9; return v.z; }() == 9);
 }
+
+TEST_CASE("is_zero") {
+    REQUIRE(is_zero(V3(0, 0, 0)));
+    REQUIRE(!is_zero(V3(0, 0, 1)));
+    REQUIRE(!is_zero(V3(-1, 0, 0)));
+    REQUIRE(is_zero(V2(0, 0)));
+    REQUIRE(!is_zero(V2(1, 0)));
+}
+
+TEST_CASE("argmax_abs") {
+    REQUIRE(argmax_abs(V3(1, 2, 3)) == 2);
+    REQUIRE(argmax_abs(V3(-4, 2, 3)) == 0);
+    REQUIRE(argmax_abs(V3(1, -5, 3)) == 1);
+    REQUIRE(argmax_abs(V3(0, 0, 0)) == 0);
+    REQUIRE(argmax_abs(V3(2, 2, 2)) == 0); // ties keep the lowest index
+    REQUIRE(argmax_abs(V3(2, -2, 1)) == 0);
+    REQUIRE(argmax_abs(V2(1, -7)) == 1);
+}
+
+TEST_CASE("div_colinear") {
+    // k such that b * k == a
+    REQUIRE(div_colinear(V3(2, 4, 6), V3(1, 2, 3)) == 2);
+    REQUIRE(div_colinear(V3(1, 2, 3), V3(2, 4, 6)) == 1/2_q);
+    REQUIRE(div_colinear(V3(-1, -2, -3), V3(1, 2, 3)) == -1);
+    REQUIRE(div_colinear(V3(0, 0, 0), V3(1, 2, 3)) == 0);
+    // the largest component of b is used, so a zero component of b is not divided by
+    REQUIRE(div_colinear(V3(0, 6, 0), V3(0, 3, 0)) == 2);
+}
+
+TEST_CASE("order / strict_order / loose_order - scalars") {
+    // order is strictly monotonic, or all three equal
+    REQUIRE(order<rational>(1, 2, 3));
+    REQUIRE(order<rational>(3, 2, 1));
+    REQUIRE(order<rational>(2, 2, 2));
+    REQUIRE(!order<rational>(1, 1, 2));
+    REQUIRE(!order<rational>(1, 2, 2));
+    REQUIRE(!order<rational>(1, 3, 2));
+
+    REQUIRE(strict_order<rational>(1, 2, 3));
+    REQUIRE(strict_order<rational>(3, 2, 1));
+    REQUIRE(!strict_order<rational>(2, 2, 2));
+    REQUIRE(!strict_order<rational>(1, 1, 2));
+
+    REQUIRE(loose_order<rational>(1, 2, 3));
+    REQUIRE(loose_order<rational>(3, 2, 1));
+    REQUIRE(loose_order<rational>(2, 2, 2));
+    REQUIRE(loose_order<rational>(1, 1, 2));
+    REQUIRE(loose_order<rational>(1, 2, 2));
+    REQUIRE(!loose_order<rational>(1, 3, 2));
+}
+
+TEST_CASE("order / strict_order / loose_order - Vec2") {
+    // both components must satisfy it
+    REQUIRE(order(V2(0, 0), V2(1, 0), V2(2, 0)));
+    REQUIRE(!order(V2(0, 0), V2(1, 1), V2(2, 1)));
+    REQUIRE(loose_order(V2(0, 0), V2(1, 1), V2(2, 1)));
+    REQUIRE(!strict_order(V2(0, 0), V2(1, 0), V2(2, 0))); // y is not strictly increasing
+    REQUIRE(strict_order(V2(0, 0), V2(1, 1), V2(2, 2)));
+    REQUIRE(!loose_order(V2(0, 0), V2(3, 1), V2(2, 2))); // x turns back
+}
+
+TEST_CASE("same_sign") {
+    REQUIRE(same_sign<rational>(2, 5));
+    REQUIRE(same_sign<rational>(-2, -5));
+    REQUIRE(same_sign<rational>(0, 0));
+    REQUIRE(!same_sign<rational>(0, 1));
+    REQUIRE(!same_sign<rational>(1, 0));
+    REQUIRE(!same_sign<rational>(-1, 1));
+
+    REQUIRE(same_sign(V3(1, -2, 0), V3(7, -1, 0)));
+    REQUIRE(!same_sign(V3(1, -2, 0), V3(7, -1, 1)));
+}
+
+TEST_CASE("min and minimize") {
+    REQUIRE(min<rational>(2, 5) == 2);
+    REQUIRE(min<rational>(5, 2) == 2);
+    rational a = 5;
+    minimize(a, rational(2));
+    REQUIRE(a == 2);
+    minimize(a, rational(7)); // no change
+    REQUIRE(a == 2);
+}
+
+TEST_CASE("format Vec") {
+    REQUIRE(std::format("{}", V2(1, 2)) == std::format("{}", V2(1, 2)));
+    REQUIRE(std::format("{}", V2(1, 2)) != std::format("{}", V2(2, 1)));
+    REQUIRE(std::format("{}", V3(1, 2, 3)).size() > 0);
+}

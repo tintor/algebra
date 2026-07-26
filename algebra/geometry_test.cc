@@ -108,3 +108,81 @@ TEST_CASE("plane_plane_plane_intersection") {
     res = plane_intersection(p1, p2, q3);
     REQUIRE(std::holds_alternative<L>(res));
 }
+
+TEST_CASE("are_parallel") {
+    REQUIRE(are_parallel(V{1, 2, 3}, V{2, 4, 6}));
+    REQUIRE(are_parallel(V{1, 2, 3}, V{-1, -2, -3})); // anti-parallel counts
+    REQUIRE(are_parallel(V{1, 2, 3}, V{1/2_q, 1, 3/2_q}));
+    REQUIRE(!are_parallel(V{1, 2, 3}, V{2, 4, 7}));
+    REQUIRE(!are_parallel(V{1, 0, 0}, V{0, 1, 0}));
+    // a zero vector is parallel to everything
+    REQUIRE(are_parallel(V{0, 0, 0}, V{1, 2, 3}));
+    REQUIRE(are_parallel(V{1, 2, 3}, V{0, 0, 0}));
+    REQUIRE(are_parallel(V{0, 0, 0}, V{0, 0, 0}));
+    // one zero component must not short circuit the other two
+    REQUIRE(are_parallel(V{0, 2, 4}, V{0, 1, 2}));
+    REQUIRE(!are_parallel(V{0, 2, 4}, V{0, 1, 3}));
+}
+
+TEST_CASE("Plane3 operator-") {
+    const P x5{{1, 0, 0}, -5, 1};
+    const P n = -x5;
+    REQUIRE(n.n == V{-1, 0, 0});
+    REQUIRE(n.d == 5);
+    REQUIRE(n.den == 1); // den is not negated
+    REQUIRE(-n == x5);
+    // same set of points, opposite orientation
+    REQUIRE(on_plane(x5, V{5, 1, 2}));
+    REQUIRE(on_plane(n, V{5, 1, 2}));
+}
+
+TEST_CASE("Plane3 operator==") {
+    const P x5{{1, 0, 0}, -5, 1};
+    REQUIRE(x5 == x5);
+    REQUIRE(!(x5 == -x5)); // equality includes orientation
+    REQUIRE(!(x5 == P{{1, 0, 0}, -6, 1}));
+    REQUIRE(!(x5 == P{{0, 1, 0}, -5, 1}));
+
+    // den != 1 takes the scaling aware path: (2x - 10)/sqrt(4) is the same equation as x - 5
+    REQUIRE(P{{2, 0, 0}, -10, 4} == x5);
+    REQUIRE(x5 == P{{2, 0, 0}, -10, 4});
+    REQUIRE(!(P{{2, 0, 0}, 10, 4} == x5)); // x == -5
+    REQUIRE(!(P{{2, 0, 0}, -10, 4} == -x5));
+    REQUIRE(P{{-2, 0, 0}, 10, 4} == -x5);
+
+    // through the origin, where d == 0 on both sides
+    const P x0{{1, 0, 0}, 0, 1};
+    REQUIRE(P{{3, 0, 0}, 0, 9} == x0);
+    REQUIRE(!(P{{-3, 0, 0}, 0, 9} == x0));
+    REQUIRE(P{{-3, 0, 0}, 0, 9} == -x0);
+}
+
+TEST_CASE("plane_plane_plane_intersection - remaining parallel branches") {
+    const P x1{{1, 0, 0}, -1, 1};
+    const P y2{{0, 1, 0}, -2, 1};
+    const P z3{{0, 0, 1}, -3, 1};
+
+    // b parallel to c, and equal: result is a into b
+    auto res = plane_intersection(x1, y2, y2);
+    REQUIRE(std::holds_alternative<L>(res));
+    for (rational t : {rational(0), rational(3)}) {
+        const V p = std::get<L>(res).orig + std::get<L>(res).dir * t;
+        REQUIRE(on_plane(x1, p));
+        REQUIRE(on_plane(y2, p));
+    }
+
+    // b parallel to c, and distinct: empty
+    REQUIRE(std::holds_alternative<None>(plane_intersection(x1, y2, P{{0, 1, 0}, -5, 1})));
+
+    // a parallel to c, and equal
+    res = plane_intersection(x1, y2, x1);
+    REQUIRE(std::holds_alternative<L>(res));
+
+    // a parallel to c, and distinct: empty
+    REQUIRE(std::holds_alternative<None>(plane_intersection(x1, y2, P{{1, 0, 0}, -7, 1})));
+
+    // an opposingly oriented duplicate is still the same set of points
+    res = plane_intersection(x1, -x1, z3);
+    REQUIRE(std::holds_alternative<L>(res));
+    REQUIRE(std::holds_alternative<P>(plane_intersection(x1, -x1, x1)));
+}
