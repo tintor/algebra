@@ -830,3 +830,25 @@ TEST_CASE("is_power_of_three more") {
     REQUIRE(!is_power_of_three(pow(natural(3), 20) + 1u));
     REQUIRE(!is_power_of_three(pow(natural(3), 20) * 2u));
 }
+
+TEST_CASE("lcm") {
+    REQUIRE(lcm(natural(0), natural(0)) == 0);
+    REQUIRE(lcm(natural(0), natural(5)) == 0);
+    REQUIRE(lcm(natural(5), natural(0)) == 0);
+    REQUIRE(lcm(natural(4), natural(6)) == 12);
+    REQUIRE(lcm(natural(21), natural(6)) == 42);
+    REQUIRE(lcm(natural(7), natural(7)) == 7);
+    REQUIRE(lcm(natural(1), natural(13)) == 13);
+
+    std::mt19937_64 rng(0);
+    for (int i = 0; i < 30; i++) {
+        const natural a = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
+        const natural b = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
+        if (!a || !b)
+            continue;
+        const natural l = lcm(a, b);
+        REQUIRE(l % a == 0);
+        REQUIRE(l % b == 0);
+        REQUIRE(l * gcd(a, b) == a * b);
+    }
+}
