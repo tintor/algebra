@@ -310,7 +310,6 @@ constexpr integer operator-(integer a) { a.negate(); return a; }
 
 template<bool plus>
 constexpr integer& __add(integer& a, const integer& b) {
-    integer a_copy = a;
 
     if (a.words.size() < b.words.size())
         a.words.resize(b.words.size());
@@ -362,15 +361,29 @@ constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
 constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
 
 constexpr void mul(const integer& a, const integer& b, integer& c) {
-    c = a.to_natural() * b.to_natural();
-    c.words.set_negative(a.is_negative() != b.is_negative());
+    const bool negative = a.is_negative() != b.is_negative();
+    // views for the operands and a borrow for the result, so nothing is copied. c may alias a or b,
+    // so the views are taken before the borrow empties c.
+    const cnatural ca = a, cb = b;
+    {
+        auto m = c.magnitude();
+        mul(ca, cb, *m);
+    }
+    c.words.set_negative(negative);
 }
 
 constexpr void mul(integer& a, const integer& b) {
     const bool negative = a.is_negative() != b.is_negative();
-    // b may be a itself; take its magnitude before borrowing, since a borrow empties a.words
-    const natural bn = b.to_natural();
-    *a.magnitude() *= bn;
+    if (&a == &b) {
+        auto m = a.magnitude();
+        *m *= *m; // squaring: natural's mul() takes the &a == &b path
+    } else {
+        // b is a distinct object, so a view of it stays valid while a's magnitude is borrowed
+        const cnatural cb = b;
+        natural out;
+        mul(static_cast<cnatural>(a), cb, out);
+        a.words = std::move(out.words);
+    }
     a.words.set_negative(negative);
 }
 
@@ -613,14 +626,19 @@ constexpr integer& operator/=(integer& a, const std_int auto b) {
 }
 
 constexpr integer operator%(const integer& a, const integer& divisor) {
-    integer quotient, remainder;
-    div(a, divisor, quotient, remainder);
-    return remainder;
+    // the remainder alone: going through div() would build a quotient only to discard it
+    const bool negative = a.is_negative();
+    natural r;
+    __mod_into(static_cast<cnatural>(a), static_cast<cnatural>(divisor), r);
+    integer c = std::move(r);
+    c.words.set_negative(negative && !c.is_zero());
+    return c;
 }
 
 // TODO generalize for any std_int
 constexpr int64_t operator%(const integer& a, int64_t b) {
-    uint64_t m = a.to_natural() % abs_unsigned(b);
+    Check(b != 0, "division of integer by zero");
+    uint64_t m = __mod(static_cast<cnatural>(a), abs_unsigned(b));
     return (a.sign() >= 0) ? m : -static_cast<int64_t>(m);
 }
 
@@ -629,7 +647,8 @@ constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)
 
 // Note: return type is integer instead of uint64_t, as it can be negative (can't fit into int64_t either)
 constexpr integer operator%(const integer& a, uint64_t b) {
-    integer c = a.to_natural() % b;
+    Check(b > 0, "division of integer by zero");
+    integer c = __mod(static_cast<cnatural>(a), b);
     if (a.is_negative())
         c.negate();
     return c;
