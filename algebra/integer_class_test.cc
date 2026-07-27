@@ -794,3 +794,28 @@ TEST_CASE("plus and minus a signed builtin operand") {
     g += 5;
     REQUIRE(g == -(big - 5));
 }
+
+TEST_CASE("integer stores its value once") {
+    // integer used to carry a second integer_backend alongside abs, copied on construction and
+    // assignment but not maintained by the arithmetic. sizeof pins that it is gone, so a future
+    // change cannot quietly reintroduce a duplicate buffer.
+    REQUIRE(sizeof(integer) == sizeof(natural));
+    REQUIRE(sizeof(integer) == sizeof(integer_backend));
+
+    // and the value still round trips through every mutating path that used to leave the copy stale
+    integer a = 5;
+    ++a;                      REQUIRE(a == 6);
+    --a;                      REQUIRE(a == 5);
+    a += 3;                   REQUIRE(a == 8);
+    a -= 3;                   REQUIRE(a == 5);
+    a *= 3;                   REQUIRE(a == 15);
+    a /= 3;                   REQUIRE(a == 5);
+    a %= 3;                   REQUIRE(a == 2);
+    a <<= 4;                  REQUIRE(a == 32);
+    a >>= 4;                  REQUIRE(a == 2);
+    a.negate();               REQUIRE(a == -2);
+    a = integer(1) << 100;    REQUIRE(a == (integer(1) << 100));
+    a += 1;                   REQUIRE(a == (integer(1) << 100) + 1);
+    integer b = 5, c = 9;
+    b.swap(c);                REQUIRE((b == 9 && c == 5));
+}
