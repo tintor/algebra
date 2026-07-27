@@ -272,10 +272,10 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     bs.words.reserve_bits(rb.max);
 
     // a == b  <=>  a.num * as * b.den == b.num * bs * a.den
-    as *= b.base.den.abs;
-    as *= a.base.num.abs;
-    bs *= a.base.den.abs;
-    bs *= b.base.num.abs;
+    as *= b.base.den.to_natural();
+    as *= a.base.num.to_natural();
+    bs *= a.base.den.to_natural();
+    bs *= b.base.num.to_natural();
     return as == bs;
 }
 
@@ -284,7 +284,9 @@ constexpr bool operator==(const rational_like auto& a, const xrational& b) { ret
 
 // returns abs(a) < abs(b)
 constexpr bool __less_abs(const rational& a, const rational& b) {
-    return (a.den.abs == b.den.abs) ? (a.num.abs < b.num.abs) : __less_ab_cd(a.num.abs, b.den.abs, b.num.abs, a.den.abs);
+    return __equal(static_cast<cnatural>(a.den), static_cast<cnatural>(b.den))
+        ? __less(static_cast<cnatural>(a.num), static_cast<cnatural>(b.num))
+        : __less_ab_cd(a.num, b.den, b.num, a.den);
 }
 
 constexpr bool __less_abs(const rational& a_base, const natural& a_root, const rational& b_base, const natural& b_root) {
@@ -297,8 +299,8 @@ constexpr bool __less_abs(const rational& a_base, const natural& a_root, const r
     aa.words.reserve_bits((a_base.num.num_bits() + b_base.den.num_bits()) * 2 + a_root.num_bits());
     bb.words.reserve_bits((b_base.num.num_bits() + a_base.den.num_bits()) * 2 + b_root.num_bits());
 
-    mul(a_base.num.abs, b_base.den.abs, aa);
-    mul(b_base.num.abs, a_base.den.abs, bb);
+    mul(a_base.num.to_natural(), b_base.den.to_natural(), aa);
+    mul(b_base.num.to_natural(), a_base.den.to_natural(), bb);
 
     aa *= aa;
     aa *= a_root;

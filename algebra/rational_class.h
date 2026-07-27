@@ -235,15 +235,15 @@ constexpr void rational::simplify() {
     num >>= z;
     den >>= z;
 
-    if (den.abs.words.size() <= 1) {
-        if (is_power_of_two(den.abs.words[0]))
+    if (den.words.size() <= 1) {
+        if (is_power_of_two(den.words[0]))
             return;
-        if (num.abs.words.size() <= 1) {
+        if (num.words.size() <= 1) {
             // note that num can be negative here, but we only need its absolute value
-            if (is_power_of_two(num.abs.words[0]))
+            if (is_power_of_two(num.words[0]))
                 return;
-            uint64_t a = num.abs.words[0] >> (az - z);
-            uint64_t b = den.abs.words[0];
+            uint64_t a = num.words[0] >> (az - z);
+            uint64_t b = den.words[0];
             do {
                 b >>= std::countr_zero(b);
                 if (a > b)
@@ -259,8 +259,8 @@ constexpr void rational::simplify() {
     }
 
     // TODO allocate a and b on stack if they are small enough
-    natural a = num.abs >> (az - z);
-    natural b = den.abs;
+    natural a = num.to_natural() >> (az - z);
+    natural b = den.to_natural();
     do {
         b >>= b.num_trailing_zeros();
         if (a > b)
