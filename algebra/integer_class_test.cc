@@ -870,3 +870,50 @@ static_assert([] { integer a = -5; a *= 7; return a == -35; }());
 static_assert([] { integer a = 6; a /= 3; return a == 2; }());
 static_assert([] { integer a = 5, b = 9; a.swap(b); return a == 9 && b == 5; }());
 static_assert([] { integer a = 1; a <<= 100; a >>= 100; return a == 1; }());
+
+// A magnitude borrow must not be copyable or movable: two of them over one backend would each
+// restore in turn, and the second would put the pre-operation value back, losing the result.
+static_assert(!std::is_copy_constructible_v<integer::magnitude_ref>);
+static_assert(!std::is_move_constructible_v<integer::magnitude_ref>);
+static_assert(!std::is_copy_assignable_v<integer::magnitude_ref>);
+static_assert(!std::is_move_assignable_v<integer::magnitude_ref>);
+
+TEST_CASE("magnitude borrow restores the sign") {
+    integer a = -12345;
+    { auto m = a.magnitude(); *m += 1u; }
+    REQUIRE(a == -12346);
+
+    // a magnitude that reaches zero comes back with no sign, not negative zero
+    integer b = -1;
+    { auto m = b.magnitude(); *m -= 1u; }
+    REQUIRE(b == 0);
+    REQUIRE(b.sign() == 0);
+
+    // growing past a word boundary keeps the sign
+    integer c = -(integer(1) << 64) + 1;
+    { auto m = c.magnitude(); *m += 1u; }
+    REQUIRE(c == -(integer(1) << 64));
+
+    // the borrow is exception safe: the value is restored even when the operation throws
+    integer d = 5;
+    REQUIRE_THROWS([&] { auto m = d.magnitude(); *m -= 99u; }());
+    REQUIRE(d.words.size() <= 1);
+}
+
+TEST_CASE("view based accessors on negative values") {
+    const integer a = -(integer(1) << 70);
+    REQUIRE(a.num_bits() == 71);
+    REQUIRE(a.num_trailing_zeros() == 70);
+    REQUIRE(a.bit(70));
+    REQUIRE(!a.bit(69));
+    REQUIRE(!a.is_uint64());
+    REQUIRE(!a.is_uint128()); // the magnitude fits two words, but the value is negative
+    REQUIRE(a.is_int128());
+
+    // comparing a magnitude against a builtin, at the boundaries
+    REQUIRE(integer(0) == 0u);
+    REQUIRE(!(integer(-5) == 5u));
+    REQUIRE(integer(UINT64_MAX) == UINT64_MAX);
+    REQUIRE(!((integer(1) << 64) == UINT64_MAX));
+    REQUIRE(!(integer(-1) < 0u) == false); // a negative value is less than any unsigned
+}

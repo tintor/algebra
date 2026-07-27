@@ -216,6 +216,13 @@ struct integer {
             value.words.swap(w);
             value.words.set_negative(false);
         }
+        // Not copyable or movable: two of these over one backend would each restore in turn, and
+        // the second would put the pre-operation value back, losing the result silently. magnitude()
+        // returns a prvalue, so copy elision means nothing here needs to be copied or moved.
+        magnitude_ref(const magnitude_ref&) = delete;
+        magnitude_ref(magnitude_ref&&) = delete;
+        magnitude_ref& operator=(const magnitude_ref&) = delete;
+        magnitude_ref& operator=(magnitude_ref&&) = delete;
         constexpr ~magnitude_ref() {
             _words.swap(value.words);
             _words.set_negative(_negative && _words.size() != 0);
