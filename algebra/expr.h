@@ -141,7 +141,7 @@ struct expr_power : public expr {
         if (b == 0 && exp.sign() > 0)
             return 0;
         if (b < 0 && exp.is_integer())
-            return exp.num.is_even();
+            return exp.num.is_even() ? 1 : -1; // an odd power of a negative base is negative
         throw std::runtime_error("indeterminate sign of pow(negative, non-integer)");
     }
 };
