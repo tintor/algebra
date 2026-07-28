@@ -48,6 +48,11 @@ public:
         if (_t != _stack)
             delete[] _t;
     }
+    // A copy would either point into the source's inline array or delete the heap buffer twice.
+    maybe_stack(const maybe_stack&) = delete;
+    maybe_stack(maybe_stack&&) = delete;
+    maybe_stack& operator=(const maybe_stack&) = delete;
+    maybe_stack& operator=(maybe_stack&&) = delete;
     constexpr operator T*() { return _t; }
 private:
     T _stack[S];
