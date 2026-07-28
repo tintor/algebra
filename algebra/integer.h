@@ -1260,6 +1260,8 @@ constexpr void binominal_mod(const integer& n, uint64_t k, const integer& m, int
 
 constexpr uint64_t log_lower(const integer& n, uint64_t base) {
     Check(!n.is_negative(), "log_lower() of a negative number");
+    // dividing by one never reaches zero, so the loop below would not terminate
+    Check(base >= 2, "log_lower() with a base below two");
     integer a = abs(n);
     uint64_t count = 0;
     if (!a)
@@ -1275,6 +1277,7 @@ constexpr uint64_t log_lower(const integer& n, uint64_t base) {
 
 constexpr uint64_t log_upper(const integer& n, uint64_t base) {
     Check(!n.is_negative(), "log_upper() of a negative number");
+    Check(base >= 2, "log_upper() with a base below two");
     integer a = abs(n);
     uint64_t count = 0;
     while (a) {

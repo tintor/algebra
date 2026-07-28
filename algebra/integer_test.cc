@@ -240,6 +240,14 @@ TEST_CASE("log_lower / log_upper") {
     REQUIRE_THROWS(log_upper(integer(-8), 2));
     // and the magnitude of a negative, taken explicitly, still works
     REQUIRE(log_lower(abs(integer(-8)), 2) == 3);
+
+    // a base below two has no logarithm: dividing by one never reaches zero, which used to spin
+    REQUIRE_THROWS(log_lower(100_i, 1));
+    REQUIRE_THROWS(log_upper(100_i, 1));
+    REQUIRE_THROWS(log_lower(100_i, 0));
+    REQUIRE_THROWS(log_upper(100_i, 0));
+    REQUIRE_THROWS(log_lower(0_i, 1));
+    REQUIRE_THROWS(log_upper(1_i, 1));
 }
 
 TEST_CASE("is_power_of_three") {
