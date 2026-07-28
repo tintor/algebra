@@ -1144,6 +1144,9 @@ constexpr void mul_karatsuba(const integer& a, const integer& b, integer& q) {
         }
     }
     q.words.resize(vq.size);
+    // mul_max_size() is an upper bound and __add_product() does not normalize, so the top word can
+    // still be zero here. An unnormalized value compares unequal to the same value from operator*.
+    q.words.normalize();
 }
 
 constexpr integer mul_karatsuba(const integer& a, const integer& b) {

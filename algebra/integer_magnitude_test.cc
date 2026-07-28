@@ -40,6 +40,44 @@ integer rand_integer(int size, Random& rng) {
     return a;
 }
 
+// a random value of exactly `bits` bits, so the top word is often small -- rand_integer() above
+// fills every word from the full 64-bit range, which never exercises a short top word
+integer rand_integer_bits(int bits, Random& rng) {
+    integer a;
+    a.words.reset((bits + 63) / 64, /*initialize*/false);
+    for (int i = 0; i < a.words.size(); i++)
+        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    if (bits % 64)
+        a.words.back() &= (uint64_t(1) << (bits % 64)) - 1;
+    a.words.back() |= uint64_t(1) << ((bits - 1) % 64);
+    return a;
+}
+
+TEST_CASE("mul_karatsuba result is normalized") {
+    // mul_max_size() is an upper bound, and it overshoots by one word when both top words are
+    // small. An unnormalized result carries a zero top word, which makes it compare unequal to
+    // the same value from operator*.
+    const integer a = integer(5) << 94;
+    const integer b = integer(3) << 94;
+    const integer k = mul_karatsuba(a, b);
+    const integer m = a * b;
+    REQUIRE(k.words.size() == m.words.size());
+    REQUIRE(k.words.back() != 0);
+    REQUIRE(k == m);
+    REQUIRE(std::hash<integer>()(k) == std::hash<integer>()(m));
+}
+
+TEST_CASE("mul_karatsuba stress with random bit lengths") {
+    Random rng;
+    for (int i = 0; i < 20'000; i++) {
+        const integer a = rand_integer_bits(rng.Uniform<int>(1, 300), rng);
+        const integer b = rand_integer_bits(rng.Uniform<int>(1, 300), rng);
+        const integer k = mul_karatsuba(a, b);
+        REQUIRE(k == a * b);
+        REQUIRE(k.words.back() != 0); // both operands are non-zero, so the product is too
+    }
+}
+
 #if 0
 TEST_CASE("mul benchmark") {
     Random rng(1);
