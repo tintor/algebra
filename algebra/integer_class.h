@@ -295,6 +295,41 @@ struct integer {
             m = (m * 4) % 5;
         return m;
     }
+
+    constexpr uint64_t mod6() const {
+        uint64_t m = algebra::mod6(static_cast<cnatural>(*this));
+        if (is_negative())
+            m = (m * 5) % 6;
+        return m;
+    }
+
+    constexpr uint64_t mod7() const {
+        uint64_t m = algebra::mod7(static_cast<cnatural>(*this));
+        if (is_negative())
+            m = (m * 6) % 7;
+        return m;
+    }
+
+    constexpr uint64_t mod9() const {
+        uint64_t m = algebra::mod9(static_cast<cnatural>(*this));
+        if (is_negative())
+            m = (m * 8) % 9;
+        return m;
+    }
+
+    constexpr uint64_t mod10() const {
+        uint64_t m = algebra::mod10(static_cast<cnatural>(*this));
+        if (is_negative())
+            m = (m * 9) % 10;
+        return m;
+    }
+
+    constexpr uint64_t mod8() const {
+        uint64_t m = low_word() % 8;
+        if (is_negative())
+            m = (m * 7) % 8;
+        return m;
+    }
 };
 
 constexpr bool operator==(const integer& a, const integer& b) {

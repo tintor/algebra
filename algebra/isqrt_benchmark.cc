@@ -30,7 +30,7 @@ constexpr integer isqrt_default(const integer& x) { return isqrt(x); }
 static void test(const auto& fn, benchmark::State& state) {
     std::mt19937_64 rng(0);
     const int bits = state.range(0);
-    std::vector<natural> x;
+    std::vector<integer> x;
     const int N = 16;
     for (int i = 0; i < N; i++)
         x.push_back(uniform_sample_bits(bits, rng));

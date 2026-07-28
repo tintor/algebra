@@ -46,7 +46,7 @@ constexpr rational sqrt_bits(const rational& x, int bits) {
     if (x.num.is_zero())
         return 0;
     // floor(sqrt(num * 2**(2*bits) / den)) / 2**bits
-    natural n = abs(x.num);
+    integer n = abs(x.num);
     n.words.set_negative(false);
     n <<= 2 * bits;
     n /= abs(x.den);

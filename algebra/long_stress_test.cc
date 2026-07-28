@@ -11,13 +11,9 @@ constexpr integer sample_integer(auto& rng) {
     if (bits == 0)
         return 0;
 
-    integer a;
-    {
-        auto m = a.magnitude();
-        *m = abs(pow(integer(2), bits - 1)); // the borrow is a natural, pow() returns an integer
-        *m |= uniform_sample_bits(bits - 1, rng);
-        Check(m->num_bits() == bits);
-    }
+    // the sample is below the leading bit, so adding it is the same as the bitwise or this used to do
+    integer a = power_of_two(bits - 1) + uniform_sample_bits(bits - 1, rng);
+    Check(a.num_bits() == bits);
     if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
         a.negate();
     return a;

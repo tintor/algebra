@@ -13,12 +13,12 @@ template<typename T> concept xrational_like = rational_like<T> || std::same_as<T
 //
 struct xrational {
     rational base;
-    natural root; // must be positive! Note: root is not fully simplified! It might have some square factors! Full factorization is expensive.
+    integer root; // must stay non negative. must be positive! Note: root is not fully simplified! It might have some square factors! Full factorization is expensive.
 
     constexpr xrational() : base(0), root(1) { }
     constexpr xrational(const xrational& a) : base(a.base), root(a.root) { }
     constexpr xrational(rational_like auto base) : base(std::move(base)), root(1) { }
-    constexpr xrational(rational base, natural root) : base(std::move(base)), root(std::move(root)) {
+    constexpr xrational(rational base, integer root) : base(std::move(base)), root(std::move(root)) {
         if (this->root == 0)
             throw std::runtime_error("root must be positive");
         simplify();
@@ -53,7 +53,7 @@ struct xrational {
 
         // Remove all squares of 3 from root
         // first test is with mod9() as div(root, 9, q) will allocate memory for q!
-        natural q;
+        integer q;
         if (root > 1 && root.mod9() == 0) {
             do {
                 if (div(root, 9, q))
@@ -110,7 +110,7 @@ constexpr xrational __add(const xrational& a, const xrational& b) {
         return {plus ? (a.base + b.base) : (a.base - b.base), a.root};
 
     const char* msg = plus ? "adding xrationals with different roots" : "subtracting xrationals with different roots";
-    natural c = gcd(a.root, b.root);
+    integer c = gcd(a.root, b.root); // gcd() returns an integer now
     Check(!c.is_one(), msg);
 
     integer ac = a.root / c, ae; // the __exact_sqrt helpers take integers now
@@ -250,7 +250,7 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     if (a.root == b.root)
         return a.base == b.base;
 
-    natural e = gcd(a.root, b.root);
+    integer e = gcd(a.root, b.root);
     if (e == 1)
         return false;
 
@@ -289,13 +289,13 @@ constexpr bool __less_abs(const rational& a, const rational& b) {
         : __less_ab_cd(a.num, b.den, b.num, a.den);
 }
 
-constexpr bool __less_abs(const rational& a_base, const natural& a_root, const rational& b_base, const natural& b_root) {
+constexpr bool __less_abs(const rational& a_base, const integer& a_root, const rational& b_base, const integer& b_root) {
     if (a_root == b_root)
         return __less_abs(a_base, b_base);
     if (a_base == b_base)
         return a_root < b_root;
 
-    natural aa, bb;
+    integer aa, bb;
     aa.words.reserve_bits((a_base.num.num_bits() + b_base.den.num_bits()) * 2 + a_root.num_bits());
     bb.words.reserve_bits((b_base.num.num_bits() + a_base.den.num_bits()) * 2 + b_root.num_bits());
 
@@ -310,7 +310,7 @@ constexpr bool __less_abs(const rational& a_base, const natural& a_root, const r
     return aa < bb;
 }
 
-constexpr bool __less(const rational& a_base, const natural& a_root, const rational& b_base, const natural& b_root) {
+constexpr bool __less(const rational& a_base, const integer& a_root, const rational& b_base, const integer& b_root) {
     const int sa = signum(a_base);
     const int sb = signum(b_base);
     if (sa != sb)
@@ -384,7 +384,7 @@ struct std::hash<algebra::xrational> {
         uint64_t seed = 0;
         seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.num));
         seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.base.den));
-        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::natural>()(a.root));
+        seed = algebra::hash_fn_64bit(seed ^ std::hash<algebra::integer>()(a.root));
         return seed;
     }
 };
