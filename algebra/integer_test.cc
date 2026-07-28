@@ -111,6 +111,40 @@ TEST_CASE("in place mod is euclidean") {
     REQUIRE(m(10, -3) == 1);
 }
 
+TEST_CASE("in place mod with a multi word divisor") {
+    // the test above only uses single word divisors, which take __abs_mod's early exit; this drives
+    // the long division loop
+    std::mt19937_64 rng(7);
+    std::uniform_int_distribution<int> a_bits(65, 400), b_bits(65, 200);
+    for (int i = 0; i < 2'000; i++) {
+        const integer a = uniform_sample_bits(a_bits(rng), rng);
+        const integer b = uniform_sample_bits(b_bits(rng), rng);
+        if (b.is_zero())
+            continue;
+
+        integer x = a;
+        mod(x, b);
+        REQUIRE(x == mod(a, b));
+        REQUIRE(x == a % b);
+        REQUIRE(x >= 0);
+        REQUIRE(x < b);
+
+        integer y = -a;
+        mod(y, b);
+        REQUIRE(y == mod(-a, b));
+        REQUIRE(y >= 0);
+        REQUIRE(y < b);
+
+        // the divisor itself, and a dividend below it
+        integer z = b;
+        mod(z, b);
+        REQUIRE(z == 0);
+        integer w = b - 1u;
+        mod(w, b);
+        REQUIRE(w == b - 1u);
+    }
+}
+
 TEST_CASE("pow with accumulator") {
     // pow(base, exp, result) == result * base**exp
     REQUIRE(pow(3_i, 0, 5_i) == 5);
