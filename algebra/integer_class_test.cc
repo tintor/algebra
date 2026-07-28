@@ -417,6 +417,30 @@ TEST_CASE("div10 stress with ucent 2") {
     }
 }
 
+TEST_CASE("div with aliased outputs") {
+    // quot and rem have to be different objects: each borrows the magnitude of its target for the
+    // duration, and two borrows over one backend each restore in turn, so the second would put the
+    // pre-operation value back and lose the result
+    integer x = 100;
+    REQUIRE_THROWS(div(integer(7), integer(3), x, x));
+
+    // either output may still alias an input
+    integer q = 17, r;
+    div(q, integer(5), q, r);
+    REQUIRE(q == 3);
+    REQUIRE(r == 2);
+
+    integer a = 17, rem2 = 0;
+    div(a, integer(5), rem2, a); // rem aliases the dividend
+    REQUIRE(rem2 == 3);
+    REQUIRE(a == 2);
+
+    integer b = 5, quot2;
+    div(integer(17), b, quot2, b); // rem aliases the divisor
+    REQUIRE(quot2 == 3);
+    REQUIRE(b == 2);
+}
+
 TEST_CASE("mul") {
     REQUIRE(integer(0) * integer(0) == integer(0));
     REQUIRE(integer(5) * integer(0) == integer(0));
