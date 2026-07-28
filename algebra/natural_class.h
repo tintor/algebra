@@ -1469,6 +1469,34 @@ constexpr natural::natural(std::string_view s, unsigned base) {
     words.normalize();
 }
 
+
+// ---- the magnitude layer, under names of its own ----
+//
+// integer borrows its magnitude and then operates on it. Every one of those operations shares a
+// name with a sign aware one -- operator+=, mul, div, mod, str -- and only the fact that natural is
+// a distinct type keeps the two apart. These wrappers give the magnitude layer names that do not
+// collide, so the sign aware code says which layer it means. Deleting natural then cannot silently
+// turn a magnitude operation into a recursive call on itself.
+
+constexpr int __mag_str_size_upper_bound(const natural& a, unsigned base) { return a.str_size_upper_bound(base); }
+constexpr int __mag_str(const natural& a, char* buffer, int buffer_size, unsigned base, bool upper) {
+    return a.str(buffer, buffer_size, base, upper);
+}
+constexpr size_t __mag_popcount(const natural& a) { return a.popcount(); }
+constexpr natural& __mag_inc(natural& a) { return ++a; }
+constexpr natural& __mag_dec(natural& a) { return --a; }
+constexpr natural& __mag_add(natural& a, const std_unsigned_int auto b) { return a += b; }
+constexpr natural& __mag_sub(natural& a, const std_unsigned_int auto b) { return a -= b; }
+constexpr natural& __mag_mul(natural& a, const std_unsigned_int auto b) { return a *= b; }
+constexpr void     __mag_mul(natural& a, const natural& b) { mul(a, b); }
+constexpr natural& __mag_div(natural& a, const std_unsigned_int auto b) { return a /= b; }
+constexpr uint64_t __mag_div(const natural& a, uint64_t b, natural& q) { return div(a, b, q); }
+constexpr void     __mag_div(const natural& a, const natural& b, natural& q, natural& r) { div(a, b, q, r); }
+constexpr void     __mag_mod(const natural& a, const natural& b, natural& r) { mod(a, b, r); }
+constexpr natural& __mag_shl(natural& a, int64_t b) { return a <<= b; }
+constexpr std::string __mag_str(const natural& a) { return str(a); }
+constexpr std::string __mag_stre(const natural& a) { return stre(a); }
+
 }
 
 template<>
