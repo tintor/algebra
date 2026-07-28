@@ -238,6 +238,25 @@ TEST_CASE("maybe_stack") {
     REQUIRE(q != p);
 }
 
+TEST_CASE("bit_range") {
+    // the number of bits in a product is the sum of the operands' counts, or one less
+    const bit_range a{4}, b{3};
+    REQUIRE((a * b).min == 6);
+    REQUIRE((a * b).max == 7);
+
+    // a zero operand has no bits, and zero times anything is zero: min must not wrap
+    const bit_range z{0};
+    REQUIRE((z * a).min == 0);
+    REQUIRE((z * a).max == 0);
+    REQUIRE((a * z).min == 0);
+    REQUIRE((z * z).min == 0);
+
+    // disjoint ranges compare, overlapping ones do not
+    REQUIRE(bit_range(1, 2) < bit_range(3, 4));
+    REQUIRE(!(bit_range(1, 3) < bit_range(3, 4)));
+    REQUIRE(!(z * a < z * a));
+}
+
 TEST_CASE("__add with zero carry into a full buffer") {
     uint64_t w[] = {1, 2};
     vnatural a {{w, 2}, 2}; // size == capacity
