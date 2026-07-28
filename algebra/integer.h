@@ -172,10 +172,18 @@ constexpr integer lcm(const integer& a, const integer& b) {
     return m;
 }
 
+// returns the largest Q such that Q*Q <= x
+constexpr uint64_t __isqrt_u128(const uint128_t x);
+
 // Constrained so that a class type never matches it. With a plain uint64_t parameter, isqrt(integer)
 // was ambiguous: integer converts to uint64_t just as readily as it binds to the integer overload.
 template<std_unsigned_int T>
 constexpr uint64_t isqrt(const T x) {
+    // the clamp below is a one word bound, so a wider value needs the two word implementation
+    if constexpr (sizeof(T) > 8) {
+        if (x > UINT64_MAX)
+            return __isqrt_u128(x);
+    }
     constexpr uint64_t MAX = UINT32_MAX; // isqrt(UINT64_MAX), also the largest q with q*q <= UINT64_MAX
     uint64_t q = static_cast<uint64_t>(std::sqrt(static_cast<double>(x)));
     if (q > MAX)
@@ -187,7 +195,6 @@ constexpr uint64_t isqrt(const T x) {
     return q;
 }
 
-// returns the largest Q such that Q*Q <= x
 constexpr uint64_t __isqrt_u128(const uint128_t x) {
     if (x <= UINT64_MAX)
         return isqrt(static_cast<uint64_t>(x));
