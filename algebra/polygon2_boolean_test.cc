@@ -239,3 +239,38 @@ TEST_CASE("De Morgan and idempotence over a set of shapes") {
                 }
         }
 }
+
+TEST_CASE("randomized boolean operations against pointwise membership") {
+    // Boxes on a small integer grid put many edges of one operand exactly on the line that leaves
+    // the midpoint of an edge of the other, which is the configuration __safe_step() has to get
+    // right: the ray it casts to find a safe distance ignores edges parallel to itself.
+    std::mt19937_64 rng(12345);
+    std::uniform_int_distribution<int> coord(0, 6), count(1, 3);
+    auto rand_region = [&] {
+        std::vector<R> rings;
+        for (int n = count(rng); n > 0; n--) {
+            int x0 = coord(rng), x1 = coord(rng), y0 = coord(rng), y1 = coord(rng);
+            if (x0 == x1 || y0 == y1)
+                continue;
+            if (x0 > x1) std::swap(x0, x1);
+            if (y0 > y1) std::swap(y0, y1);
+            rings.push_back(box(x0, y0, x1, y1));
+        }
+        return P(rings);
+    };
+
+    for (int iter = 0; iter < 200; iter++) {
+        const P a = rand_region(), b = rand_region();
+        const P u = a | b, i = a & b, d = a - b, x = a ^ b;
+        for (int gx = -1; gx <= 7; gx++)
+            for (int gy = -1; gy <= 7; gy++) {
+                // quarter offsets stay off every edge, and off every midpoint normal as well
+                const V p(rational(4 * gx + 1, 4), rational(4 * gy + 1, 4));
+                const bool ca = contains(a, p), cb = contains(b, p);
+                REQUIRE(contains(u, p) == (ca || cb));
+                REQUIRE(contains(i, p) == (ca && cb));
+                REQUIRE(contains(d, p) == (ca && !cb));
+                REQUIRE(contains(x, p) == (ca != cb));
+            }
+    }
+}
