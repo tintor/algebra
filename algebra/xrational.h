@@ -67,8 +67,9 @@ struct xrational {
             } while (root > 1);
         }
 
-        if (root > 1 && exact_sqrt(root, q)) {
-            base.num *= q;
+        integer qi; // exact_sqrt() writes an integer now
+        if (root > 1 && exact_sqrt(root, qi)) {
+            base.num *= qi;
             root = 1;
             simplify = true;
         }
@@ -112,9 +113,9 @@ constexpr xrational __add(const xrational& a, const xrational& b) {
     natural c = gcd(a.root, b.root);
     Check(!c.is_one(), msg);
 
-    natural ac = a.root / c, ae;
+    integer ac = a.root / c, ae; // the __exact_sqrt helpers take integers now
     Check(__exact_sqrt1(ac, ae), msg);
-    natural bc = b.root / c, be;
+    integer bc = b.root / c, be;
     Check(__exact_sqrt1(bc, be), msg);
 
     Check(__exact_sqrt2(ac, ae) && __exact_sqrt2(bc, be), msg);
@@ -192,14 +193,13 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
         return {a.base * b.base * integer(a.root)};
 
     // TODO maybe use gcd(a.root, b.root) to avoid difficult factorization
-    natural whole = abs(a.base.num * b.base.num);
-    natural root = 1;
+    integer whole = abs(a.base.num * b.base.num); // exact_sqrt() writes integers now
+    integer root = 1;
     exact_sqrt(a.root, whole, root);
     exact_sqrt(b.root, whole, root);
-    integer w = whole;
     if (a.is_negative() != b.is_negative())
-        w.negate();
-    return {rational{std::move(w), a.base.den * b.base.den}, std::move(root)};
+        whole.negate();
+    return {rational{std::move(whole), a.base.den * b.base.den}, abs(root)};
 }
 
 constexpr xrational operator*(const xrational& a, const rational_like auto& b) { return {a.base * b, a.root}; }
@@ -254,7 +254,7 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     if (e == 1)
         return false;
 
-    natural as, bs, ae, be;
+    integer as, bs, ae, be; // the exact_sqrt helpers and div() take integers now
 
     div(a.root, e, ae, /*dummy*/as);
     if (!__exact_sqrt1(ae, as))
@@ -335,10 +335,10 @@ constexpr xrational sqrt(const xrational& a) {
         throw std::runtime_error("sqrt of xrational with root");
     if (a.base.is_zero())
         return xrational{rational{0}};
-    natural whole = 1, root = 1;
+    integer whole = 1, root = 1; // exact_sqrt() writes integers now
     exact_sqrt(abs(a.base.num), whole, root);
     exact_sqrt(abs(a.base.den), whole, root);
-    return {rational{whole, a.base.den}, root};
+    return {rational{whole, a.base.den}, abs(root)};
 }
 
 constexpr xrational& operator<<=(xrational& a, std_int auto b) { a.base <<= b; return a; }

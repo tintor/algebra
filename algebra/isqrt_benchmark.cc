@@ -1,4 +1,4 @@
-#include "algebra/natural.h"
+#include "algebra/integer.h"
 #include <benchmark/benchmark.h>
 using namespace benchmark;
 
@@ -25,7 +25,7 @@ bool __is_posix_terminal(__sFILE*) { return true; }
 }
 #endif
 
-constexpr natural isqrt_default(const natural& x) { return isqrt(x); }
+constexpr integer isqrt_default(const integer& x) { return isqrt(x); }
 
 static void test(const auto& fn, benchmark::State& state) {
     std::mt19937_64 rng(0);

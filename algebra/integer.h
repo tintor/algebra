@@ -4,20 +4,10 @@
 
 namespace algebra {
 
+// Migrated out of natural.h as these converted to integer. natural.h holds only what still
+// operates on natural, and goes away with that class.
+
 constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
-
-// returns abs(a) > abs(b), minimizing memory allocation
-constexpr bool abs_greater(const integer& a, const integer& b) {
-    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
-}
-
-constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
-    integer max_min = max - min;
-    if (max_min.sign() < 0)
-        throw std::runtime_error("max smaller than min in uniform_sample()");
-    ++max_min;
-    return integer(uniform_sample(abs(max_min), rng)) + min;
-}
 
 constexpr integer exp2(std_int auto exp) {
     if (exp < 0)
@@ -58,7 +48,6 @@ constexpr integer pow(integer base, std_int auto exp) {
     return result;
 }
 
-// returns result * (base ** exp)
 constexpr integer pow(integer base, std_int auto exp, integer result) {
     if (exp < 0)
         throw std::runtime_error("negative exponent in pow(integer, ...)");
@@ -100,8 +89,669 @@ constexpr integer pow(integer base, const natural& exp) {
     return result;
 }
 
+template<std::floating_point T>
+constexpr void round_to_zero(const T& a, integer& b) {
+    int exponent;
+    auto mantissa = std::frexp(a, &exponent);
+
+    const int bits = std::numeric_limits<T>::digits;
+    auto m = std::ldexp(mantissa, bits);
+    exponent -= bits;
+
+    if (m < 0)
+        m = -m;
+
+    b = static_cast<uint64_t>(m);
+    b <<= exponent;
+}
+
+// very fast, but only approximate for large A
+constexpr integer isqrt_hardware(const integer& a) {
+    Check(!a.is_negative(), "isqrt_hardware() of a negative number");
+    if (a <= 1)
+        return a;
+
+    const int FP_DIGITS = std::numeric_limits<double>::digits;
+
+    int a_exp = static_cast<int>(a.num_bits()) - FP_DIGITS;
+    int delta = 0;
+    if (a_exp >= std::numeric_limits<double>::max_exponent) {
+        delta = a_exp - (std::numeric_limits<double>::max_exponent - 1);
+        delta += delta % 2;
+        a_exp -= delta;
+    }
+
+    Check(a_exp < std::numeric_limits<double>::max_exponent);
+    Check(delta % 2 == 0);
+
+    double a_fp;
+    if (a_exp <= 0) {
+        a_fp = a.words[0];
+    } else {
+        const uint64_t m = extract_u64(a, a_exp);
+        a_fp = std::ldexp(static_cast<double>(m), a_exp);
+    }
+
+    const double x_fp = std::sqrt(a_fp);
+
+    int x_exp;
+    auto x_mantissa = std::frexp(x_fp, &x_exp);
+
+    const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS);
+    return natural(x) << (x_exp - FP_DIGITS + delta / 2);
+}
+
+// exact result for values of at most two words, shared by the isqrt implementations
+constexpr bool __isqrt_small(const integer& a, integer& out) {
+    if (a.words.size() <= 1) {
+        uint64_t q = std::sqrt(static_cast<double>(a.words[0]));
+        if (__mulq(q, q) > a.words[0])
+            q -= 1;
+        out = q;
+        return true;
+    }
+    if (a.words.size() == 2) {
+        const uint128_t ac = concat(a.words[1], a.words[0]);
+        out = __isqrt_u128(ac);
+        return true;
+    }
+    return false;
+}
+
+constexpr integer isqrt(const integer& a) {
+    Check(!a.is_negative(), "isqrt() of a negative number");
+    integer small;
+    if (__isqrt_small(a, small))
+        return small;
+
+    integer y = power_of_two((a.num_bits() + 1) / 2);
+    integer x, r;
+    do {
+        x = y;
+        div(a, x, y, r);
+        y += x;
+        // TODO if (y.is_even() && r >= x/2) y += 1    | Would this 1) speed up iteration? 2) avoid mul() at the end?
+        y >>= 1;
+    } while (y < x);
+
+    x += 1;
+    mul(x, x, r);
+    if (r <= a)
+        return x;
+    x -= 1;
+    return x;
+}
+
+constexpr integer isqrt2(const integer& a) {
+    Check(!a.is_negative(), "isqrt2() of a negative number");
+    integer small;
+    if (__isqrt_small(a, small))
+        return small;
+
+    integer x = power_of_two((a.num_bits() + 1) / 2);
+    integer v = x * x;
+    integer r;
+
+    //int i = 0;
+    while (v > a) {
+        //std::print("{}\n", x);
+        v -= a;
+        div(v, x, v, r); // v is much smaller than a, which makes this division cheaper!
+        v >>= 1;
+        if (v == 0) {
+            x -= 1;
+            return x;
+        }
+        x -= v;
+        mul(x, x, v);
+        //Check(++i <= 10000);
+    }
+
+    if (v == a)
+        return x;
+    v += x;
+    x += 1;
+    v += x;
+    if (v <= a)
+        return x;
+    x -= 1;
+    return x;
+}
+
+constexpr integer isqrt3(const integer& a) {
+    Check(!a.is_negative(), "isqrt3() of a negative number");
+    integer small;
+    if (__isqrt_small(a, small))
+        return small;
+
+    integer x = power_of_two((a.num_bits() + 1) / 2);
+    integer x2 = x * x;
+    integer r, v, m;
+
+    while (x2 > a) {
+        // newton step: v = (x*x - a) / (2*x)
+        v = x2;
+        v -= a;
+        div(v, x, /*out*/v, /*out*/r); // v is much smaller than a, which makes this division cheaper!
+        v >>= 1;
+        if (v == 0) {
+            x -= 1;
+            return x;
+        }
+        // x*x decreases by (x_old + x_new) * (x_old - x_new)
+        m = x;
+        x -= v;
+        m += x;
+        m *= v;
+        Check(m <= x2);
+        x2 -= m;
+    }
+
+    if (x2 == a)
+        return x;
+    x2 += x;
+    x += 1;
+    x2 += x; // x2 = (x + 1) * (x + 1)
+    if (x2 <= a)
+        return x;
+    x -= 1;
+    return x;
+}
+
+constexpr integer iroot(const integer& a, uint32_t n) {
+    Check(!a.is_negative(), "iroot() of a negative number");
+    if (a <= 1 || n == 1)
+        return a;
+    if (n == 0)
+        return 1;
+    if (n == 2)
+        return isqrt(a);
+
+    // exact bracket from the bit length: 2**((bits-1)/n) <= root < 2**(bits/n + 1)
+    const auto bits = a.num_bits();
+    integer left = power_of_two((bits - 1) / n);
+    integer right = power_of_two(bits / n + 1);
+
+    integer m, mn, t, t2;
+
+    // narrow it with a floating point estimate, but only after verifying each bound: the
+    // estimate can land on either side of the root, and for small roots the window below
+    // used to be empty, which left the true root outside the bracket
+    round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
+    if (m > 1u) {
+        const integer w = (m >> 19) + 2;
+        integer lo = (m > w) ? (m - w) : natural(1);
+        if (lo > left && pow(lo, n) <= a)
+            left = std::move(lo);
+        integer hi = m + w;
+        if (hi < right && pow(hi, n) > a)
+            right = std::move(hi);
+    }
+
+    while (left < right) {
+        m = right;
+        m -= left;
+        ++m;
+        m >>= 1;
+        m += left;
+
+        // mn = pow(m, n)
+        if (n == 3) {
+            mul(m, m, mn);
+            mn *= m;
+        } else if (n == 4) {
+            mul(m, m, t);
+            mul(t, t, mn);
+        } else if (n == 5) {
+            mul(m, m, t);
+            mul(t, t, mn);
+            mn *= m;
+        } else if (n == 6) {
+            mul(m, m, t);
+            t *= m;
+            mul(t, t, mn);
+        } else {
+            int c = n;
+            mn = 1;
+            if (c & 1)
+                mn = m;
+            t = m;
+            c >>= 1;
+            while (c) {
+                mul(t, t, t2);
+                std::swap(t, t2); // t = t * t
+                if (c & 1)
+                    mn *= t;
+                c >>= 1;
+            }
+        }
+
+        if (mn > a) {
+            --m;
+            right = m;
+            continue;
+        }
+        if (mn < a) {
+            left = m;
+            continue;
+        }
+        return m;
+    }
+    return left;
+}
+
+// assumes are a and b are in [0, m-1] range
+// a = (a + b) % m
+constexpr void add_mod(integer& a, const integer& b, const integer& m) {
+    a += b;
+    if (a >= m)
+        a -= m;
+}
+
+// assumes are a and b are in [0, m-1] range
+// a = (a - b) % m
+constexpr void sub_mod(integer& a, const integer& b, const integer& m) {
+    if (b > a)
+        a += m;
+    a -= b;
+}
+
+// assumes are a and b are in [0, m-1] range
+// a = (a * b) % m
+constexpr void __mul_mod(integer& a, const integer& b, const integer& m) {
+    // This is simple and slow implementation, for testing.
+    a *= b;
+    if (a >= m)
+        a %= m;
+}
+
+constexpr void mul_mod(const integer& a, const integer& b, const integer& m, integer& out) {
+    if (a == 1 || b == 0) {
+        out = b;
+        return;
+    }
+    if (b == 1 || a == 0) {
+        out = a;
+        return;
+    }
+    if (a.is_uint128() && b.is_uint128() && m.is_uint128()) {
+        out = mul_mod(static_cast<uint128_t>(a), static_cast<uint128_t>(b), static_cast<uint128_t>(m));
+        return;
+    }
+
+    if (a.num_bits() + b.num_bits() <= m.num_bits()) {
+        out = a;
+        out *= b;
+        if (a.num_bits() + b.num_bits() == m.num_bits() && out >= m)
+            out -= m;
+        return;
+    }
+
+    out = 0;
+    integer aa = a, bb = b;
+    while (aa && bb) {
+        if (aa < bb)
+            std::swap(aa, bb);
+        if (bb == 1) {
+            add_mod(out, aa, m); // result = (result + aa) % m
+            return;
+        }
+        if (bb.is_odd())
+            add_mod(out, aa, m); // result = (result + aa) % m
+        add_mod(aa, aa, m); // aa = (aa + aa) % m
+        bb >>= 1;
+    }
+}
+
+// returns (a**b) mod m
+constexpr void pow_mod(integer a, const integer& b, const integer& m, integer& out) {
+    out = 1;
+    if (a >= m)
+        a %= m;
+    for (size_t i = 0; i < b.num_bits(); i++) {
+        if (b.bit(i))
+            __mul_mod(out, a, m);
+        if (i == b.num_bits() - 1)
+            break;
+        __mul_mod(a, a, m);
+    }
+}
+
+constexpr integer pow_mod(integer a, const integer& b, const integer& m) {
+    integer out;
+    pow_mod(std::move(a), b, m, /*out*/out);
+    return out;
+}
+
+// Miller-Rabin algorithm
+// It returns false if n is composite and returns true if n
+// is probably prime.  k is an input parameter that determines
+// accuracy level. Higher value of `rounds` indicates more accuracy.
+constexpr bool is_likely_prime(const integer& n, int rounds) {
+    Check(!n.is_negative(), "is_likely_prime() of a negative number");
+    if (n.is_uint64())
+        return is_prime(static_cast<uint64_t>(n));
+
+    std::array<int, 40> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
+        71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173};
+    if (rounds > primes.size())
+        throw std::runtime_error("rounds arg is too high");
+    if (n.mod2() == 0 || n.mod3() == 0 || n.mod5() == 0)
+        return false;
+
+    const integer n_minus_1 = n - 1;
+    auto s = n_minus_1.num_trailing_zeros();
+    integer d = n_minus_1;
+    d >>= s;
+    integer x, a;
+
+    for (int i = 0; i < rounds; i++) {
+        a = primes[i];
+
+        pow_mod(a, d, n, /*out*/x);
+        if (x == 1 || x == n_minus_1)
+            continue;
+
+        int r = 1;
+        for (; r < s; r++) {
+            __mul_mod(x, x, n); // x = (x * x) % n
+            if (x == n_minus_1)
+                break;
+        }
+        if (r == s)
+            return false;
+    }
+    return true;
+}
+
+constexpr std::pair<int, int> mod63_65(const integer& a) {
+    Check(!a.is_negative(), "mod63_65() of a negative number");
+    int m63 = 0;
+    int m65 = 0;
+    int i = 0;
+    while (i < a.num_bits()) {
+        uint64_t b = extract_u64(a, i);
+
+        m63 += b % 64;
+        if (m63 >= 63)
+            m63 -= 63;
+
+        m65 += b % 64;
+        if (m65 >= 65)
+            m65 -= 65;
+
+        b >>= 6;
+        m63 += b % 64;
+        if (m63 >= 63)
+            m63 -= 63;
+
+        m65 -= b % 64;
+        if (m65 < 0)
+            m65 += 65;
+        i += 12;
+    }
+    return {m63, m65};
+}
+
+// rejects ~98% of all numbers
+constexpr bool is_possible_square(const integer& a) {
+    Check(!a.is_negative(), "is_possible_square() of a negative number");
+    if (!is_one_of(a.words[0] % 16, {0,1,4,9}))
+        return false;
+
+    auto [m63, m65] = mod63_65(a);
+    return is_one_of(m63, {0,1,4,7,9,16,18,22,25,28,36,37,43,46,49,58})
+        && is_one_of(m65, {0,1,4,9,10,14,16,25,26,29,30,35,36,39,40,49,51,55,56,61,64});
+}
+
+constexpr std::vector<std::pair<integer, int>> factorize(integer a) {
+    Check(!a.is_negative(), "factorize() of a negative number");
+    if (a <= 1)
+        return {};
+    std::vector<std::pair<integer, int>> out;
+
+    auto count = a.num_trailing_zeros();
+    if (count) {
+        out.emplace_back(2, count);
+        a >>= count;
+        if (a == 1)
+            return out;
+    }
+
+    if (a.mod3() == 0) {
+        count = 1;
+        a /= 3;
+        while (a > 1 && a.mod3() == 0) {
+            a /= 3;
+            count += 1;
+        }
+        out.emplace_back(3, count);
+        if (a == 1)
+            return out;
+    }
+
+    int f = 1;
+    while (is_possible_square(a)) {
+        integer s = isqrt(a);
+        if (s * s != a)
+            break;
+        a = s;
+        f *= 2;
+    }
+    if (is_likely_prime(a, 40)) {
+        out.emplace_back(a, f);
+        return out;
+    }
+    if (a.is_uint64()) {
+        for (auto e : factorize(static_cast<uint64_t>(a)))
+            out.push_back({e.first, e.second * f});
+        return out;
+    }
+
+    uint64_t p = 5;
+    while (true) {
+        if (a % p == 0) {
+            int count = f;
+            a /= p;
+            while (a % p == 0) {
+                a /= p;
+                count += f;
+            }
+            out.emplace_back(p, count);
+            if (a == 1)
+                break;
+
+            while (is_possible_square(a)) {
+                integer s = isqrt(a);
+                if (s * s != a)
+                    break;
+                a = s;
+                f *= 2;
+            }
+            if (is_likely_prime(a, 40)) {
+                out.emplace_back(a, f);
+                break;
+            }
+            if (a.is_uint64()) {
+                for (auto e : factorize(static_cast<uint64_t>(a)))
+                    out.push_back({e.first, e.second * f});
+                return out;
+            }
+        }
+        p += 2;
+
+        if (a % p == 0) {
+            int count = f;
+            a /= p;
+            while (a % p == 0) {
+                a /= p;
+                count += f;
+            }
+            out.emplace_back(p, count);
+            if (a == 1)
+                break;
+
+            while (is_possible_square(a)) {
+                integer s = isqrt(a);
+                if (s * s != a)
+                    break;
+                a = s;
+                f *= 2;
+            }
+            if (is_likely_prime(a, 40)) {
+                out.emplace_back(a, f);
+                break;
+            }
+            if (a.is_uint64()) {
+                for (auto e : factorize(static_cast<uint64_t>(a)))
+                    out.push_back({e.first, e.second * f});
+                return out;
+            }
+        }
+        p += 4;
+        if (p < 5)
+            throw std::runtime_error("overflow");
+    }
+    return out;
+}
+
+// returns (n k)
+constexpr void binominal(const integer& n, uint64_t k, integer& out) {
+    Check(!n.is_negative(), "binominal() of a negative number");
+    out = 1;
+    integer e;
+    for (uint64_t i = 0; i < k; i++) {
+        e = n;
+        e -= i;
+        out *= e;
+        out /= i + 1;
+    }
+}
+
+constexpr bool __exact_sqrt1(const integer& a, integer& b) {
+    auto z = a.num_trailing_zeros();
+    if (z & 1)
+        return false;
+
+    b = a;
+    b >>= z / 2;
+    return is_possible_square(b);
+}
+
+constexpr bool __exact_sqrt2(const integer& a, integer& b) {
+    // option 1) try to factorize with small factors (fast, but doesn't work for all numbers)
+    // option 2) isqrt_nr() -> it detects if number is perfect square
+
+    integer s = isqrt(a);
+    mul(s, s, b);
+    if (b != a)
+        return false;
+    b = std::move(s);
+    return true;
+}
+
+constexpr bool exact_sqrt(const integer& a, integer& b) { return __exact_sqrt1(a, b) && __exact_sqrt2(a, b); }
+
+// assumes that whole and root are already initialized
+constexpr void exact_sqrt(integer a, integer& whole, integer& root) {
+    Check(!a.is_negative(), "exact_sqrt() of a negative number");
+    if (a <= 1)
+        return;
+
+    // factorize a
+    auto z = a.num_trailing_zeros();
+    if (z) {
+        if (z > 1)
+            whole <<= z / 2;
+        if (z & 1) {
+            if (root.is_even()) {
+                root >>= 1;
+                whole <<= 1;
+            } else
+                root <<= 1;
+        }
+        a >>= z;
+    }
+
+    std::optional<integer> a_sqrt;
+    if (is_possible_square(a)) {
+        integer s = isqrt(a);
+        if (s * s == a) {
+            whole *= s;
+            return;
+        }
+        a_sqrt = std::move(s);
+    }
+
+    uint64_t p = 3;
+    while (a > 1) {
+        if (p > 256) {
+            if (a_sqrt == std::nullopt) {
+                integer s = isqrt(a);
+                if (s * s == a) {
+                    whole *= s;
+                    return;
+                }
+                a_sqrt = std::move(s);
+                if (is_likely_prime(a, 40))
+                    break;
+            }
+            if (p > *a_sqrt)
+                break;
+        } else
+            if (p >= a)
+                break;
+
+        int count = 0;
+        while (a % p == 0) {
+            a /= p;
+            count += 1;
+        }
+        if (count) {
+            if (count >= 2)
+                whole *= pow(integer(p), count / 2);
+            if (count & 1) {
+                if (root % p == 0) {
+                    root /= p;
+                    whole *= p;
+                } else
+                    root *= p;
+            }
+            a_sqrt = std::nullopt;
+        }
+        p += 2;
+    }
+    if (a > 1) {
+        if (root % a == 0) {
+            root /= a;
+            whole *= a;
+        } else
+            root *= a;
+    }
+}
+
+
+// returns abs(a) > abs(b), minimizing memory allocation
+constexpr bool abs_greater(const integer& a, const integer& b) {
+    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
+}
+
+constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
+    integer max_min = max - min;
+    if (max_min.sign() < 0)
+        throw std::runtime_error("max smaller than min in uniform_sample()");
+    ++max_min;
+    return integer(uniform_sample(abs(max_min), rng)) + min;
+}
+
+
+
+// returns result * (base ** exp)
+
+
 // returns x such that (a * x) mod m == 1, (or false if such number doesn't exist)
-constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
+constexpr bool inverse_mod(const integer& a, const integer& m, integer& out) {
+    Check(!a.is_negative() && !m.is_negative(), "inverse_mod() of a negative number");
     integer t = 0;
     integer r = m;
     integer new_t = 1;
@@ -130,11 +780,28 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
 }
 
 // returns (n k) mod m
-constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, natural& out) {
+constexpr void mod(integer& a, const integer& b) {
+    const bool negative = a.is_negative();
+    a.words.set_negative(false);
+    {
+        const natural bn = abs(b); // b may be a itself, see mul() on aliasing
+        auto m = a.magnitude();
+        mod(*m, bn);
+    }
+    if (negative && !a.words.empty()) {
+        // result is in [0, abs(b)) range
+        natural e = abs(b);
+        e -= abs(a);
+        a = std::move(e);
+    }
+}
+
+constexpr void binominal_mod(const integer& n, uint64_t k, const integer& m, integer& out) {
+    Check(!n.is_negative() && !m.is_negative(), "binominal_mod() of a negative number");
     // Fast path: multiply by the modular inverse of each i+1, which keeps out below m. It needs
     // every i+1 in [1, k] to be invertible mod m, i.e. m coprime with k!, so inverse_mod can fail.
     out = 1;
-    natural e, inv;
+    integer e, inv;
     for (uint64_t i = 0; i < k; i++) {
         e = i;
         e += 1;
@@ -163,21 +830,6 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, nat
     mod(out, m); // k == 0 leaves out == 1, which still has to be reduced
 }
 
-constexpr void mod(integer& a, const integer& b) {
-    const bool negative = a.is_negative();
-    a.words.set_negative(false);
-    {
-        const natural bn = abs(b); // b may be a itself, see mul() on aliasing
-        auto m = a.magnitude();
-        mod(*m, bn);
-    }
-    if (negative && !a.words.empty()) {
-        // result is in [0, abs(b)) range
-        natural e = abs(b);
-        e -= abs(a);
-        a = std::move(e);
-    }
-}
 
 // Migrated from natural.h to take an integer. natural.h is included before integer_class.h, so a
 // function there cannot name integer; converted ones move to this side until that order changes.
@@ -211,17 +863,17 @@ constexpr uint64_t log_upper(const integer& n, uint64_t base) {
 
 constexpr bool is_power_of_three(const integer& n) {
     Check(!n.is_negative(), "is_power_of_three() of a negative number");
-    natural a = abs(n);
+    integer a = n; // isqrt() takes an integer now, so no magnitude copy is needed
     if (a.words.empty())
         return false;
-    natural m;
+    integer m;
     while (a > 1) {
         if (a.mod3())
             return false;
         // a power of three that is also a perfect square stays a power of three when
         // halved in exponent, and the square root is much cheaper to keep dividing
         if (is_possible_square(a)) {
-            natural s = isqrt(a);
+            integer s = isqrt(a);
             mul(s, s, m);
             if (m == a) {
                 a = std::move(s);

@@ -14,7 +14,7 @@ constexpr integer sample_integer(auto& rng) {
     integer a;
     {
         auto m = a.magnitude();
-        *m = pow(2_n, bits - 1);
+        *m = abs(pow(integer(2), bits - 1)); // the borrow is a natural, pow() returns an integer
         *m |= uniform_sample_bits(bits - 1, rng);
         Check(m->num_bits() == bits);
     }
@@ -26,7 +26,7 @@ constexpr integer sample_integer(auto& rng) {
 constexpr natural sample_positive_natural(auto& rng) {
     int bits = std::uniform_int_distribution<int>(1, 64)(rng);
     natural a;
-    a = pow(2_n, bits - 1);
+    a = abs(pow(integer(2), bits - 1)); // pow() returns an integer now
     a |= uniform_sample_bits(bits - 1, rng);
     Check(a.num_bits() == bits);
     return a;
