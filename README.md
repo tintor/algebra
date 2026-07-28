@@ -243,6 +243,71 @@ Overloaded operators:
 
 ---
 
+## `class MultiPolygon2<T = rational>`
+
+A region of the plane, as a set of rings plus a complement flag. `Ring2<T>` is a
+`std::vector<Vec2<T>>`; the closing edge from `back()` to `front()` is implicit, so a ring never
+repeats its first vertex.
+
+Membership uses the nonzero winding rule, flipped by `complement`. An outer boundary winds counter
+clockwise and a hole winds clockwise, so a hole cancels the shell containing it and nesting to any
+depth works without tracking which ring is whose hole. The flag is what makes inversion exact and
+free: the complement of a bounded region is unbounded and has no finite ring representation.
+
+`T` needs exact arithmetic *and* division for the predicates to hold, which is why the default is
+`rational` rather than `integer`.
+
+#### `std::vector<Ring2<T>> MultiPolygon2::rings`
+#### `bool MultiPolygon2::complement`
+#### `MultiPolygon2()`
+- The empty region. `~MultiPolygon2<T>()` is the whole plane.
+#### `MultiPolygon2(Ring2<T> ring)`
+#### `MultiPolygon2(std::vector<Ring2<T>> rings, bool complement = false)`
+#### `bool MultiPolygon2::is_empty() const`
+#### `bool MultiPolygon2::is_whole_plane() const`
+
+Overloaded operators: `~` (complement), `|` `&` `-` `^` (boolean operations, in
+`polygon2_boolean.h`), and `==`, which compares the rings structurally rather than as point sets.
+
+## `class ArcPolygon2<T = rational>`
+
+The same, with edges that are line segments or circular arcs. A ring is a `std::vector<ArcVertex<T>>`
+(`ArcRing2<T>`), where each vertex carries the *bulge* of the edge leaving it:
+
+#### `Vec2<T> ArcVertex::p`
+#### `T ArcVertex::bulge`
+- `tan(theta/4)` for the arc's included angle `theta`, and 0 for a straight edge. A positive bulge
+  puts the arc on the left of the edge, a negative one on the right.
+
+That choice is what keeps everything rational: a rational bulge with rational endpoints gives a
+rational centre and squared radius, so no coordinate is ever irrational. A bulge cannot describe a
+full circle, since `theta == 2*pi` needs `tan(pi/2)`; `circle_ring()` uses two half circle edges.
+
+Members and operators mirror `MultiPolygon2`: `rings`, `complement`, `is_empty()`,
+`is_whole_plane()`, `~` and `==`.
+
+## `class ArcRegion<T = rational>`
+
+A boolean combination of arc regions, kept as a tree and evaluated on demand. Arc regions have no
+explicit boolean result: two arcs meet at `cx +- sqrt(r*r - dy*dy)`, which is not rational, and
+cutting a further arc at such a point nests the radicals. Membership *is* exactly computable, so
+`contains()` on a combination is the combination of `contains()` on its operands, and every leaf test
+is the exact rational predicate from `polygon2_arc.h`.
+
+That gives exact union, intersection, difference, symmetric difference and complement over arc
+regions, closed under further combination, with no tolerance anywhere. What it does not give is a
+ring list or an exact area for a combination -- writing those down is the step that needs the
+irrational points.
+
+#### `ArcRegion(ArcPolygon2<T> p)` / `ArcRegion(ArcRing2<T> ring)`
+- A leaf.
+#### `size_t ArcRegion::leaf_count() const`
+- How many arc regions the combination rests on.
+
+Overloaded operators: `|` `&` `-` `^` and `~`. Note that `~region` is a strict negation of
+`contains()`, unlike `~polygon`, which flips the complement flag and so leaves the boundary belonging
+to both sides.
+
 # Functions
 
 ### algebra/util.h
@@ -473,6 +538,101 @@ Overloaded operators:
 #### `segment_segment_intersection(a, b, c, d)`
 - Returns `None`, a point, or a segment. `segment_segment_intersection_param()` returns the
   parameters instead of the points, and `segment_segment_intersects()` returns 0, 1 or 2.
+
+### algebra/polygon2.h
+#### `T signed_area2(const Ring2<T>& ring)`
+- Twice the signed area, which stays integral when `T` is. Positive is counter clockwise.
+#### `T signed_area(const Ring2<T>& ring)`
+#### `T signed_area(const MultiPolygon2<T>& a)`
+- Throws for an unbounded region, which has no finite area.
+#### `bool is_ccw(const Ring2<T>& ring)`
+#### `void reverse(Ring2<T>& ring)`
+- Reverses the orientation of a ring, turning a shell into a hole and back.
+#### `bool on_boundary(const Ring2<T>& ring, const Vec2<T>& p)`
+#### `bool on_boundary(const MultiPolygon2<T>& a, const Vec2<T>& p)`
+#### `int winding_number(const Ring2<T>& ring, const Vec2<T>& p)`
+#### `int winding_number(const MultiPolygon2<T>& a, const Vec2<T>& p)`
+- How many times the region wraps counter clockwise around `p`. Undefined on the boundary, so
+  callers test `on_boundary()` first.
+#### `bool contains(const MultiPolygon2<T>& a, const Vec2<T>& p)`
+- Closed region membership: the boundary belongs to the region on either side of a complement, so it
+  is contained by both `a` and `~a`.
+#### `void bounding_box(const MultiPolygon2<T>& a, Vec2<T>& min, Vec2<T>& max)`
+- The smallest axis aligned box containing every vertex. Throws for an unbounded or empty region.
+#### `void simplify(MultiPolygon2<T>& a)`
+- Drops repeated and collinear vertices, and rings that enclose no area (fewer than three vertices,
+  or all vertices on one line). The interior is unchanged, but the boundary of a dropped sliver goes
+  with it, so a point that was only on such a sliver stops being contained.
+
+### algebra/polygon2_boolean.h
+#### `MultiPolygon2<T> boolean_op(BoolOp op, const MultiPolygon2<T>& a, const MultiPolygon2<T>& b)`
+- `BoolOp` is `Union`, `Intersection`, `Difference` or `SymmetricDifference`. The operators `|`, `&`,
+  `-` and `^` call it.
+- Exact for an exact `T`, with no epsilon anywhere: every edge is cut at every crossing, each
+  fragment is classified by sampling a point a provably safe step off its midpoint, and the
+  surviving fragments are stitched into rings oriented with the interior on their left.
+- Cost is quadratic in the number of edges, for the cutting and for the classification.
+- The result is not `simplify()`ed: cutting leaves collinear vertices where the inputs met.
+
+### algebra/polygon2_buffer.h
+#### `MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size, Ring2<T> (*element)(const T&) = square_element<T>)`
+- Positive size grows, negative shrinks, zero is the identity.
+- Note what is *not* offered: buffering by a Euclidean distance. Moving an edge out by `r` needs the
+  unit normal, i.e. `sqrt(dx*dx + dy*dy)`, and a round join needs a circular arc whose intersections
+  with its neighbours are irrational as well. Neither is representable in `rational`, so the shape to
+  buffer by is given explicitly instead and the result stays exact.
+#### `MultiPolygon2<T> dilate(const MultiPolygon2<T>& a, const Ring2<T>& b)`
+#### `MultiPolygon2<T> erode(const MultiPolygon2<T>& a, const Ring2<T>& b)`
+- Minkowski sum and its dual with a convex `b` that contains the origin.
+#### `Ring2<T> square_element(const T& r)`
+- `max(|dx|, |dy|) <= r`, i.e. buffering in the Chebyshev metric.
+#### `Ring2<T> diamond_element(const T& r)`
+- `|dx| + |dy| <= r`, i.e. the Manhattan metric.
+#### `Ring2<T> polygon_element(const T& r, int sides)`
+- A convex polygon with `2*sides` vertices inscribed in the circle of radius `r`, with rational
+  coordinates from the Pythagorean parametrisation. It is a subset of the disk, so it
+  under-approximates a round buffer as closely as wanted.
+#### `Ring2<T> reflect(Ring2<T> a)`
+- Negates every vertex, giving the `-B` that erosion needs. Note that the ring comes back with the
+  opposite orientation; `dilate()` builds convex hulls from the element's vertices and tests the
+  origin against a winding number, so neither cares.
+#### `Ring2<T> convex_hull(std::vector<Vec2<T>> p)`
+- The counter clockwise convex hull, by monotone chain. Exact for an exact `T`.
+
+### algebra/polygon2_arc.h
+#### `Vec2<T> arc_midpoint(const Vec2<T>& a, const Vec2<T>& b, const T& bulge)`
+#### `Vec2<T> arc_center(const Vec2<T>& a, const Vec2<T>& b, const T& bulge)`
+#### `T arc_radius2(const Vec2<T>& a, const Vec2<T>& b, const T& bulge)`
+- The midpoint, centre and *squared* radius of an arc. All rational; the radius itself is not.
+  `arc_center()` and `arc_radius2()` require a non-zero bulge.
+#### `bool on_arc(const Vec2<T>& a, const Vec2<T>& b, const T& bulge, const Vec2<T>& p)`
+- Whether `p` lies on the arc (or straight edge) from `a` to `b`, endpoints included.
+#### `Ring2<T> chord_ring(const ArcRing2<T>& ring)`
+#### `MultiPolygon2<T> chord_polygon(const ArcPolygon2<T>& a)`
+- The same vertices with every arc replaced by its chord.
+#### `int winding_number(const ArcPolygon2<T>& a, const Vec2<T>& p)`
+- The chord polygon's winding number, corrected by one per arc whose circular segment contains `p`.
+  Undefined on the boundary and on the chord of an arc.
+#### `bool on_boundary(const ArcPolygon2<T>& a, const Vec2<T>& p)`
+#### `bool contains(const ArcPolygon2<T>& a, const Vec2<T>& p)`
+- Closed membership, as for `MultiPolygon2`. A point on a chord is stepped off first, by a step that
+  provably crosses nothing.
+#### `T signed_area_chords(const ArcPolygon2<T>& a)`
+- The area of the chord polygon. The true area differs by the circular segments, whose area is
+  `r*r*(theta - sin theta)/2` and so is not representable, which is why there is no exact
+  `signed_area()` for an arc region.
+#### `ArcRing2<T> circle_ring(const Vec2<T>& center, const T& radius)`
+- A closed circle, as the two half circle edges that a single bulge cannot express.
+
+### algebra/polygon2_arc_boolean.h
+#### `bool contains(const ArcRegion<T>& r, const Vec2<T>& p)`
+- Evaluates the tree at `p`.
+#### `void area_bounds(const ArcRegion<T>& r, const Vec2<T>& min, const Vec2<T>& max, int depth, T& lower, T& undecided)`
+- Area by subdividing the given box, since the exact area involves `r*r*(theta - sin theta)/2`.
+  Boxes that sample as fully inside or fully outside settle, the rest are split until `depth` runs
+  out, and what still straddles the boundary is reported as `undecided`.
+- The test per box is five sample points, not an exact containment test, so `lower` and `undecided`
+  are a good estimate rather than a proven bound. The box has to contain the region.
 
 ### algebra/dual.h
 #### `struct dual<T> { T real, dual; }`
