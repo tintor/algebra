@@ -711,6 +711,57 @@ TEST_CASE("parse with base") {
     REQUIRE(integer(std::string_view("ff"), 16) == 255);
 }
 
+// digit by digit, so it does not share any of the parser's chunking
+static integer horner(std::string_view digits, unsigned base) {
+    integer a = 0;
+    for (char c : digits) {
+        a *= base;
+        a += ('0' <= c && c <= '9') ? (c - '0') : (c - 'a' + 10);
+    }
+    return a;
+}
+
+TEST_CASE("parse across a chunk boundary") {
+    // the parser consumes the digits in chunks, so the interesting lengths are the ones just
+    // below, at and above a whole number of chunks
+    for (int digits = 1; digits <= 70; digits++) {
+        const std::string oct(digits, '7');
+        REQUIRE(integer(oct.c_str(), 8) == horner(oct, 8));
+        REQUIRE(integer(("-" + oct).c_str(), 8) == -horner(oct, 8));
+
+        const std::string bin(digits, '1');
+        REQUIRE(integer(bin.c_str(), 2) == horner(bin, 2));
+
+        const std::string hex(digits, 'f');
+        REQUIRE(integer(hex.c_str(), 16) == horner(hex, 16));
+    }
+
+    // a low digit after a full chunk, which a wrong chunk width shifts into the wrong place
+    REQUIRE(integer("1000000000000000000000", 8) == horner("1000000000000000000000", 8));
+    REQUIRE(integer("777777777777777777777777777777777777777777", 8)
+            == horner("777777777777777777777777777777777777777777", 8));
+}
+
+TEST_CASE("parse round trip with base") {
+    Random rng;
+    for (int i = 0; i < 300; i++) {
+        // a random value of a random bit length (uniform_sample_bits() lives in integer.h)
+        const int bits = rng.Uniform<int>(1, 400);
+        integer a;
+        a.words.reset((bits + 63) / 64, /*initialize*/false);
+        for (int w = 0; w < a.words.size(); w++)
+            a.words[w] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+        if (bits % 64)
+            a.words.back() &= (uint64_t(1) << (bits % 64)) - 1;
+        a.words.normalize();
+
+        for (unsigned base : {2u, 8u, 16u}) {
+            const std::string s = a.str(base, /*upper*/false);
+            REQUIRE(integer(s.c_str(), base) == a);
+        }
+    }
+}
+
 TEST_CASE("mod is euclidean") {
     // mod() returns a value in [0, abs(b))
     REQUIRE(mod(-1_i, 7u) == 6);
