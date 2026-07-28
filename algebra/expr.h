@@ -68,7 +68,9 @@ struct expr_matrix : public expr {
     std::vector<expr_ptr> data;
 
     virtual constexpr int sign() const {
-        if (rows == 0 && cols == 0)
+        // a 1x1 matrix is its single element; every other shape, including the empty one, has no
+        // sign of its own (and reading data[0] of an empty matrix is out of bounds)
+        if (rows == 1 && cols == 1 && data.size() == 1)
             return data[0]->sign();
         throw unknown_sign_error("indeterminate sign of a matrix");
     }
