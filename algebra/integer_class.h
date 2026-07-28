@@ -161,7 +161,7 @@ struct integer {
         return 0;
     }
 
-    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + abs(*this).str_size_upper_bound(base); }
+    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + __mag_str_size_upper_bound(abs(*this), base); }
     constexpr int str(char* buffer, int buffer_size, unsigned base = 10, bool upper = true) const {
         int result = 0;
         if (is_negative()) {
@@ -171,7 +171,7 @@ struct integer {
             *buffer++ = '-';
             result = 1;
         }
-        return result + abs(*this).str(buffer, buffer_size, base, upper);
+        return result + __mag_str(abs(*this), buffer, buffer_size, base, upper);
     }
 
     constexpr std::string str(unsigned base = 10, bool upper = true) const {
@@ -186,7 +186,7 @@ struct integer {
 
     constexpr size_t popcount() const {
         if (!is_negative())
-            return abs(*this).popcount();
+            return __mag_popcount(abs(*this));
 
         size_t c = 0;
         uint64_t carry = 1;
@@ -235,19 +235,20 @@ struct integer {
     constexpr magnitude_ref magnitude() { return magnitude_ref(words); }
 
     constexpr integer& operator++() {
-        // natural::operator++/-- work on the magnitude and preserve the sign of words
+        // the magnitude increment and decrement preserve the sign of words, and the borrow brings
+        // a result of zero back positive
         if (is_negative())
-            --*magnitude();
+            __mag_dec(*magnitude());
         else
-            ++*magnitude();
+            __mag_inc(*magnitude());
         return *this;
     }
 
     constexpr integer& operator--() {
         if (is_negative())
-            ++*magnitude();
+            __mag_inc(*magnitude());
         else if (words.size() > 0)
-            --*magnitude();
+            __mag_dec(*magnitude());
         else
             *this = -1;
         return *this;
@@ -370,12 +371,12 @@ constexpr integer& __add(integer& a, std_int auto b) {
         return __add<!plus>(a, static_cast<decltype(ub)>(~ub + 1));
 
     if (plus == !a.is_negative()) {
-        *a.magnitude() += ub;
+        __mag_add(*a.magnitude(), ub);
         return a;
     }
 
     if (!__less_u(static_cast<cnatural>(a), ub)) {
-        *a.magnitude() -= ub;
+        __mag_sub(*a.magnitude(), ub);
         return a;
     }
     // here plus == a.is_negative(), so the result of the magnitude subtraction is
@@ -413,7 +414,7 @@ constexpr void mul(integer& a, const integer& b) {
     const bool negative = a.is_negative() != b.is_negative();
     if (&a == &b) {
         auto m = a.magnitude();
-        *m *= *m; // squaring: natural's mul() takes the &a == &b path
+        __mag_mul(*m, *m); // squaring: the magnitude mul() takes the &a == &b path
     } else {
         // b is a distinct object, so a view of it stays valid while a's magnitude is borrowed
         const cnatural cb = b;
@@ -452,24 +453,26 @@ constexpr integer& operator*=(integer& a, const integer& b) {
 
 constexpr integer& operator*=(integer& a, const natural& b) {
     const bool negative = a.is_negative();
-    *a.magnitude() *= b;
+    __mag_mul(*a.magnitude(), b);
     a.words.set_negative(negative);
     return a;
 }
 
 constexpr integer& operator*=(integer& a, std_int auto b) {
     const bool negative = a.is_negative() != (b < 0);
-    *a.magnitude() *= abs_unsigned(b);
+    __mag_mul(*a.magnitude(), abs_unsigned(b));
     a.words.set_negative(negative);
     return a;
 }
 
 constexpr std::string str(const integer& a) {
-    return a.is_negative() ? "-" + str(abs(a)) : str(abs(a));
+    const std::string m = __mag_str(abs(a));
+    return a.is_negative() ? "-" + m : m;
 }
 
 constexpr std::string stre(const integer& a) {
-    return a.is_negative() ? "-" + stre(abs(a)) : stre(abs(a));
+    const std::string m = __mag_stre(abs(a));
+    return a.is_negative() ? "-" + m : m;
 }
 
 // The magnitude products, done on integer's own backend. These mirror natural's add_product and
@@ -611,7 +614,7 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
     {
         auto q = quot.magnitude();
         auto r = rem.magnitude();
-        div(an, bn, *q, *r);
+        __mag_div(an, bn, *q, *r);
     }
     quot.words.set_negative(negative);
     rem.words.set_negative(a_negative);
@@ -640,7 +643,7 @@ constexpr T div(const integer& a, T b, integer& quot) {
     {
         const natural an = abs(a); // quot may alias a, see div() above
         auto q = quot.magnitude();
-        rem = div(an, abs_unsigned(b), *q);
+        rem = __mag_div(an, abs_unsigned(b), *q);
     }
     if (!quot.is_zero())
         quot.words.set_negative(a.is_negative() != (b < 0));
@@ -658,7 +661,7 @@ constexpr T div(const integer& a, T b, integer& quot) {
     {
         const natural an = abs(a); // quot may alias a, see div() above
         auto q = quot.magnitude();
-        rem = div(an, static_cast<uint64_t>(b), *q);
+        rem = __mag_div(an, static_cast<uint64_t>(b), *q);
     }
     if (!quot.is_zero())
         quot.words.set_negative(a.is_negative());
@@ -678,7 +681,7 @@ constexpr integer& operator/=(integer& a, const integer& b) {
 }
 constexpr integer& operator/=(integer& a, const std_int auto b) {
     const bool negative = a.is_negative();
-    *a.magnitude() /= abs_unsigned(b);
+    __mag_div(*a.magnitude(), abs_unsigned(b));
     a.words.set_negative(negative != (b < 0));
     return a;
 }
@@ -716,7 +719,7 @@ constexpr integer mod(const integer& a, const integer& b) {
     // Note: mod() on the magnitudes would resolve back to this function, since natural
     // converts implicitly to integer. Call the natural kernel explicitly.
     natural r;
-    mod(abs(a), abs(b), /*out*/r);
+    __mag_mod(abs(a), abs(b), /*out*/r);
     if (a.is_negative() && !r.words.empty()) {
         // result is in [0, abs(b)) range
         natural e = abs(b);
@@ -782,7 +785,7 @@ constexpr auto operator""_i(const char* s) { return integer(s); }
 
 constexpr void operator<<=(integer& a, int64_t i) {
     const bool negative = a.is_negative();
-    *a.magnitude() <<= i;
+    __mag_shl(*a.magnitude(), i);
     a.words.set_negative(negative);
 }
 
