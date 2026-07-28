@@ -12,6 +12,7 @@ template<> struct IsNumberClass<integer> : std::true_type {};
 constexpr natural abs(const integer& a);
 
 struct integer {
+
     // The whole value: the magnitude in the words, the sign in the sign of the size, which is how
     // integer_backend already stores it. Magnitude arithmetic goes through the cnatural/vnatural/
     // inatural conversions below, or through __magnitude() when it has to happen in place.
@@ -206,54 +207,9 @@ struct integer {
     constexpr operator vnatural() { return {{words.data(), words.size()}, words.capacity()}; }
     constexpr operator inatural() { return {words.data(), words.size()}; }
 
-    // Borrows the magnitude as a natural for work that has to happen in place. natural is exactly
-    // one integer_backend, so the swap is a pointer exchange and not a copy; the sign is restored
-    // when the scope ends, and a result of zero comes back positive.
-    class magnitude_ref {
-        integer_backend& _words;
-        bool _negative;
-    public:
-        natural value;
-        constexpr magnitude_ref(integer_backend& w) : _words(w), _negative(w.sign() < 0) {
-            value.words.swap(w);
-            value.words.set_negative(false);
-        }
-        // Not copyable or movable: two of these over one backend would each restore in turn, and
-        // the second would put the pre-operation value back, losing the result silently. magnitude()
-        // returns a prvalue, so copy elision means nothing here needs to be copied or moved.
-        magnitude_ref(const magnitude_ref&) = delete;
-        magnitude_ref(magnitude_ref&&) = delete;
-        magnitude_ref& operator=(const magnitude_ref&) = delete;
-        magnitude_ref& operator=(magnitude_ref&&) = delete;
-        constexpr ~magnitude_ref() {
-            _words.swap(value.words);
-            _words.set_negative(_negative && _words.size() != 0);
-        }
-        constexpr natural* operator->() { return &value; }
-        constexpr natural& operator*() { return value; }
-    };
-    constexpr magnitude_ref magnitude() { return magnitude_ref(words); }
 
-    constexpr integer& operator++() {
-        // the magnitude increment and decrement preserve the sign of words, and the borrow brings
-        // a result of zero back positive
-        if (is_negative())
-            __mag_dec(*magnitude());
-        else
-            __mag_inc(*magnitude());
-        return *this;
-    }
-
-    constexpr integer& operator--() {
-        if (is_negative())
-            __mag_inc(*magnitude());
-        else if (words.size() > 0)
-            __mag_dec(*magnitude());
-        else
-            *this = -1;
-        return *this;
-    }
-
+    constexpr integer& operator++();
+    constexpr integer& operator--();
     constexpr integer operator++(int) { integer a = *this; operator++(); return a; }
     constexpr integer operator--(int) { integer a = *this; operator--(); return a; }
 
@@ -333,6 +289,51 @@ struct integer {
     }
 };
 
+class magnitude_ref {
+    integer_backend& _words;
+    bool _negative;
+public:
+    natural value;
+    constexpr magnitude_ref(integer_backend& w) : _words(w), _negative(w.sign() < 0) {
+        value.words.swap(w);
+        value.words.set_negative(false);
+    }
+    // Not copyable or movable: two of these over one backend would each restore in turn, and
+    // the second would put the pre-operation value back, losing the result silently. magnitude()
+    // returns a prvalue, so copy elision means nothing here needs to be copied or moved.
+    magnitude_ref(const magnitude_ref&) = delete;
+    magnitude_ref(magnitude_ref&&) = delete;
+    magnitude_ref& operator=(const magnitude_ref&) = delete;
+    magnitude_ref& operator=(magnitude_ref&&) = delete;
+    constexpr ~magnitude_ref() {
+        _words.swap(value.words);
+        _words.set_negative(_negative && _words.size() != 0);
+    }
+    constexpr natural* operator->() { return &value; }
+    constexpr natural& operator*() { return value; }
+};
+constexpr magnitude_ref magnitude(integer& a) { return magnitude_ref(a.words); }
+
+constexpr integer& integer::operator++() {
+    // the magnitude increment and decrement preserve the sign of words, and the borrow brings a
+    // result of zero back positive
+    if (is_negative())
+        __mag_dec(*magnitude(*this));
+    else
+        __mag_inc(*magnitude(*this));
+    return *this;
+}
+
+constexpr integer& integer::operator--() {
+    if (is_negative())
+        __mag_inc(*magnitude(*this));
+    else if (words.size() > 0)
+        __mag_dec(*magnitude(*this));
+    else
+        *this = -1;
+    return *this;
+}
+
 constexpr bool operator==(const integer& a, const integer& b) {
     return a.is_negative() == b.is_negative() && __equal(static_cast<cnatural>(a), static_cast<cnatural>(b));
 }
@@ -371,12 +372,12 @@ constexpr integer& __add(integer& a, std_int auto b) {
         return __add<!plus>(a, static_cast<decltype(ub)>(~ub + 1));
 
     if (plus == !a.is_negative()) {
-        __mag_add(*a.magnitude(), ub);
+        __mag_add(*magnitude(a), ub);
         return a;
     }
 
     if (!__less_u(static_cast<cnatural>(a), ub)) {
-        __mag_sub(*a.magnitude(), ub);
+        __mag_sub(*magnitude(a), ub);
         return a;
     }
     // here plus == a.is_negative(), so the result of the magnitude subtraction is
@@ -404,7 +405,7 @@ constexpr void mul(const integer& a, const integer& b, integer& c) {
     // so the views are taken before the borrow empties c.
     const cnatural ca = a, cb = b;
     {
-        auto m = c.magnitude();
+        auto m = magnitude(c);
         mul(ca, cb, *m);
     }
     c.words.set_negative(negative);
@@ -413,7 +414,7 @@ constexpr void mul(const integer& a, const integer& b, integer& c) {
 constexpr void mul(integer& a, const integer& b) {
     const bool negative = a.is_negative() != b.is_negative();
     if (&a == &b) {
-        auto m = a.magnitude();
+        auto m = magnitude(a);
         __mag_mul(*m, *m); // squaring: the magnitude mul() takes the &a == &b path
     } else {
         // b is a distinct object, so a view of it stays valid while a's magnitude is borrowed
@@ -453,14 +454,14 @@ constexpr integer& operator*=(integer& a, const integer& b) {
 
 constexpr integer& operator*=(integer& a, const natural& b) {
     const bool negative = a.is_negative();
-    __mag_mul(*a.magnitude(), b);
+    __mag_mul(*magnitude(a), b);
     a.words.set_negative(negative);
     return a;
 }
 
 constexpr integer& operator*=(integer& a, std_int auto b) {
     const bool negative = a.is_negative() != (b < 0);
-    __mag_mul(*a.magnitude(), abs_unsigned(b));
+    __mag_mul(*magnitude(a), abs_unsigned(b));
     a.words.set_negative(negative);
     return a;
 }
@@ -612,8 +613,8 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
     const natural an = abs(a);
     const natural bn = abs(b);
     {
-        auto q = quot.magnitude();
-        auto r = rem.magnitude();
+        auto q = magnitude(quot);
+        auto r = magnitude(rem);
         __mag_div(an, bn, *q, *r);
     }
     quot.words.set_negative(negative);
@@ -642,7 +643,7 @@ constexpr T div(const integer& a, T b, integer& quot) {
     uint64_t rem;
     {
         const natural an = abs(a); // quot may alias a, see div() above
-        auto q = quot.magnitude();
+        auto q = magnitude(quot);
         rem = __mag_div(an, abs_unsigned(b), *q);
     }
     if (!quot.is_zero())
@@ -660,7 +661,7 @@ constexpr T div(const integer& a, T b, integer& quot) {
     uint64_t rem;
     {
         const natural an = abs(a); // quot may alias a, see div() above
-        auto q = quot.magnitude();
+        auto q = magnitude(quot);
         rem = __mag_div(an, static_cast<uint64_t>(b), *q);
     }
     if (!quot.is_zero())
@@ -681,7 +682,7 @@ constexpr integer& operator/=(integer& a, const integer& b) {
 }
 constexpr integer& operator/=(integer& a, const std_int auto b) {
     const bool negative = a.is_negative();
-    __mag_div(*a.magnitude(), abs_unsigned(b));
+    __mag_div(*magnitude(a), abs_unsigned(b));
     a.words.set_negative(negative != (b < 0));
     return a;
 }
@@ -785,13 +786,17 @@ constexpr auto operator""_i(const char* s) { return integer(s); }
 
 constexpr void operator<<=(integer& a, int64_t i) {
     const bool negative = a.is_negative();
-    __mag_shl(*a.magnitude(), i);
+    __mag_shl(*magnitude(a), i);
     a.words.set_negative(negative);
 }
 
 ALGEBRA_SHIFT_OP(integer)
 
 constexpr natural abs(const integer& a) { natural m; m.words = a.words; m.words.set_negative(false); return m; }
+
+// Borrows the magnitude as a natural for work that has to happen in place. natural is exactly
+// one integer_backend, so the swap is a pointer exchange and not a copy; the sign is restored
+// when the scope ends, and a result of zero comes back positive.
 
 static_assert(sizeof(integer) == 16);
 
