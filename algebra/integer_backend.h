@@ -216,7 +216,7 @@ public:
         }
     }
 
-    // not accessible to class natural
+    // not accessible to class integer
     constexpr void negate() { _size = -_size; }
     constexpr void set_negative(bool a) { _size = a ? -size() : size(); }
     constexpr int sign() const { return _size; }

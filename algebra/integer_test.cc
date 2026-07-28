@@ -3,7 +3,7 @@
 
 TEST_CASE("uniform_sample") {
     integer a;
-    a = pow(2_n, 128) - 1;
+    a = pow(2_i, 128) - 1;
     std::mt19937_64 rng(0);
     for (int i = 0; i < 20; i++) {
         integer m = uniform_sample(0, a, rng);
@@ -68,33 +68,33 @@ TEST_CASE("add/sub_product") {
 TEST_CASE("inverse_mod") {
     integer out;
 
-    REQUIRE(inverse_mod(3_n, 11_n, out));
+    REQUIRE(inverse_mod(3_i, 11_i, out));
     REQUIRE(out == 4u); // 3 * 4 == 12 == 1 (mod 11)
 
-    REQUIRE(inverse_mod(1_n, 7_n, out));
+    REQUIRE(inverse_mod(1_i, 7_i, out));
     REQUIRE(out == 1u);
 
-    REQUIRE(inverse_mod(5_n, 7_n, out));
+    REQUIRE(inverse_mod(5_i, 7_i, out));
     REQUIRE(out == 3u); // 5 * 3 == 15 == 1 (mod 7)
 
     // no inverse when gcd(a, m) != 1
-    REQUIRE(!inverse_mod(4_n, 8_n, out));
-    REQUIRE(!inverse_mod(6_n, 9_n, out));
+    REQUIRE(!inverse_mod(4_i, 8_i, out));
+    REQUIRE(!inverse_mod(6_i, 9_i, out));
 
     // exhaustive small check
     for (uint64_t m = 2; m < 30; m++)
         for (uint64_t a = 1; a < m; a++) {
-            const bool ok = inverse_mod(natural(a), natural(m), out);
+            const bool ok = inverse_mod(integer(a), integer(m), out);
             REQUIRE(ok == (gcd(a, m) == 1));
             if (ok)
-                REQUIRE((natural(a) * out) % m == 1);
+                REQUIRE((integer(a) * out) % m == 1);
         }
 
     // multi-word
     integer big = 1;
     big <<= 130;
     big += 7u;
-    REQUIRE(inverse_mod(3_n, big, out));
+    REQUIRE(inverse_mod(3_i, big, out));
     REQUIRE((integer(3) * out) % big == 1);
 }
 
@@ -180,50 +180,50 @@ TEST_CASE("exp2") {
     REQUIRE_THROWS(exp2(-1));
 }
 
-TEST_CASE("pow(integer, natural)") {
-    REQUIRE(pow(integer(3), 4_n) == 81);
-    REQUIRE(pow(integer(-3), 3_n) == -27);
-    REQUIRE(pow(integer(-3), 4_n) == 81);
-    REQUIRE(pow(integer(2), 100_n) == exp2(100));
-    REQUIRE(pow(integer(-2), 101_n) == -exp2(101));
-    REQUIRE(pow(integer(7), 0_n) == 1);
-    REQUIRE(pow(integer(0), 5_n) == 0);
+TEST_CASE("pow(integer, integer)") {
+    REQUIRE(pow(integer(3), 4_i) == 81);
+    REQUIRE(pow(integer(-3), 3_i) == -27);
+    REQUIRE(pow(integer(-3), 4_i) == 81);
+    REQUIRE(pow(integer(2), 100_i) == exp2(100));
+    REQUIRE(pow(integer(-2), 101_i) == -exp2(101));
+    REQUIRE(pow(integer(7), 0_i) == 1);
+    REQUIRE(pow(integer(0), 5_i) == 0);
 }
 
 TEST_CASE("binominal_mod") {
     // reference values: C(10,3) = 120, C(20,5) = 15504, C(6,4) = 15, C(10,5) = 252, C(8,3) = 56
     integer out;
-    binominal_mod(10_n, 3, 7_n, out);
+    binominal_mod(10_i, 3, 7_i, out);
     REQUIRE(out == 120u % 7u);
-    binominal_mod(20_n, 5, 101_n, out);
+    binominal_mod(20_i, 5, 101_i, out);
     REQUIRE(out == 15504u % 101u);
-    binominal_mod(10_n, 0, 7_n, out);
+    binominal_mod(10_i, 0, 7_i, out);
     REQUIRE(out == 1u);
 
     // a modulus sharing a factor with some i+1 in [1, k] has no modular inverse for it, which
     // must not silently produce a wrong answer
-    binominal_mod(6_n, 4, 4_n, out);
+    binominal_mod(6_i, 4, 4_i, out);
     REQUIRE(out == 15u % 4u);
-    binominal_mod(6_n, 4, 6_n, out);
+    binominal_mod(6_i, 4, 6_i, out);
     REQUIRE(out == 15u % 6u);
-    binominal_mod(10_n, 5, 10_n, out);
+    binominal_mod(10_i, 5, 10_i, out);
     REQUIRE(out == 252u % 10u);
-    binominal_mod(8_n, 3, 9_n, out);
+    binominal_mod(8_i, 3, 9_i, out);
     REQUIRE(out == 56u % 9u);
 
     // m == 1 reduces everything to 0
-    binominal_mod(10_n, 3, 1_n, out);
+    binominal_mod(10_i, 3, 1_i, out);
     REQUIRE(out == 0u);
-    binominal_mod(10_n, 0, 1_n, out);
+    binominal_mod(10_i, 0, 1_i, out);
     REQUIRE(out == 0u);
 }
 
 // log_lower, log_upper and is_power_of_three moved to integer.h when they were converted to take
-// an integer, so their tests move here with them. They still accept a natural, which converts.
+// an integer, so their tests move here with them.
 TEST_CASE("log_lower / log_upper") {
     // log_lower / log_upper
-    REQUIRE(log_lower(natural(0), 10) == 0);
-    REQUIRE(log_upper(natural(0), 10) == 0);
+    REQUIRE(log_lower(integer(0), 10) == 0);
+    REQUIRE(log_upper(integer(0), 10) == 0);
     for (uint64_t base : {2ull, 3ull, 10ull}) {
         for (int e = 0; e < 20; e++) {
             const integer p = pow(integer(base), e);
@@ -249,23 +249,23 @@ TEST_CASE("is_power_of_three") {
     REQUIRE(is_power_of_three(3));
     REQUIRE(!is_power_of_three(4));
     REQUIRE(is_power_of_three(9));
-    REQUIRE(is_power_of_three(pow(3_n, 30)));
-    REQUIRE(!is_power_of_three(pow(3_n, 30) - 1));
+    REQUIRE(is_power_of_three(pow(3_i, 30)));
+    REQUIRE(!is_power_of_three(pow(3_i, 30) - 1));
 }
 
 TEST_CASE("is_power_of_three more") {
-    REQUIRE(!is_power_of_three(natural(0)));
-    REQUIRE(is_power_of_three(natural(1)));
-    REQUIRE(is_power_of_three(natural(3)));
-    REQUIRE(is_power_of_three(natural(9)));
-    REQUIRE(is_power_of_three(natural(81)));
-    REQUIRE(is_power_of_three(pow(natural(3), 40)));
-    REQUIRE(is_power_of_three(pow(natural(3), 64)));  // a perfect square
-    REQUIRE(!is_power_of_three(natural(2)));
-    REQUIRE(!is_power_of_three(natural(6)));
-    REQUIRE(!is_power_of_three(natural(12)));
-    REQUIRE(!is_power_of_three(pow(natural(3), 20) + 1u));
-    REQUIRE(!is_power_of_three(pow(natural(3), 20) * 2u));
+    REQUIRE(!is_power_of_three(integer(0)));
+    REQUIRE(is_power_of_three(integer(1)));
+    REQUIRE(is_power_of_three(integer(3)));
+    REQUIRE(is_power_of_three(integer(9)));
+    REQUIRE(is_power_of_three(integer(81)));
+    REQUIRE(is_power_of_three(pow(integer(3), 40)));
+    REQUIRE(is_power_of_three(pow(integer(3), 64)));  // a perfect square
+    REQUIRE(!is_power_of_three(integer(2)));
+    REQUIRE(!is_power_of_three(integer(6)));
+    REQUIRE(!is_power_of_three(integer(12)));
+    REQUIRE(!is_power_of_three(pow(integer(3), 20) + 1u));
+    REQUIRE(!is_power_of_three(pow(integer(3), 20) * 2u));
 }
 
 TEST_CASE("is_power_of_three rejects a negative") {

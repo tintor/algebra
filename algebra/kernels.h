@@ -293,7 +293,7 @@ constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
     return (v.size == 0) ? 0 : -1;
 }
 
-// Compares a magnitude against an unsigned builtin, without building a natural for it.
+// Compares a magnitude against an unsigned builtin, without building an integer for it.
 template<std_unsigned_int T>
 constexpr bool __equal_u(cnatural a, T b) {
     if constexpr (sizeof(T) <= 8) {

@@ -483,7 +483,7 @@ TEST_CASE("inexact conversion from rational") {
     REQUIRE(decimal(rational(1, 20)).exp == -2);
     REQUIRE(decimal(rational(1, 25)).num == 4);
     REQUIRE(decimal(rational(1, 25)).exp == -2);
-// real<B> adds and subtracts through natural and integer, so these exercise the fixes above
+// real<B> adds and subtracts through integer and integer, so these exercise the fixes above
 }
 
 TEST_CASE("real with integral operand") {
@@ -507,11 +507,11 @@ TEST_CASE("real with integral operand") {
     REQUIRE(to_rational(real<2>(7) - 5) == rational(2));
     REQUIRE(to_rational(5 - real<2>(7)) == rational(-2));
 
-    // integer and natural operands
+    // integer and integer operands
     REQUIRE(to_rational(a + integer(2)) == rational(11, 4));
     REQUIRE(to_rational(a - integer(2)) == rational(-5, 4));
     REQUIRE(to_rational(a * integer(4)) == rational(3));
-    REQUIRE(to_rational(a * natural(4)) == rational(3));
+    REQUIRE(to_rational(a * integer(4)) == rational(3));
 
     const decimal p(3, -2); // 0.03
     REQUIRE(to_rational(p + 2) == rational(203, 100));

@@ -78,18 +78,18 @@ TEST_CASE("compound assignment with rational") {
 
 TEST_CASE("equality with different roots") {
     // (2/3)*sqrt(245) == (14/3)*sqrt(5), since sqrt(245) == 7*sqrt(5)
-    const xrational a(2/3_q, natural(245));
-    const xrational b(14/3_q, natural(5));
+    const xrational a(2/3_q, integer(245));
+    const xrational b(14/3_q, integer(5));
     REQUIRE(sqr(a) == sqr(b));
     REQUIRE(a == b);
     REQUIRE(b == a);
 
-    const xrational c(15/3_q, natural(5));
+    const xrational c(15/3_q, integer(5));
     REQUIRE(!(a == c));
     REQUIRE(!(c == a));
 
-    const xrational d(-2/3_q, natural(245));
-    const xrational e(-14/3_q, natural(5));
+    const xrational d(-2/3_q, integer(245));
+    const xrational e(-14/3_q, integer(5));
     REQUIRE(d == e);
     REQUIRE(!(a == e));
 }
@@ -97,68 +97,68 @@ TEST_CASE("equality with different roots") {
 TEST_CASE("simplify") {
     // xrational(1, r) is sqrt(r): square factors may move into base, but the value must not change
     for (int r : {1, 2, 3, 4, 5, 8, 9, 12, 16, 18, 24, 27, 32, 36, 45, 48, 50, 72, 81, 90, 98, 128, 200, 245}) {
-        const xrational a(1, natural(r));
+        const xrational a(1, integer(r));
         REQUIRE(a.root > 0);
         REQUIRE(sqr(a) == r);
         REQUIRE(a > 0);
         REQUIRE(a * a == r);
     }
 
-    REQUIRE(xrational(1, natural(4)) == 2);
-    REQUIRE(xrational(1, natural(8)) == 2 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(16)) == 4);
-    REQUIRE(xrational(1, natural(32)) == 4 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(128)) == 8 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(9)) == 3);
-    REQUIRE(xrational(1, natural(9)).is_rational());
-    REQUIRE(xrational(1, natural(18)) == 3 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(27)) == 3 * sqrt(3_x));
-    REQUIRE(xrational(1, natural(36)) == 6);
-    REQUIRE(xrational(1, natural(45)) == 3 * sqrt(5_x));
-    REQUIRE(xrational(1, natural(72)) == 6 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(81)) == 9);
-    REQUIRE(xrational(1, natural(90)) == 3 * sqrt(10_x));
-    REQUIRE(xrational(1, natural(200)) == 10 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(243)) == 9 * sqrt(3_x));
+    REQUIRE(xrational(1, integer(4)) == 2);
+    REQUIRE(xrational(1, integer(8)) == 2 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(16)) == 4);
+    REQUIRE(xrational(1, integer(32)) == 4 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(128)) == 8 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(9)) == 3);
+    REQUIRE(xrational(1, integer(9)).is_rational());
+    REQUIRE(xrational(1, integer(18)) == 3 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(27)) == 3 * sqrt(3_x));
+    REQUIRE(xrational(1, integer(36)) == 6);
+    REQUIRE(xrational(1, integer(45)) == 3 * sqrt(5_x));
+    REQUIRE(xrational(1, integer(72)) == 6 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(81)) == 9);
+    REQUIRE(xrational(1, integer(90)) == 3 * sqrt(10_x));
+    REQUIRE(xrational(1, integer(200)) == 10 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(243)) == 9 * sqrt(3_x));
 
     // the root is not fully simplified, but it still compares equal to the simplified form
-    REQUIRE(xrational(1, natural(50)) == 5 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(98)) == 7 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(50)) == 5 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(98)) == 7 * sqrt(2_x));
 
     // square factors of a multi word root
-    const xrational big(1, natural(1) << 101); // sqrt(2**101) == 2**50 * sqrt(2)
-    REQUIRE(big == xrational(rational(natural(1) << 50), natural(2)));
-    REQUIRE(sqr(big) == rational(natural(1) << 101));
+    const xrational big(1, integer(1) << 101); // sqrt(2**101) == 2**50 * sqrt(2)
+    REQUIRE(big == xrational(rational(integer(1) << 50), integer(2)));
+    REQUIRE(sqr(big) == rational(integer(1) << 101));
     const xrational big3(1, abs(pow(integer(3), 100)));
     REQUIRE(big3 == rational(pow(integer(3), 50)));
     REQUIRE(big3.is_rational());
 
     // base and root of a simplified value
-    REQUIRE(xrational(2, natural(9)) == 6);
-    REQUIRE(xrational(1/3_q, natural(9)) == 1);
-    REQUIRE(xrational(1/6_q, natural(18)) == xrational(1/2_q, natural(2)));
-    REQUIRE(xrational(1/6_q, natural(9)).base == 1/2_q); // base stays in lowest terms
-    REQUIRE(xrational(2/4_q, natural(3)).base == 1/2_q);
-    REQUIRE(xrational(-1, natural(8)) == -2 * sqrt(2_x));
-    REQUIRE(xrational(-1/6_q, natural(9)).base == -1/2_q);
+    REQUIRE(xrational(2, integer(9)) == 6);
+    REQUIRE(xrational(1/3_q, integer(9)) == 1);
+    REQUIRE(xrational(1/6_q, integer(18)) == xrational(1/2_q, integer(2)));
+    REQUIRE(xrational(1/6_q, integer(9)).base == 1/2_q); // base stays in lowest terms
+    REQUIRE(xrational(2/4_q, integer(3)).base == 1/2_q);
+    REQUIRE(xrational(-1, integer(8)) == -2 * sqrt(2_x));
+    REQUIRE(xrational(-1/6_q, integer(9)).base == -1/2_q);
 
     // zero always has root 1
-    REQUIRE(xrational(0, natural(5)).root == 1);
-    REQUIRE(xrational(0, natural(5)).is_zero());
-    REQUIRE(xrational(0, natural(9)).root == 1);
+    REQUIRE(xrational(0, integer(5)).root == 1);
+    REQUIRE(xrational(0, integer(5)).is_zero());
+    REQUIRE(xrational(0, integer(9)).root == 1);
 
-    REQUIRE_THROWS_AS(xrational(1, natural(0)), std::runtime_error);
+    REQUIRE_THROWS_AS(xrational(1, integer(0)), std::runtime_error);
 }
 
 TEST_CASE("is_rational") {
-    const xrational a(3/2_q, natural(5));
+    const xrational a(3/2_q, integer(5));
     REQUIRE(a.base == 3/2_q);
     REQUIRE(a.root == 5);
     REQUIRE(!a.is_rational());
     REQUIRE(!a.is_zero());
     REQUIRE(!a.is_negative());
 
-    const xrational b(-3/2_q, natural(1));
+    const xrational b(-3/2_q, integer(1));
     REQUIRE(b.is_rational());
     REQUIRE(b.is_negative());
     REQUIRE(b.base == -3/2_q);
@@ -180,7 +180,7 @@ TEST_CASE("is_rational") {
     REQUIRE(sqr(sqrt(2_x)).is_rational());
     REQUIRE(sqrt(4_x).is_rational());
     REQUIRE(sqrt(0_x).is_rational());
-    REQUIRE(xrational(1, natural(256)).is_rational());
+    REQUIRE(xrational(1, integer(256)).is_rational());
 }
 
 TEST_CASE("negate signum abs") {
@@ -201,7 +201,7 @@ TEST_CASE("negate signum abs") {
     REQUIRE(abs(-sqrt(2_x)) == sqrt(2_x));
     REQUIRE(abs(xrational(-3/2_q)) == 3/2_q);
     REQUIRE(abs(xrational(0)) == 0);
-    REQUIRE(abs(-xrational(3/2_q, natural(5))) == xrational(3/2_q, natural(5)));
+    REQUIRE(abs(-xrational(3/2_q, integer(5))) == xrational(3/2_q, integer(5)));
 
     // negation and abs leave their argument alone
     const xrational b = -sqrt(3_x);
@@ -214,14 +214,14 @@ TEST_CASE("negate signum abs") {
 TEST_CASE("invert") {
     xrational a = sqrt(2_x);
     a.invert();
-    REQUIRE(a == xrational(1/2_q, natural(2))); // 1/sqrt(2) == sqrt(2)/2
+    REQUIRE(a == xrational(1/2_q, integer(2))); // 1/sqrt(2) == sqrt(2)/2
     REQUIRE(a * sqrt(2_x) == 1);
 
-    const xrational b(3/2_q, natural(5));
+    const xrational b(3/2_q, integer(5));
     xrational c = b;
     c.invert();
     REQUIRE(b * c == 1);
-    REQUIRE(c == xrational(2/15_q, natural(5)));
+    REQUIRE(c == xrational(2/15_q, integer(5)));
 
     xrational d(-7/3_q);
     d.invert();
@@ -242,13 +242,13 @@ TEST_CASE("__addition_compatible") {
     REQUIRE_NOTHROW(__addition_compatible(sqrt(2_x), sqrt(2_x)));
     REQUIRE_NOTHROW(__addition_compatible(xrational(1), xrational(2)));
     REQUIRE_NOTHROW(__addition_compatible(xrational(0), xrational(0)));
-    REQUIRE_NOTHROW(__addition_compatible(xrational(3/2_q, natural(5)), xrational(-1/7_q, natural(5))));
+    REQUIRE_NOTHROW(__addition_compatible(xrational(3/2_q, integer(5)), xrational(-1/7_q, integer(5))));
 
     REQUIRE_THROWS_AS(__addition_compatible(sqrt(2_x), sqrt(3_x)), std::runtime_error);
     REQUIRE_THROWS_AS(__addition_compatible(sqrt(2_x), xrational(1)), std::runtime_error);
     REQUIRE_THROWS_AS(__addition_compatible(xrational(1), sqrt(2_x)), std::runtime_error);
     // roots are compared as stored, not fully simplified
-    REQUIRE_THROWS_AS(__addition_compatible(xrational(1, natural(50)), 5 * sqrt(2_x)), std::runtime_error);
+    REQUIRE_THROWS_AS(__addition_compatible(xrational(1, integer(50)), 5 * sqrt(2_x)), std::runtime_error);
 }
 
 TEST_CASE("__less_abs") {
@@ -267,51 +267,51 @@ TEST_CASE("__less_abs") {
 
     // with roots: compares abs(base) * sqrt(root)
     // (1/2)*sqrt(3) = 0.866..  <  (1/3)*sqrt(8) = 0.942..
-    REQUIRE(__less_abs(rational(1, 2), natural(3), rational(1, 3), natural(8)));
-    REQUIRE(!__less_abs(rational(1, 3), natural(8), rational(1, 2), natural(3)));
-    REQUIRE(__less_abs(rational(-1, 2), natural(3), rational(-1, 3), natural(8))); // signs ignored
-    REQUIRE(__less_abs(rational(1, 2), natural(3), rational(-1, 3), natural(8)));
+    REQUIRE(__less_abs(rational(1, 2), integer(3), rational(1, 3), integer(8)));
+    REQUIRE(!__less_abs(rational(1, 3), integer(8), rational(1, 2), integer(3)));
+    REQUIRE(__less_abs(rational(-1, 2), integer(3), rational(-1, 3), integer(8))); // signs ignored
+    REQUIRE(__less_abs(rational(1, 2), integer(3), rational(-1, 3), integer(8)));
 
     // equal values are not less than each other, even with different roots
-    REQUIRE(!__less_abs(rational(2), natural(2), rational(1), natural(8))); // 2*sqrt(2) == sqrt(8)
-    REQUIRE(!__less_abs(rational(1), natural(8), rational(2), natural(2)));
+    REQUIRE(!__less_abs(rational(2), integer(2), rational(1), integer(8))); // 2*sqrt(2) == sqrt(8)
+    REQUIRE(!__less_abs(rational(1), integer(8), rational(2), integer(2)));
 
     // equal bases: the larger root wins
-    REQUIRE(__less_abs(rational(3, 5), natural(2), rational(3, 5), natural(3)));
-    REQUIRE(!__less_abs(rational(3, 5), natural(3), rational(3, 5), natural(2)));
-    REQUIRE(__less_abs(rational(-3, 5), natural(2), rational(-3, 5), natural(3)));
+    REQUIRE(__less_abs(rational(3, 5), integer(2), rational(3, 5), integer(3)));
+    REQUIRE(!__less_abs(rational(3, 5), integer(3), rational(3, 5), integer(2)));
+    REQUIRE(__less_abs(rational(-3, 5), integer(2), rational(-3, 5), integer(3)));
 
     // equal roots: the larger base wins
-    REQUIRE(__less_abs(rational(1, 3), natural(7), rational(1, 2), natural(7)));
-    REQUIRE(!__less_abs(rational(1, 2), natural(7), rational(1, 3), natural(7)));
+    REQUIRE(__less_abs(rational(1, 3), integer(7), rational(1, 2), integer(7)));
+    REQUIRE(!__less_abs(rational(1, 2), integer(7), rational(1, 3), integer(7)));
 
     // zero is smaller than anything else
-    REQUIRE(__less_abs(rational(0), natural(1), rational(1, 1000000), natural(2)));
-    REQUIRE(!__less_abs(rational(1, 1000000), natural(2), rational(0), natural(1)));
+    REQUIRE(__less_abs(rational(0), integer(1), rational(1, 1000000), integer(2)));
+    REQUIRE(!__less_abs(rational(1, 1000000), integer(2), rational(0), integer(1)));
 
     // multi word operands: (2**200/3)*sqrt(2) = 0.471*2**200 > (2**199/7)*sqrt(3) = 0.124*2**200
-    const rational a(integer(natural(1) << 200), integer(3));
-    const rational b(integer(natural(1) << 199), integer(7));
-    REQUIRE(!__less_abs(a, natural(2), b, natural(3)));
-    REQUIRE(__less_abs(b, natural(3), a, natural(2)));
+    const rational a(integer(integer(1) << 200), integer(3));
+    const rational b(integer(integer(1) << 199), integer(7));
+    REQUIRE(!__less_abs(a, integer(2), b, integer(3)));
+    REQUIRE(__less_abs(b, integer(3), a, integer(2)));
 }
 
 TEST_CASE("__less") {
-    REQUIRE(__less(rational(-1), natural(2), rational(1), natural(2)));
-    REQUIRE(!__less(rational(1), natural(2), rational(-1), natural(2)));
+    REQUIRE(__less(rational(-1), integer(2), rational(1), integer(2)));
+    REQUIRE(!__less(rational(1), integer(2), rational(-1), integer(2)));
     // -sqrt(3) < -sqrt(2)
-    REQUIRE(__less(rational(-1), natural(3), rational(-1), natural(2)));
-    REQUIRE(!__less(rational(-1), natural(2), rational(-1), natural(3)));
+    REQUIRE(__less(rational(-1), integer(3), rational(-1), integer(2)));
+    REQUIRE(!__less(rational(-1), integer(2), rational(-1), integer(3)));
     // -2*sqrt(2) < -sqrt(3)
-    REQUIRE(__less(rational(-2), natural(2), rational(-1), natural(3)));
-    REQUIRE(!__less(rational(-1), natural(3), rational(-2), natural(2)));
+    REQUIRE(__less(rational(-2), integer(2), rational(-1), integer(3)));
+    REQUIRE(!__less(rational(-1), integer(3), rational(-2), integer(2)));
 
-    REQUIRE(__less(rational(0), natural(1), rational(1, 1000), natural(1)));
-    REQUIRE(__less(rational(-1, 1000), natural(1), rational(0), natural(1)));
-    REQUIRE(!__less(rational(0), natural(1), rational(0), natural(1)));
-    REQUIRE(!__less(rational(3), natural(5), rational(3), natural(5)));
-    REQUIRE(!__less(rational(2), natural(2), rational(1), natural(8))); // equal values
-    REQUIRE(!__less(rational(-2), natural(2), rational(-1), natural(8)));
+    REQUIRE(__less(rational(0), integer(1), rational(1, 1000), integer(1)));
+    REQUIRE(__less(rational(-1, 1000), integer(1), rational(0), integer(1)));
+    REQUIRE(!__less(rational(0), integer(1), rational(0), integer(1)));
+    REQUIRE(!__less(rational(3), integer(5), rational(3), integer(5)));
+    REQUIRE(!__less(rational(2), integer(2), rational(1), integer(8))); // equal values
+    REQUIRE(!__less(rational(-2), integer(2), rational(-1), integer(8)));
 }
 
 TEST_CASE("ordering") {
@@ -323,19 +323,19 @@ TEST_CASE("ordering") {
         xrational(-4/3_q),                  // -1.3333
         -1_x,                               // -1
         xrational(-1/2_q),                  // -0.5
-        -xrational(1/3_q, natural(2)),      // -0.4714
+        -xrational(1/3_q, integer(2)),      // -0.4714
         0_x,                                //  0
-        xrational(1/3_q, natural(2)),       //  0.4714
+        xrational(1/3_q, integer(2)),       //  0.4714
         xrational(1/2_q),                   //  0.5
-        xrational(1/2_q, natural(2)),       //  0.7071
+        xrational(1/2_q, integer(2)),       //  0.7071
         1_x,                                //  1
         sqrt(2_x),                          //  1.4142
         sqrt(3_x),                          //  1.7320
         2_x,                                //  2
         sqrt(5_x),                          //  2.2360
-        xrational(3/2_q, natural(5)),       //  3.3541
+        xrational(3/2_q, integer(5)),       //  3.3541
         5_x,                                //  5
-        xrational(1, natural(50)),          //  7.0710
+        xrational(1, integer(50)),          //  7.0710
     };
     for (size_t i = 0; i < v.size(); i++)
         for (size_t j = 0; j < v.size(); j++) {
@@ -377,9 +377,9 @@ TEST_CASE("compare with rational") {
     REQUIRE(0 < sqrt(2_x));
     REQUIRE(-sqrt(2_x) < 0);
     REQUIRE(!(sqrt(2_x) < sqrt(2_x)));
-    REQUIRE(xrational(1, natural(50)) == 5 * sqrt(2_x));
-    REQUIRE(!(xrational(1, natural(50)) < 5 * sqrt(2_x)));
-    REQUIRE(!(5 * sqrt(2_x) < xrational(1, natural(50))));
+    REQUIRE(xrational(1, integer(50)) == 5 * sqrt(2_x));
+    REQUIRE(!(xrational(1, integer(50)) < 5 * sqrt(2_x)));
+    REQUIRE(!(5 * sqrt(2_x) < xrational(1, integer(50))));
     REQUIRE(xrational(-7/3_q) < integer(-2));
     REQUIRE(xrational(-7/3_q) > integer(-3));
 }
@@ -387,8 +387,8 @@ TEST_CASE("compare with rational") {
 TEST_CASE("add sub with rationals") {
     REQUIRE(sqrt(2_x) + sqrt(2_x) == 2 * sqrt(2_x));
     REQUIRE((sqrt(2_x) - sqrt(2_x)).is_zero());
-    REQUIRE(xrational(3/2_q, natural(5)) + xrational(1/2_q, natural(5)) == 2 * sqrt(5_x));
-    REQUIRE(xrational(3/2_q, natural(5)) - xrational(1/2_q, natural(5)) == sqrt(5_x));
+    REQUIRE(xrational(3/2_q, integer(5)) + xrational(1/2_q, integer(5)) == 2 * sqrt(5_x));
+    REQUIRE(xrational(3/2_q, integer(5)) - xrational(1/2_q, integer(5)) == sqrt(5_x));
     REQUIRE(1_x + 2_x == 3);
     REQUIRE(1_x - 2_x == -1);
     REQUIRE(0_x + 0_x == 0);
@@ -404,10 +404,10 @@ TEST_CASE("add sub with rationals") {
     REQUIRE(2_x - integer(3) == -1);
 
     // roots that share a square factor can still be added
-    REQUIRE(xrational(1, natural(50)) + sqrt(2_x) == 6 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(50)) - sqrt(2_x) == 4 * sqrt(2_x));
-    REQUIRE(sqrt(2_x) - xrational(1, natural(50)) == -4 * sqrt(2_x));
-    REQUIRE(xrational(1, natural(98)) + xrational(1, natural(50)) == 12 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(50)) + sqrt(2_x) == 6 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(50)) - sqrt(2_x) == 4 * sqrt(2_x));
+    REQUIRE(sqrt(2_x) - xrational(1, integer(50)) == -4 * sqrt(2_x));
+    REQUIRE(xrational(1, integer(98)) + xrational(1, integer(50)) == 12 * sqrt(2_x));
 
     // otherwise adding is not possible within this type
     REQUIRE_THROWS_AS(sqrt(2_x) + 1, std::runtime_error);
@@ -420,8 +420,8 @@ TEST_CASE("add sub with rationals") {
     REQUIRE_THROWS_AS(sqrt(2_x) + 1/2_q, std::runtime_error);
 
     // identities
-    const xrational a(3/2_q, natural(5));
-    const xrational b(-1/7_q, natural(5));
+    const xrational a(3/2_q, integer(5));
+    const xrational b(-1/7_q, integer(5));
     REQUIRE(a + b == b + a);
     REQUIRE(a - b == -(b - a));
     REQUIRE((a + b) - b == a);
@@ -472,9 +472,9 @@ TEST_CASE("compound assignment with xrational") {
 
     // += and -= with a matching root, through the xrational overload
     xrational e = sqrt(3_x);
-    e += xrational(2, natural(3));
+    e += xrational(2, integer(3));
     REQUIRE(e == 3 * sqrt(3_x));
-    e -= xrational(2, natural(3));
+    e -= xrational(2, integer(3));
     REQUIRE(e == sqrt(3_x));
 }
 
@@ -493,7 +493,7 @@ TEST_CASE("assignment") {
     a = integer(-6);
     REQUIRE(a == -6);
 
-    const xrational b(3/2_q, natural(5));
+    const xrational b(3/2_q, integer(5));
     xrational c(b);
     REQUIRE(c == b);
     c = b;
@@ -511,19 +511,19 @@ TEST_CASE("multiply") {
     REQUIRE((-sqrt(2_x)) * (-sqrt(3_x)) == sqrt(6_x));
     REQUIRE(sqrt(2_x) * 0_x == 0);
     REQUIRE(sqrt(2_x) * 3 == 3 * sqrt(2_x));
-    REQUIRE(sqrt(2_x) * 1/2_q == xrational(1/2_q, natural(2)));
+    REQUIRE(sqrt(2_x) * 1/2_q == xrational(1/2_q, integer(2)));
     REQUIRE(sqrt(2_x) * integer(3) == 3 * sqrt(2_x));
     REQUIRE(2_x * 3_x == 6);
-    REQUIRE(xrational(3/2_q, natural(5)) * xrational(2/3_q, natural(5)) == 5);
-    REQUIRE(xrational(1/2_q, natural(2)) * xrational(1/3_q, natural(3)) == xrational(1/6_q, natural(6)));
+    REQUIRE(xrational(3/2_q, integer(5)) * xrational(2/3_q, integer(5)) == 5);
+    REQUIRE(xrational(1/2_q, integer(2)) * xrational(1/3_q, integer(3)) == xrational(1/6_q, integer(6)));
 
     // a * a and sqr(a) agree
-    for (const xrational& a : {sqrt(2_x), -sqrt(3_x), xrational(3/2_q, natural(5)), xrational(-2/7_q), 0_x, 1_x}) {
+    for (const xrational& a : {sqrt(2_x), -sqrt(3_x), xrational(3/2_q, integer(5)), xrational(-2/7_q), 0_x, 1_x}) {
         REQUIRE(a * a == sqr(a));
         REQUIRE(sqr(a) >= 0);
     }
     // associativity and commutativity
-    const xrational p = sqrt(2_x), q = xrational(3/2_q, natural(5)), r = xrational(-2/7_q);
+    const xrational p = sqrt(2_x), q = xrational(3/2_q, integer(5)), r = xrational(-2/7_q);
     REQUIRE(p * q == q * p);
     REQUIRE((p * q) * r == p * (q * r));
     REQUIRE(p * 1_x == p);
@@ -531,23 +531,23 @@ TEST_CASE("multiply") {
 
 TEST_CASE("divide") {
     REQUIRE(sqrt(6_x) / sqrt(2_x) == sqrt(3_x));
-    REQUIRE(sqrt(3_x) / sqrt(6_x) == xrational(1/2_q, natural(2)));
+    REQUIRE(sqrt(3_x) / sqrt(6_x) == xrational(1/2_q, integer(2)));
     REQUIRE(sqrt(2_x) / sqrt(2_x) == 1);
     REQUIRE(sqrt(8_x) / sqrt(2_x) == 2);
-    REQUIRE(sqrt(2_x) / 2 == xrational(1/2_q, natural(2)));
+    REQUIRE(sqrt(2_x) / 2 == xrational(1/2_q, integer(2)));
     REQUIRE(2 / sqrt(2_x) == sqrt(2_x));
     REQUIRE(1 / sqrt(2_x) * sqrt(2_x) == 1);
     REQUIRE(6_x / 3 == 2);
     REQUIRE(6_x / 4_q == 3/2_q);
     REQUIRE(0_x / sqrt(2_x) == 0);
-    REQUIRE(xrational(3/2_q, natural(5)) / xrational(1/2_q, natural(5)) == 3);
+    REQUIRE(xrational(3/2_q, integer(5)) / xrational(1/2_q, integer(5)) == 3);
     REQUIRE(sqrt(15_x) / sqrt(3_x) == sqrt(5_x));
     REQUIRE(-sqrt(6_x) / sqrt(2_x) == -sqrt(3_x));
     REQUIRE(sqrt(6_x) / (-sqrt(2_x)) == -sqrt(3_x));
 
     // (a / b) * b == a
-    const xrational a(3/2_q, natural(5));
-    for (const xrational& b : {sqrt(2_x), -sqrt(3_x), xrational(2/7_q), 1_x, xrational(1, natural(50))}) {
+    const xrational a(3/2_q, integer(5));
+    for (const xrational& b : {sqrt(2_x), -sqrt(3_x), xrational(2/7_q), 1_x, xrational(1, integer(50))}) {
         REQUIRE((a / b) * b == a);
         REQUIRE(a / b == a * (1 / b));
     }
@@ -568,8 +568,8 @@ TEST_CASE("sqrt and sqr") {
     REQUIRE(sqrt(1_x) == 1);
     REQUIRE(sqrt(9_x) == 3);
     REQUIRE(sqrt(50_x) == 5 * sqrt(2_x));
-    REQUIRE(sqrt(1/2_x) == xrational(1/2_q, natural(2)));
-    REQUIRE(sqrt(2/9_x) == xrational(1/3_q, natural(2)));
+    REQUIRE(sqrt(1/2_x) == xrational(1/2_q, integer(2)));
+    REQUIRE(sqrt(2/9_x) == xrational(1/3_q, integer(2)));
     REQUIRE(sqrt(1/4_x) == 1/2_q);
     REQUIRE(sqrt(9/16_x) == 3/4_q);
     REQUIRE_THROWS_AS(sqrt(-1_x), std::runtime_error);
@@ -578,10 +578,10 @@ TEST_CASE("sqrt and sqr") {
 
     REQUIRE(sqr(xrational(0)) == 0);
     REQUIRE(sqr(xrational(-3/2_q)) == 9/4_q);
-    REQUIRE(sqr(xrational(3/2_q, natural(5))) == 45/4_q);
-    REQUIRE(sqr(xrational(-3/2_q, natural(5))) == 45/4_q);
+    REQUIRE(sqr(xrational(3/2_q, integer(5))) == 45/4_q);
+    REQUIRE(sqr(xrational(-3/2_q, integer(5))) == 45/4_q);
     REQUIRE(sqr(sqrt(7_x)) == 7);
-    REQUIRE(sqr(xrational(1, natural(50))) == 50);
+    REQUIRE(sqr(xrational(1, integer(50))) == 50);
     REQUIRE(sqr(sqrt(2_x)).is_rational());
 }
 
@@ -604,20 +604,20 @@ TEST_CASE("pow") {
     REQUIRE(pow(2_x, -1) == 1/2_q);
     REQUIRE(pow(2_x, -2) == 1/4_q);
     REQUIRE(pow(sqrt(2_x), -2) == 1/2_q);
-    REQUIRE(pow(sqrt(2_x), -3) == xrational(1/4_q, natural(2)));
+    REQUIRE(pow(sqrt(2_x), -3) == xrational(1/4_q, integer(2)));
     REQUIRE(pow(-2_x, -3) == -1/8_q);
     REQUIRE(pow(3/2_x, -2) == 4/9_q);
 
     // pow(a, e + 1) == pow(a, e) * a
     for (int e = 0; e < 8; e++) {
         REQUIRE(pow(sqrt(2_x), e + 1) == pow(sqrt(2_x), e) * sqrt(2_x));
-        REQUIRE(pow(xrational(-3/2_q, natural(5)), e + 1) == pow(xrational(-3/2_q, natural(5)), e) * xrational(-3/2_q, natural(5)));
+        REQUIRE(pow(xrational(-3/2_q, integer(5)), e + 1) == pow(xrational(-3/2_q, integer(5)), e) * xrational(-3/2_q, integer(5)));
     }
 }
 
 TEST_CASE("shift") {
     REQUIRE((sqrt(2_x) << 3) == 8 * sqrt(2_x));
-    REQUIRE((sqrt(2_x) >> 1) == xrational(1/2_q, natural(2)));
+    REQUIRE((sqrt(2_x) >> 1) == xrational(1/2_q, integer(2)));
     REQUIRE((3_x << 2) == 12);
     REQUIRE((3_x >> 2) == 3/4_q);
     REQUIRE((-sqrt(2_x) << 1) == -2 * sqrt(2_x));
@@ -627,7 +627,7 @@ TEST_CASE("shift") {
     a <<= 2;
     REQUIRE(a == 4 * sqrt(5_x));
     a >>= 3;
-    REQUIRE(a == xrational(1/2_q, natural(5)));
+    REQUIRE(a == xrational(1/2_q, integer(5)));
 
     // shifting is multiplication/division by a power of two
     for (int i = 0; i < 4; i++) {
@@ -641,14 +641,14 @@ TEST_CASE("format of sqrt forms") {
     REQUIRE(format("{}", xrational(-3/2_q)) == "-3/2");
     REQUIRE(format("{}", sqrt(3_x)) == "sqrt(3)");
     REQUIRE(format("{}", sqrt(50_x)) == "5*sqrt(2)");
-    REQUIRE(format("{}", xrational(1, natural(50))) == "sqrt(50)");
-    REQUIRE(format("{}", xrational(-3/2_q, natural(2))) == "-3/2*sqrt(2)");
-    REQUIRE(format("{}", xrational(1/3_q, natural(5))) == "sqrt(5)/3");
-    REQUIRE(format("{}", xrational(-1/3_q, natural(5))) == "-sqrt(5)/3");
+    REQUIRE(format("{}", xrational(1, integer(50))) == "sqrt(50)");
+    REQUIRE(format("{}", xrational(-3/2_q, integer(2))) == "-3/2*sqrt(2)");
+    REQUIRE(format("{}", xrational(1/3_q, integer(5))) == "sqrt(5)/3");
+    REQUIRE(format("{}", xrational(-1/3_q, integer(5))) == "-sqrt(5)/3");
     REQUIRE(format("{}", -sqrt(2_x)) == "-1*sqrt(2)"); // generic form, base is an integer
     REQUIRE(format("{}", xrational(0)) == "0");
     REQUIRE(format("{}", 2_x * sqrt(2_x)) == "2*sqrt(2)");
-    REQUIRE(format("{}", xrational(1, natural(9))) == "3");
+    REQUIRE(format("{}", xrational(1, integer(9))) == "3");
 
     // the format specifier must be empty
     xrational one = 1_x;
@@ -656,23 +656,23 @@ TEST_CASE("format of sqrt forms") {
     REQUIRE(std::vformat("{}", std::make_format_args(one)) == "1");
 
     std::ostringstream os;
-    os << sqrt(2_x) << ' ' << xrational(-3/2_q) << ' ' << xrational(1/3_q, natural(5));
+    os << sqrt(2_x) << ' ' << xrational(-3/2_q) << ' ' << xrational(1/3_q, integer(5));
     REQUIRE(os.str() == "sqrt(2) -3/2 sqrt(5)/3");
 }
 
 TEST_CASE("hash") {
     std::hash<xrational> h;
     REQUIRE(h(sqrt(2_x)) == h(sqrt(2_x)));
-    REQUIRE(h(xrational(3/2_q, natural(5))) == h(xrational(3/2_q, natural(5))));
+    REQUIRE(h(xrational(3/2_q, integer(5))) == h(xrational(3/2_q, integer(5))));
     REQUIRE(h(sqrt(2_x)) != h(sqrt(3_x)));
     REQUIRE(h(sqrt(2_x)) != h(-sqrt(2_x)));
-    REQUIRE(h(xrational(1, natural(4))) == h(2_x)); // both simplify to the same value
+    REQUIRE(h(xrational(1, integer(4))) == h(2_x)); // both simplify to the same value
 
     std::unordered_map<xrational, int> m;
     m[sqrt(2_x)] = 1;
     m[sqrt(2_x)] += 1;
     m[sqrt(3_x)] = 3;
-    m[xrational(1, natural(4))] = 4;
+    m[xrational(1, integer(4))] = 4;
     REQUIRE(m.size() == 3);
     REQUIRE(m[sqrt(2_x)] == 2);
     REQUIRE(m[2_x] == 4);
