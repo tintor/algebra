@@ -90,6 +90,13 @@ constexpr std::vector<__Edge<T>> __cut_edges(const std::vector<__Edge<T>>& edges
 
 // Half the smallest positive t with `from + dir*t` on any of `edges`, or 1 when there is none.
 // Walking that far from `from` along `dir` cannot leave the face that `from` borders.
+//
+// An edge parallel to the ray is skipped, and that is safe rather than merely unlikely. The edges
+// come from closed rings, so the collinear ones the ray could slide along form a union of intervals
+// on its line, and the first point of that union the ray reaches is an endpoint of one of them. Some
+// edge ends there, and it cannot be collinear too -- if it were, the point would be interior to the
+// union rather than its first point -- so a non parallel edge attaches at exactly that distance and
+// is found by the general case below.
 template<typename T>
 constexpr T __safe_step(const std::vector<__Edge<T>>& edges, const Vec2<T>& from, const Vec2<T>& dir) {
     bool found = false;
@@ -97,11 +104,8 @@ constexpr T __safe_step(const std::vector<__Edge<T>>& edges, const Vec2<T>& from
     for (const __Edge<T>& e : edges) {
         // from + dir*t == e.a + (e.b - e.a)*s, for some s in [0, 1] and t > 0
         T t, s, det;
-        if (!__solve_linear<T>(from - e.a, dir, e.a - e.b, t, s, det)) {
-            if (det == 0)
-                continue; // parallel, so it either misses or overlaps and hits an endpoint anyway
-            continue;
-        }
+        if (!__solve_linear<T>(from - e.a, dir, e.a - e.b, t, s, det))
+            continue; // parallel to the ray, which the comment above covers
         if (det < 0) {
             negate(t);
             negate(s);
