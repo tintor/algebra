@@ -7,14 +7,13 @@ namespace algebra {
 struct rational;
 template<> struct IsNumberClass<rational> : std::true_type {};
 
-template<typename T> concept integral = std::same_as<T, integer> || std::same_as<T, natural> || std_int<T>;
+template<typename T> concept integral = std::same_as<T, integer> || std_int<T>;
 template<typename T> concept rational_like = integral<T> || std::same_as<T, rational>;
 
 struct rational {
     integer num, den;
 
     constexpr rational() : den(1) { }
-    constexpr rational(natural a) : num(std::move(a)), den(1) { }
     constexpr rational(integer a) : num(std::move(a)), den(1) { }
     constexpr rational(integer a, integer b) : num(std::move(a)), den(std::move(b)) { simplify(); }
 private:

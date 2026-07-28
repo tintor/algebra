@@ -4,8 +4,8 @@ load(":library.bzl", "library")
 cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main", ":kernels"])
 
 library("kernels",       hdrs = ["util.h", "types.h"])
-library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
-library("integer_class", deps = [":natural_class"])
+library("integer_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
+library("natural_class", deps = [":integer_class"])
 # natural_test.cc includes integer.h: the number theory functions it exercises live there now
 library("natural",       deps = [":integer_class"], test_deps = [":integer"])
 library("integer",       deps = [":natural"])

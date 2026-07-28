@@ -799,7 +799,6 @@ TEST_CASE("integer stores its value once") {
     // integer used to carry a second integer_backend alongside abs, copied on construction and
     // assignment but not maintained by the arithmetic. sizeof pins that it is gone, so a future
     // change cannot quietly reintroduce a duplicate buffer.
-    REQUIRE(sizeof(integer) == sizeof(natural));
     REQUIRE(sizeof(integer) == sizeof(integer_backend));
 
     // and the value still round trips through every mutating path that used to leave the copy stale
@@ -896,7 +895,7 @@ TEST_CASE("magnitude borrow restores the sign") {
 
     // the borrow is exception safe: the value is restored even when the operation throws
     integer d = 5;
-    REQUIRE_THROWS([&] { auto m = magnitude(d); *m -= 99u; }());
+    REQUIRE_THROWS([&] { auto m = magnitude(d); __abs_sub(*m, 99u); }());
     REQUIRE(d.words.size() <= 1);
 }
 

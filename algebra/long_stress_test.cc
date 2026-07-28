@@ -19,11 +19,10 @@ constexpr integer sample_integer(auto& rng) {
     return a;
 }
 
-constexpr natural sample_positive_natural(auto& rng) {
+constexpr integer sample_positive_natural(auto& rng) {
     int bits = std::uniform_int_distribution<int>(1, 64)(rng);
-    natural a;
-    a = abs(pow(integer(2), bits - 1)); // pow() returns an integer now
-    a |= uniform_sample_bits(bits - 1, rng);
+    // the sample is below the leading bit, so adding it is the same as a bitwise or
+    integer a = power_of_two(bits - 1) + uniform_sample_bits(bits - 1, rng);
     Check(a.num_bits() == bits);
     return a;
 }
