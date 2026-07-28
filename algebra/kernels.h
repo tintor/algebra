@@ -135,7 +135,7 @@ constexpr bool __less_a_bc_scalar(cwords a, cwords b, uint64_t c) {
     if (a_bits < bc_bits - 1)
         return true;
 
-    // A == B || A == B + 1
+    // the two are within one bit of each other, so compare them word by word
     int cmp = 0;
     uint128_t carry = 0;
     for (auto i = 0; i < b.size; i++) {

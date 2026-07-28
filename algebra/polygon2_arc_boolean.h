@@ -110,8 +110,11 @@ constexpr ArcRegion<T> operator~(const ArcRegion<T>& a) {
 // Area by subdivision, to a bound rather than exactly, since the exact area of a region with arc
 // edges involves r^2*(theta - sin theta)/2 and so is transcendental. Boxes fully inside or fully
 // outside settle immediately; the rest are split until `depth` runs out, and what is left straddling
-// the boundary is the uncertainty. Returns the lower bound and the amount still undecided, so
-// lower <= true area <= lower + undecided.
+// the boundary is the uncertainty.
+//
+// The test per box is five sample points, not a containment test, so a box whose samples all agree
+// is taken at their word. `lower` and `lower + undecided` are therefore a close estimate of the area
+// rather than a proven bound on it, and the caller's box has to contain the region.
 template<typename T>
 constexpr void area_bounds(const ArcRegion<T>& r, const Vec2<T>& min, const Vec2<T>& max, int depth,
                            T& lower, T& undecided) {

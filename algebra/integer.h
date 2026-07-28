@@ -785,15 +785,18 @@ constexpr void sub_mod(integer& a, const integer& b, const integer& m) {
     a -= b;
 }
 
-// assumes are a and b are in [0, m-1] range
+// assumes a and b are in [0, m-1] range
 // a = (a * b) % m
 constexpr void __mul_mod(integer& a, const integer& b, const integer& m) {
-    // This is simple and slow implementation, for testing.
+    // The whole double width product first, then one reduction. mul_mod() below is the one with the
+    // size aware paths, but pow_mod() and is_likely_prime() call this instead.
     a *= b;
     if (a >= m)
         a %= m;
 }
 
+// assumes a and b are in [0, m-1] range, the same as add_mod() and sub_mod() above: the doubling
+// loop at the bottom reduces with add_mod(), which needs its operands already reduced
 constexpr void mul_mod(const integer& a, const integer& b, const integer& m, integer& out) {
     if (a == 1 || b == 0) {
         out = b;
@@ -1209,7 +1212,7 @@ constexpr bool inverse_mod(const integer& a, const integer& m, integer& out) {
     return true;
 }
 
-// returns (n k) mod m
+// a = a mod b, in place, with the result in [0, abs(b)) as the other mod() overloads give
 constexpr void mod(integer& a, const integer& b) {
     const bool negative = a.is_negative();
     a.words.set_negative(false);
