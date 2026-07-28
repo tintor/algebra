@@ -172,6 +172,25 @@ TEST_CASE("pow uint64") {
     REQUIRE(algebra::pow(static_cast<uint64_t>(10), 19) == 10000000000000000000ull);
 }
 
+TEST_CASE("pow of a narrower unsigned") {
+    // the result type is uint64_t, so a narrower argument must not cap the arithmetic
+    REQUIRE(algebra::pow(static_cast<uint32_t>(100'000), 3) == 1'000'000'000'000'000ull);
+    REQUIRE(algebra::pow(static_cast<uint16_t>(10), 4) == 10'000);
+    REQUIRE(algebra::pow(static_cast<uint8_t>(3), 6) == 729);
+    REQUIRE(algebra::pow(static_cast<uint8_t>(2), 20) == 1'048'576); // the power of two path
+
+    // against repeated multiplication in 64 bits, for a narrow and a wide argument type
+    for (uint64_t base = 0; base < 40; base++)
+        for (unsigned e = 0; e < 12; e++) {
+            uint64_t r = 1;
+            for (unsigned i = 0; i < e; i++)
+                r *= base;
+            REQUIRE(algebra::pow(base, e) == r);
+            REQUIRE(algebra::pow(static_cast<uint32_t>(base), e) == r);
+            REQUIRE(algebra::pow(static_cast<uint16_t>(base), e) == r);
+        }
+}
+
 TEST_CASE("__add with zero carry into a full buffer") {
     uint64_t w[] = {1, 2};
     vnatural a {{w, 2}, 2}; // size == capacity
