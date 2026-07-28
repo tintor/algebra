@@ -495,8 +495,14 @@ constexpr integer pow(integer base, const integer& exp) {
     return result;
 }
 
+// b = the value truncated towards zero, so a negative value keeps its sign
 template<std::floating_point T>
 constexpr void round_to_zero(const T& a, integer& b) {
+    // frexp() leaves the exponent unspecified for these, and the cast of the mantissa below would
+    // be undefined as well
+    Check(!std::isnan(a), "round_to_zero() of nan");
+    Check(!std::isinf(a), "round_to_zero() of infinity");
+
     int exponent;
     auto mantissa = std::frexp(a, &exponent);
 
@@ -504,11 +510,16 @@ constexpr void round_to_zero(const T& a, integer& b) {
     auto m = std::ldexp(mantissa, bits);
     exponent -= bits;
 
-    if (m < 0)
+    const bool negative = m < 0;
+    if (negative)
         m = -m;
 
+    // the magnitude first, since a negative shift truncates the magnitude, which is what
+    // truncation towards zero means on either side of zero
     b = static_cast<uint64_t>(m);
     b <<= exponent;
+    if (negative)
+        b.negate();
 }
 
 // very fast, but only approximate for large A
@@ -683,7 +694,9 @@ constexpr integer iroot(const integer& a, uint32_t n) {
     // narrow it with a floating point estimate, but only after verifying each bound: the
     // estimate can land on either side of the root, and for small roots the window below
     // used to be empty, which left the true root outside the bracket
-    round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
+    const double estimate = std::pow(static_cast<double>(a), 1.0 / n);
+    if (std::isfinite(estimate)) // a value above ~1e308 has no double estimate to narrow with
+        round_to_zero(estimate, m);
     if (m > 1u) {
         const integer w = (m >> 19) + 2;
         integer lo = (m > w) ? (m - w) : integer(1);
