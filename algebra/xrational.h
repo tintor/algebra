@@ -215,8 +215,11 @@ constexpr xrational& operator*=(xrational& a, const rational_like auto& b) {
 }
 
 constexpr xrational operator/(const xrational& a, const xrational& b) {
-    if (&a == &b)
+    if (&a == &b) {
+        // the shortcut has to look at the value first: 0/0 is not 1
+        Check(!a.is_zero(), "division by zero");
         return xrational{rational{1}};
+    }
     if (a.root == b.root)
         return xrational{a.base / b.base};
 
