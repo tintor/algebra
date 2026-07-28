@@ -6,6 +6,11 @@ namespace algebra {
 struct integer;
 template<> struct IsNumberClass<integer> : std::true_type {};
 
+// The magnitude of an integer, as a natural. This is the only way to get at the magnitude as a
+// value, and it is what integer's own sign aware members build on -- calling a natural member on
+// abs(*this) reaches natural's implementation, not integer's, which is the point.
+constexpr natural abs(const integer& a);
+
 struct integer {
     // The whole value: the magnitude in the words, the sign in the sign of the size, which is how
     // integer_backend already stores it. Magnitude arithmetic goes through the cnatural/vnatural/
@@ -35,9 +40,6 @@ struct integer {
     constexpr bool is_odd() const { return low_word() % 2; }
     constexpr bool is_one() const { return words.size() == 1 && words[0] == 1 && sign() >= 0; }
     constexpr bool is_zero() const { return words.size() == 0; }
-
-    // TODO remove this and deprecate natural
-    constexpr natural to_natural() const { natural m; m.words = words; m.words.set_negative(false); return m; }
 
     constexpr bool is_int8() const {
         if (words.size() > 1)
@@ -159,7 +161,7 @@ struct integer {
         return 0;
     }
 
-    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + to_natural().str_size_upper_bound(base); }
+    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + abs(*this).str_size_upper_bound(base); }
     constexpr int str(char* buffer, int buffer_size, unsigned base = 10, bool upper = true) const {
         int result = 0;
         if (is_negative()) {
@@ -169,7 +171,7 @@ struct integer {
             *buffer++ = '-';
             result = 1;
         }
-        return result + to_natural().str(buffer, buffer_size, base, upper);
+        return result + abs(*this).str(buffer, buffer_size, base, upper);
     }
 
     constexpr std::string str(unsigned base = 10, bool upper = true) const {
@@ -184,7 +186,7 @@ struct integer {
 
     constexpr size_t popcount() const {
         if (!is_negative())
-            return to_natural().popcount();
+            return abs(*this).popcount();
 
         size_t c = 0;
         uint64_t carry = 1;
@@ -263,7 +265,7 @@ struct integer {
 
     template<std::floating_point T>
     constexpr operator T() const {
-        auto a = static_cast<T>(to_natural());
+        auto a = static_cast<T>(abs(*this));
         return (sign() < 0) ? -a : a;
     }
 
@@ -343,7 +345,7 @@ constexpr integer& __add(integer& a, std_int auto b) {
     }
     // here plus == a.is_negative(), so the result of the magnitude subtraction is
     // negative only for (a >= 0) - b
-    a = ub - static_cast<decltype(ub)>(a.to_natural());
+    a = ub - static_cast<decltype(ub)>(abs(a));
     if constexpr (!plus)
         a.negate();
     return a;
@@ -395,7 +397,7 @@ constexpr integer operator*(const integer& a, const integer& b) {
 
 constexpr integer operator*(const integer& a, const natural& b) {
     integer c;
-    c = a.to_natural() * b;
+    c = abs(a) * b;
     c.words.set_negative(a.is_negative());
     return c;
 }
@@ -428,11 +430,11 @@ constexpr integer& operator*=(integer& a, std_int auto b) {
 }
 
 constexpr std::string str(const integer& a) {
-    return a.is_negative() ? "-" + str(a.to_natural()) : str(a.to_natural());
+    return a.is_negative() ? "-" + str(abs(a)) : str(abs(a));
 }
 
 constexpr std::string stre(const integer& a) {
-    return a.is_negative() ? "-" + stre(a.to_natural()) : stre(a.to_natural());
+    return a.is_negative() ? "-" + stre(abs(a)) : stre(abs(a));
 }
 
 // The magnitude products, done on integer's own backend. These mirror natural's add_product and
@@ -569,8 +571,8 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
     const bool negative = a.is_negative() != b.is_negative();
     // Take the operand magnitudes before borrowing the outputs: quot or rem may be the same object
     // as a or b, and a borrow leaves the borrowed value's words empty while it is alive.
-    const natural an = a.to_natural();
-    const natural bn = b.to_natural();
+    const natural an = abs(a);
+    const natural bn = abs(b);
     {
         auto q = quot.magnitude();
         auto r = rem.magnitude();
@@ -598,7 +600,7 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
     }
     int64_t rem;
     {
-        const natural an = a.to_natural(); // quot may alias a, see div() above
+        const natural an = abs(a); // quot may alias a, see div() above
         auto q = quot.magnitude();
         rem = div(an, abs_unsigned(b), *q);
     }
@@ -608,7 +610,7 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
 }
 
 constexpr integer operator/(const integer& a, const std_int auto b) {
-    integer c = a.to_natural() / abs_unsigned(b);
+    integer c = abs(a) / abs_unsigned(b);
     c.words.set_negative(a.is_negative() != (b < 0));
     return c;
 }
@@ -658,10 +660,10 @@ constexpr integer mod(const integer& a, const integer& b) {
     // Note: mod() on the magnitudes would resolve back to this function, since natural
     // converts implicitly to integer. Call the natural kernel explicitly.
     natural r;
-    mod(a.to_natural(), b.to_natural(), /*out*/r);
+    mod(abs(a), abs(b), /*out*/r);
     if (a.is_negative() && !r.words.empty()) {
         // result is in [0, abs(b)) range
-        natural e = b.to_natural();
+        natural e = abs(b);
         e -= r;
         return e;
     }
@@ -669,7 +671,7 @@ constexpr integer mod(const integer& a, const integer& b) {
 }
 
 constexpr uint64_t mod(const integer& a, uint64_t b) {
-    uint64_t m = a.to_natural() % b;
+    uint64_t m = abs(a) % b;
     return (a.is_negative() && m) ? (b - m) : m;
 }
 
@@ -729,6 +731,8 @@ constexpr void operator<<=(integer& a, int64_t i) {
 }
 
 ALGEBRA_SHIFT_OP(integer)
+
+constexpr natural abs(const integer& a) { natural m; m.words = a.words; m.words.set_negative(false); return m; }
 
 static_assert(sizeof(integer) == 16);
 
