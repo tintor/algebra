@@ -19,7 +19,7 @@ constexpr integer sample_integer(auto& rng) {
     return a;
 }
 
-constexpr integer sample_positive_natural(auto& rng) {
+constexpr integer sample_positive_integer(auto& rng) {
     int bits = std::uniform_int_distribution<int>(1, 64)(rng);
     // the sample is below the leading bit, so adding it is the same as a bitwise or
     integer a = power_of_two(bits - 1) + uniform_sample_bits(bits - 1, rng);
@@ -28,7 +28,7 @@ constexpr integer sample_positive_natural(auto& rng) {
 }
 
 constexpr rational sample_rational(auto& rng) {
-    return {sample_integer(rng), sample_positive_natural(rng)};
+    return {sample_integer(rng), sample_positive_integer(rng)};
 }
 
 template<int B>

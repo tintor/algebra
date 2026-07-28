@@ -18,7 +18,7 @@ TEST_CASE("div test") {
     REQUIRE(r < b);
 }
 
-integer rand_natural(int min_size, int max_size, Random& rng) {
+integer rand_integer(int min_size, int max_size, Random& rng) {
     integer a;
     a.words.reset(rng.Uniform<int>(min_size, max_size));
     for (int i = 0; i < a.words.size(); i++)
@@ -26,13 +26,13 @@ integer rand_natural(int min_size, int max_size, Random& rng) {
     return a;
 }
 
-void rand_natural(integer& a, int min_size, int max_size, Random& rng) {
+void rand_integer(integer& a, int min_size, int max_size, Random& rng) {
     a.words.reset(rng.Uniform<int>(min_size, max_size));
     for (int i = 0; i < a.words.size(); i++)
         a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
 }
 
-integer rand_natural(int size, Random& rng) {
+integer rand_integer(int size, Random& rng) {
     integer a;
     a.words.reset(size);
     for (int i = 0; i < size; i++)
@@ -45,68 +45,68 @@ TEST_CASE("mul benchmark") {
     Random rng(1);
     integer a, b;
 
-    a = rand_natural(4, rng);
-    b = rand_natural(4, rng);
+    a = rand_integer(4, rng);
+    b = rand_integer(4, rng);
     BENCHMARK("a * b 4") { return a * b; };
     BENCHMARK("karatsuba 4") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(8, rng);
-    b = rand_natural(8, rng);
+    a = rand_integer(8, rng);
+    b = rand_integer(8, rng);
     BENCHMARK("a * b 8") { return a * b; };
     BENCHMARK("karatsuba 8") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(16, rng);
-    b = rand_natural(16, rng);
+    a = rand_integer(16, rng);
+    b = rand_integer(16, rng);
     BENCHMARK("a * b 16") { return a * b; };
     BENCHMARK("karatsuba 16") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(32, rng);
-    b = rand_natural(32, rng);
+    a = rand_integer(32, rng);
+    b = rand_integer(32, rng);
     BENCHMARK("a * b 32") { return a * b; };
     BENCHMARK("karatsuba 32") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(64, rng);
-    b = rand_natural(64, rng);
+    a = rand_integer(64, rng);
+    b = rand_integer(64, rng);
     BENCHMARK("a * b 64") { return a * b; };
     BENCHMARK("karatsuba 64") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(128, rng);
-    b = rand_natural(128, rng);
+    a = rand_integer(128, rng);
+    b = rand_integer(128, rng);
     BENCHMARK("a * b 128") { return a * b; };
     BENCHMARK("karatsuba 128") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(256, rng);
-    b = rand_natural(256, rng);
+    a = rand_integer(256, rng);
+    b = rand_integer(256, rng);
     BENCHMARK("a * b 256") { return a * b; };
     BENCHMARK("karatsuba 256") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(512, rng);
-    b = rand_natural(512, rng);
+    a = rand_integer(512, rng);
+    b = rand_integer(512, rng);
     BENCHMARK("a * b 512") { return a * b; };
     BENCHMARK("karatsuba 512") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(1024, rng);
-    b = rand_natural(1024, rng);
+    a = rand_integer(1024, rng);
+    b = rand_integer(1024, rng);
     BENCHMARK("a * b 1024") { return a * b; };
     BENCHMARK("karatsuba 1024") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(2048, rng);
-    b = rand_natural(2048, rng);
+    a = rand_integer(2048, rng);
+    b = rand_integer(2048, rng);
     BENCHMARK("a * b 2048") { return a * b; };
     BENCHMARK("karatsuba 2048") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(4096, rng);
-    b = rand_natural(4096, rng);
+    a = rand_integer(4096, rng);
+    b = rand_integer(4096, rng);
     BENCHMARK("a * b 4096") { return a * b; };
     BENCHMARK("karatsuba 4096") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(8192, rng);
-    b = rand_natural(8192, rng);
+    a = rand_integer(8192, rng);
+    b = rand_integer(8192, rng);
     BENCHMARK("a * b 8192") { return a * b; };
     BENCHMARK("karatsuba 8192") { return mul_karatsuba(a, b); };
 
-    a = rand_natural(16384, rng);
-    b = rand_natural(16384, rng);
+    a = rand_integer(16384, rng);
+    b = rand_integer(16384, rng);
     BENCHMARK("a * b 16384") { return a * b; };
     BENCHMARK("karatsuba 16384") { return mul_karatsuba(a, b); };
 }
@@ -149,8 +149,8 @@ TEST_CASE("mul_karatsuba ones") {
 TEST_CASE("mul_karatsuba 4") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_natural(4, rng);
-        integer b = rand_natural(4, rng);
+        integer a = rand_integer(4, rng);
+        integer b = rand_integer(4, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -158,8 +158,8 @@ TEST_CASE("mul_karatsuba 4") {
 TEST_CASE("mul_karatsuba 8") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_natural(8, rng);
-        integer b = rand_natural(8, rng);
+        integer a = rand_integer(8, rng);
+        integer b = rand_integer(8, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -167,8 +167,8 @@ TEST_CASE("mul_karatsuba 8") {
 TEST_CASE("mul_karatsuba 16") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_natural(16, rng);
-        integer b = rand_natural(16, rng);
+        integer a = rand_integer(16, rng);
+        integer b = rand_integer(16, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -176,8 +176,8 @@ TEST_CASE("mul_karatsuba 16") {
 TEST_CASE("mul_karatsuba 32") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_natural(32, rng);
-        integer b = rand_natural(32, rng);
+        integer a = rand_integer(32, rng);
+        integer b = rand_integer(32, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -185,8 +185,8 @@ TEST_CASE("mul_karatsuba 32") {
 TEST_CASE("mul_karatsuba 64") {
     Random rng(0);
     for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_natural(64, rng);
-        integer b = rand_natural(64, rng);
+        integer a = rand_integer(64, rng);
+        integer b = rand_integer(64, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -194,8 +194,8 @@ TEST_CASE("mul_karatsuba 64") {
 TEST_CASE("mul_karatsuba 128") {
     Random rng(0);
     for (int i = 0; i < 5'000'000; i++) {
-        integer a = rand_natural(128, rng);
-        integer b = rand_natural(128, rng);
+        integer a = rand_integer(128, rng);
+        integer b = rand_integer(128, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -203,8 +203,8 @@ TEST_CASE("mul_karatsuba 128") {
 TEST_CASE("mul_karatsuba 256") {
     Random rng(0);
     for (int i = 0; i < 2'500'000; i++) {
-        integer a = rand_natural(256, rng);
-        integer b = rand_natural(256, rng);
+        integer a = rand_integer(256, rng);
+        integer b = rand_integer(256, rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -212,8 +212,8 @@ TEST_CASE("mul_karatsuba 256") {
 TEST_CASE("mul_karatsuba general") {
     Random rng(0);
     for (int i = 0; i < 1'000'000; i++) {
-        integer a = rand_natural(rng.Uniform<int>(0, 512), rng);
-        integer b = rand_natural(rng.Uniform<int>(0, 512), rng);
+        integer a = rand_integer(rng.Uniform<int>(0, 512), rng);
+        integer b = rand_integer(rng.Uniform<int>(0, 512), rng);
         REQUIRE(a * b == mul_karatsuba(a, b));
     }
 }
@@ -223,8 +223,8 @@ TEST_CASE("__less_a_bc_scalar") {
     Random rng(555);
     integer a, b;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 2, rng);
-        rand_natural(b, 1, 1, rng);
+        rand_integer(a, 1, 2, rng);
+        rand_integer(b, 1, 1, rng);
         uint64_t c = rng.Uniform<uint64_t>(0, UINT64_MAX);
         REQUIRE(__less_a_bc_scalar(a, b, c) == (a < b * c));
     }
@@ -234,9 +234,9 @@ TEST_CASE("__less_a_bc") {
     Random rng(666);
     integer a, b, c;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 10, rng);
-        rand_natural(b, 1, 5, rng);
-        rand_natural(c, 1, 5, rng);
+        rand_integer(a, 1, 10, rng);
+        rand_integer(b, 1, 5, rng);
+        rand_integer(c, 1, 5, rng);
         REQUIRE(__less_a_bc(a, b, c) == a < b * c);
     }
 }
@@ -245,9 +245,9 @@ TEST_CASE("__less_ab_c") {
     Random rng(999);
     integer a, b, c;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 5, rng);
-        rand_natural(b, 1, 5, rng);
-        rand_natural(c, 1, 10, rng);
+        rand_integer(a, 1, 5, rng);
+        rand_integer(b, 1, 5, rng);
+        rand_integer(c, 1, 10, rng);
         REQUIRE(__less_ab_c(a, b, c) == a * b < c);
     }
 }
@@ -256,10 +256,10 @@ TEST_CASE("__less_ab_cd") {
     Random rng(888);
     integer a, b, c, d;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 5, rng);
-        rand_natural(b, 1, 5, rng);
-        rand_natural(c, 1, 5, rng);
-        rand_natural(d, 1, 5, rng);
+        rand_integer(a, 1, 5, rng);
+        rand_integer(b, 1, 5, rng);
+        rand_integer(c, 1, 5, rng);
+        rand_integer(d, 1, 5, rng);
         REQUIRE(__less_ab_cd(a, b, c, d) == a * b < c * d);
     }
 }
@@ -274,10 +274,10 @@ TEST_CASE("__det_ab_cd") {
     Random rng(777);
     integer a, b, c, d;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 5, rng);
-        rand_natural(b, 1, 5, rng);
-        rand_natural(c, 1, 5, rng);
-        rand_natural(d, 1, 5, rng);
+        rand_integer(a, 1, 5, rng);
+        rand_integer(b, 1, 5, rng);
+        rand_integer(c, 1, 5, rng);
+        rand_integer(d, 1, 5, rng);
         REQUIRE(__det_ab_cd(a, b, c, d) == signum(a * b, c * d));
     }
 }
@@ -286,8 +286,8 @@ TEST_CASE("__saturated_div") {
     Random rng(0);
     integer a, b;
     for (int i = 0; i < 1000'000; i++) {
-        rand_natural(a, 1, 10, rng);
-        rand_natural(b, 1, 10, rng);
+        rand_integer(a, 1, 10, rng);
+        rand_integer(b, 1, 10, rng);
         REQUIRE(a * b == b * a);
         const uint64_t q = __saturated_div(b, a);
         REQUIRE(a * q <= b);
@@ -616,9 +616,9 @@ TEST_CASE("div10 stress with ucent 2") {
 TEST_CASE("stress + and -") {
     Random rng(0);
     for (int i = 0; i < 1000'000; i++) {
-        const integer a = rand_natural(rng.Uniform<int>(1, 10), rng);
-        const integer b = rand_natural(rng.Uniform<int>(1, 10), rng);
-        const integer c = rand_natural(rng.Uniform<int>(1, 10), rng);
+        const integer a = rand_integer(rng.Uniform<int>(1, 10), rng);
+        const integer b = rand_integer(rng.Uniform<int>(1, 10), rng);
+        const integer c = rand_integer(rng.Uniform<int>(1, 10), rng);
 
         const integer sab = a + b;
         const integer sac = a + c;
@@ -642,7 +642,7 @@ TEST_CASE("stress + and -") {
 TEST_CASE("stress a += a") {
     Random rng(0);
     for (int i = 0; i < 1000'000; i++) {
-        const integer a = rand_natural(rng.Uniform<int>(1, 10), rng);
+        const integer a = rand_integer(rng.Uniform<int>(1, 10), rng);
         integer m = a;
         m += m;
         REQUIRE(m == a + a);
@@ -663,8 +663,8 @@ integer safe_mul(const integer& a, const integer& b) {
 TEST_CASE("stress mul") {
     Random rng(0);
     for (int i = 0; i < 1000'000; i++) {
-        const integer a = rand_natural(rng.Uniform<int>(1, 5), rng);
-        const integer b = rand_natural(rng.Uniform<int>(1, 5), rng);
+        const integer a = rand_integer(rng.Uniform<int>(1, 5), rng);
+        const integer b = rand_integer(rng.Uniform<int>(1, 5), rng);
         const integer ab = safe_mul(a, b);
 
         integer c;
@@ -697,7 +697,7 @@ TEST_CASE("square") {
 TEST_CASE("stress square in-place") {
     Random rng(0);
     for (int i = 0; i < 100'000; i++) {
-        integer a = rand_natural(rng.Uniform<int>(1, 5), rng);
+        integer a = rand_integer(rng.Uniform<int>(1, 5), rng);
         integer m = a;
         square(m);
         REQUIRE(m == a * a);
@@ -707,9 +707,9 @@ TEST_CASE("stress square in-place") {
 TEST_CASE("stress div with remainder") {
     Random rng(10);
     for (int i = 0; i < 100'000; i++) {
-        const integer a = rand_natural(rng.Uniform<int>(2, 10), rng);
+        const integer a = rand_integer(rng.Uniform<int>(2, 10), rng);
 
-        const integer b = rand_natural(rng.Uniform<int>(1, 5), rng);
+        const integer b = rand_integer(rng.Uniform<int>(1, 5), rng);
         integer quot, rem;
         div(a, b, quot, rem);
         REQUIRE(rem < b);
@@ -722,7 +722,7 @@ TEST_CASE("stress div with remainder") {
     }
 }
 
-// TODO randomized long division test against cpp_int for big naturals!
+// TODO randomized long division test against cpp_int for big integers!
 
 TEST_CASE("is_x") {
     integer z = 0;
@@ -885,8 +885,8 @@ TEST_CASE("sub_product scalar") {
 TEST_CASE("add/sub_product scalar stress") {
     Random rng(31231);
     for (int i = 0; i < 500'000; i++) {
-        integer a = rand_natural(1, 8, rng);
-        integer b = rand_natural(1, 4, rng);
+        integer a = rand_integer(1, 8, rng);
+        integer b = rand_integer(1, 4, rng);
         uint64_t d = rng.Uniform<uint64_t>(0, INT64_MAX);
         integer e;
 
@@ -915,9 +915,9 @@ TEST_CASE("add/sub_product scalar stress") {
 TEST_CASE("add/sub_product stress") {
     Random rng(31231);
     for (int i = 0; i < 1000'000; i++) {
-        integer a = rand_natural(1, 8, rng);
-        integer b = rand_natural(1, 4, rng);
-        integer c = rand_natural(1, 4, rng);
+        integer a = rand_integer(1, 8, rng);
+        integer b = rand_integer(1, 4, rng);
+        integer c = rand_integer(1, 4, rng);
         integer e;
 
         e = a;
@@ -1053,8 +1053,8 @@ TEST_CASE("divide_bz matches div") {
     // small / trivial cases
     for (auto [an, dn] : {std::pair{1, 1}, {2, 1}, {5, 3}, {9, 4}, {20, 8}, {33, 8}, {40, 16}, {64, 9}, {17, 17}, {18, 17}}) {
         for (int rep = 0; rep < 8; rep++) {
-            integer a = rand_natural(an, an, rng);
-            integer d = rand_natural(dn, dn, rng);
+            integer a = rand_integer(an, an, rng);
+            integer d = rand_integer(dn, dn, rng);
             if (!d)
                 continue;
             div(a, d, q1, r1);
@@ -1068,8 +1068,8 @@ TEST_CASE("divide_bz matches div") {
 
     // random sizes
     for (int rep = 0; rep < 60; rep++) {
-        integer a = rand_natural(1, 60, rng);
-        integer d = rand_natural(1, 30, rng);
+        integer a = rand_integer(1, 60, rng);
+        integer d = rand_integer(1, 30, rng);
         if (!d)
             continue;
         div(a, d, q1, r1);
@@ -1079,7 +1079,7 @@ TEST_CASE("divide_bz matches div") {
     }
 
     // divisor with a single top bit set (shift == 0 path) and with a low top bit
-    integer a = rand_natural(40, 40, rng);
+    integer a = rand_integer(40, 40, rng);
     integer d = 1;
     d <<= 64 * 8;
     divide_bz(a, d, q2, r2);
@@ -1087,7 +1087,7 @@ TEST_CASE("divide_bz matches div") {
     REQUIRE(q1 == q2);
     REQUIRE(r1 == r2);
 
-    d = rand_natural(8, 8, rng);
+    d = rand_integer(8, 8, rng);
     d.words.back() = 1; // maximal normalization shift
     divide_bz(a, d, q2, r2);
     div(a, d, q1, r1);
@@ -1096,8 +1096,8 @@ TEST_CASE("divide_bz matches div") {
 
     // deeper recursion
     for (auto [an, dn] : {std::pair{200, 40}, {130, 32}, {300, 64}}) {
-        integer aa = rand_natural(an, an, rng);
-        integer dd = rand_natural(dn, dn, rng);
+        integer aa = rand_integer(an, an, rng);
+        integer dd = rand_integer(dn, dn, rng);
         div(aa, dd, q1, r1);
         divide_bz(aa, dd, q2, r2);
         REQUIRE(q1 == q2);
@@ -1252,12 +1252,12 @@ TEST_CASE("str matches digit at a time conversion") {
 
     Random rng(21);
     for (int i = 0; i < 100; i++) {
-        const integer a = rand_natural(1, 12, rng);
+        const integer a = rand_integer(1, 12, rng);
         for (unsigned base : {2u, 3u, 7u, 8u, 10u, 15u, 16u})
             REQUIRE(a.str(base) == ref_str(a, base));
     }
     for (int i = 0; i < 5; i++) {
-        const integer a = rand_natural(60, 80, rng);
+        const integer a = rand_integer(60, 80, rng);
         REQUIRE(a.str() == ref_str(a, 10));
         REQUIRE(a.str(7) == ref_str(a, 7));
     }
@@ -1287,8 +1287,8 @@ TEST_CASE("bitwise and with operands of different size") {
 
     Random rng(31);
     for (int i = 0; i < 100; i++) {
-        const integer x = rand_natural(1, 8, rng);
-        const integer y = rand_natural(1, 8, rng);
+        const integer x = rand_integer(1, 8, rng);
+        const integer y = rand_integer(1, 8, rng);
         integer z = x;
         __abs_and(z, y);
         REQUIRE(z == __abs_and_copy(x, y));
@@ -1380,7 +1380,7 @@ TEST_CASE("square matches multiplication") {
     Random rng(41);
     for (int size = 1; size <= 40; size++) {
         for (int rep = 0; rep < 3; rep++) {
-            const integer a = rand_natural(size, size, rng);
+            const integer a = rand_integer(size, size, rng);
             integer x = a;
             square(x);
             REQUIRE(x == a * a);
@@ -1398,7 +1398,7 @@ TEST_CASE("square matches multiplication") {
     }
 
     // in place multiplication of a value with itself goes through square()
-    integer b = rand_natural(9, 9, rng);
+    integer b = rand_integer(9, 9, rng);
     integer c = b;
     mul(c, c);
     REQUIRE(c == b * b);
