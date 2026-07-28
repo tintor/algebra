@@ -431,6 +431,27 @@ TEST_CASE("add sub with rationals") {
     REQUIRE(a - 0_x == a);
 }
 
+TEST_CASE("division by zero") {
+    xrational z = rational(0);
+    xrational a = rational(3);
+    const xrational s = sqrt(2_x);
+
+    // the same object on both sides used to shortcut to 1 before looking at the value
+    REQUIRE_THROWS_AS(z / z, std::runtime_error);
+    REQUIRE_THROWS_AS(a / z, std::runtime_error);
+    REQUIRE_THROWS_AS(s / z, std::runtime_error);
+    REQUIRE_THROWS_AS(a / rational(0), std::runtime_error);
+    REQUIRE_THROWS_AS(rational(1) / z, std::runtime_error);
+    REQUIRE_THROWS_AS(z.invert(), std::runtime_error);
+    xrational b = a;
+    REQUIRE_THROWS_AS(b /= z, std::runtime_error);
+
+    // a non-zero value divided by itself is still one, by either path
+    REQUIRE(a / a == 1);
+    REQUIRE(s / s == 1);
+    REQUIRE(a / xrational(rational(3)) == 1);
+}
+
 TEST_CASE("compound assignment with xrational") {
     xrational a = sqrt(5_x);
     a += sqrt(5_x);
