@@ -39,6 +39,9 @@ constexpr integer uniform_sample_bits(const size_t n, auto& rng) {
 // uniformly sample from [0, count-1]
 constexpr void uniform_sample(const integer& count, auto& rng, integer& out) {
     Check(!count.is_negative(), "uniform_sample() with a negative count");
+    // [0, count) is empty for a zero count. The fast path below would ask for a distribution over
+    // [0, count - 1], where the subtraction wraps to the whole 64-bit range.
+    Check(!count.is_zero(), "uniform_sample() with a zero count");
     if (count.is_uint64()) {
         out = std::uniform_int_distribution<uint64_t>(0, static_cast<uint64_t>(count) - 1)(rng);
         return;
