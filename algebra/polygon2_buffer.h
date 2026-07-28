@@ -85,11 +85,12 @@ constexpr Ring2<T> polygon_element(const T& r, int sides) {
     return convex_hull(pts);
 }
 
+// -B, which is what eroding by B needs. Negating every vertex is a rotation by half a turn, so the
+// orientation carries over on its own; reversing the ring as well used to flip it.
 template<typename T>
 constexpr Ring2<T> reflect(Ring2<T> a) {
     for (Vec2<T>& p : a)
         p = Vec2<T>{-p.x, -p.y};
-    std::reverse(a.begin(), a.end()); // keep the orientation
     return a;
 }
 
