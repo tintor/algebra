@@ -471,6 +471,21 @@ TEST_CASE("uniform_sample") {
     }
 }
 
+TEST_CASE("uniform_sample of an empty range") {
+    std::mt19937_64 rng(0);
+    // [0, count) with count == 0 is empty. The uint64 fast path built a distribution over
+    // [0, count - 1], which wrapped to the whole 64-bit range and returned an arbitrary value.
+    REQUIRE_THROWS(uniform_sample(0_i, rng));
+    REQUIRE_THROWS(uniform_sample(integer(-1), rng));
+
+    // one is the smallest count with something in it
+    REQUIRE(uniform_sample(1_i, rng) == 0);
+
+    // min == max is a single value, and an inverted range is an error
+    REQUIRE(uniform_sample(5_i, 5_i, rng) == 5);
+    REQUIRE_THROWS(uniform_sample(6_i, 5_i, rng));
+}
+
 TEST_CASE("uniform_sample2") {
     integer a = 999'999'999'999'999'999'999'999'999'999'999'999_i;
     integer b = 500'000'000'000'000'000'000'000'000'000'000'000_i;
