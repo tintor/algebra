@@ -1154,7 +1154,14 @@ constexpr void mul_karatsuba(const integer& a, const integer& b, integer& q) {
     if (std::min(A, B) <= 2 || std::max(A, B) < KARATSUBA_LIMIT) {
         __add_product(vq, static_cast<cwords>(a), static_cast<cwords>(b));
     } else {
-        const int W = 4 * std::max(A, B);
+        // Scratch for the recursion. At a level with operands of n words it reserves r (about n+3
+        // words) and p (about n), then recurses on halves, so W(n) <= 2n + 3 + W(n/2 + 1). Summing
+        // the geometric series gives 4n, and the +3 and the +1 per level add another 7 per level,
+        // i.e. 7*log2(n). The measured peak stays just under 4n -- 13 words to spare at n = 31749 --
+        // so the log term is the margin that keeps it there, and __mul_karatsuba_rec() checks the
+        // end of the buffer besides.
+        const int n = std::max(A, B);
+        const int W = 4 * n + 8 * num_bits(static_cast<uint64_t>(n));
         if (W <= 1024) {
             uint64_t w[1024];
             __mul_karatsuba_rec(a, b, vq, w, w + W);

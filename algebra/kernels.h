@@ -721,7 +721,7 @@ constexpr int KARATSUBA_LIMIT = 32;
 constexpr int BZ_BASE_CASE_SIZE = 8;
 
 // long mul  16384               takes 235/230ms*
-// karatsuba 16384 with 8 limit  takes ****ms (fails, likely due to small W buffer size)
+// karatsuba 16384 with 8 limit  used to fail; the guess was right, the scratch buffer was too small
 // karatsuba 16384 with 16 limit takes  33ms* (regresses size 16 compared to long mul)
 // karatsuba 16384 with 32 limit takes  26ms*
 // karatsuba 16384 with 64 limit takes  26ms*
