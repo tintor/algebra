@@ -13,7 +13,7 @@ constexpr integer sample_integer(auto& rng) {
 
     integer a;
     {
-        auto m = a.magnitude();
+        auto m = magnitude(a);
         *m = pow(2_n, bits - 1);
         *m |= uniform_sample_bits(bits - 1, rng);
         Check(m->num_bits() == bits);

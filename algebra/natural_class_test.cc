@@ -1164,26 +1164,30 @@ TEST_CASE("move assignment does not leak") {
     REQUIRE(g_array_allocs == before);
 }
 
-TEST_CASE("subtraction below zero throws") {
-    REQUIRE_THROWS(natural(3) - natural(5));
-    REQUIRE_THROWS(natural(3) - 5u);
-    REQUIRE_THROWS(natural(3) - static_cast<uint64_t>(5));
-    REQUIRE_THROWS(3u - natural(5));
-    REQUIRE_THROWS(static_cast<uint128_t>(3) - natural(5));
-    REQUIRE_THROWS((natural(1) << 64) - (natural(1) << 65));
-    REQUIRE_THROWS(natural(0) - 1u);
-
-    natural a = 1;
-    a <<= 100;
-    REQUIRE_THROWS((static_cast<uint128_t>(1) << 90) - a);
+// natural is a typedef for integer, so a subtraction that used to be rejected now yields a
+// negative result. Only the magnitude level helpers still refuse to go below zero.
+TEST_CASE("subtraction below zero is signed") {
+    REQUIRE(natural(3) - natural(5) == -2);
+    REQUIRE(natural(3) - 5u == -2);
+    REQUIRE(natural(3) - static_cast<uint64_t>(5) == -2);
+    REQUIRE(3u - natural(5) == -2);
+    REQUIRE((natural(1) << 64) - (natural(1) << 65) == -(natural(1) << 64));
+    REQUIRE(natural(0) - 1u == -1);
 
     {
         natural b = 5;
-        REQUIRE_THROWS(b -= natural(6));
+        b -= natural(6);
+        REQUIRE(b == -1);
     }
     {
         natural b = 5;
-        REQUIRE_THROWS(b -= static_cast<uint64_t>(6));
+        b -= static_cast<uint64_t>(6);
+        REQUIRE(b == -1);
+    }
+    // the magnitude level subtraction still refuses
+    {
+        natural b = 5;
+        REQUIRE_THROWS([&] { auto m = magnitude(b); __mag_sub(*m, 6u); }());
     }
 
     // valid subtractions keep working
@@ -1298,11 +1302,14 @@ TEST_CASE("sub_product rejects a violated precondition") {
     b <<= 200;
     natural c = 3;
 
+    // sub_product is now the sign aware one, so an underflow yields a negative result
     natural a = 5; // much smaller than b * c
-    REQUIRE_THROWS(sub_product(a, b, c));
+    sub_product(a, b, c);
+    REQUIRE(a == natural(5) - b * c);
 
     natural a2 = 5;
-    REQUIRE_THROWS(sub_product(a2, b, static_cast<uint64_t>(7)));
+    sub_product(a2, b, static_cast<uint64_t>(7));
+    REQUIRE(a2 == natural(5) - b * 7u);
 
     // valid uses keep working
     natural d = b * c;
@@ -1396,16 +1403,15 @@ TEST_CASE("square matches multiplication") {
     REQUIRE(c == b * b);
 }
 
-TEST_CASE("operator~ normalizes") {
+// operator~ is integer's -(a+1). Flipping the words of a magnitude is invert_bits() now.
+TEST_CASE("operator~ is the arithmetic complement") {
     natural a = UINT64_MAX;
-    natural b = ~a;
-    REQUIRE(b.words.size() == 0);
-    REQUIRE(b == 0u);
-    REQUIRE(!b);
+    REQUIRE(~a == -(a + 1u));
+    REQUIRE(~natural(0) == -1);
+    REQUIRE(~~a == a);
 
     natural d = 0xF0F0u;
-    natural e = ~d;
-    REQUIRE(e == (UINT64_MAX ^ 0xF0F0u));
+    REQUIRE(~d == -natural(0xF0F1u));
 }
 
 TEST_CASE("resize clears the inline word") {

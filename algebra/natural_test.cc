@@ -862,8 +862,9 @@ TEST_CASE("invert_bits") {
     natural b = 0xF0F0u;
     natural c = b;
     invert_bits(c);
-    REQUIRE(c == ~b);
     REQUIRE(c == (UINT64_MAX ^ 0xF0F0u));
+    // ~ is the arithmetic complement and means something else
+    REQUIRE(~b == -natural(0xF0F1u));
 }
 
 TEST_CASE("isqrt2 and isqrt3 agree with isqrt") {
@@ -933,4 +934,44 @@ TEST_CASE("is_possible_square - every square passes the filter") {
     REQUIRE(!is_possible_square(3_n));
     REQUIRE(!is_possible_square(5_n));
     REQUIRE(!is_possible_square(6_n));
+}
+
+// natural is a typedef for integer now, so nothing stops a negative value from reaching an
+// algorithm that is only defined on non negative input. Each of those rejects it up front.
+TEST_CASE("algorithms defined only on non negative input reject a negative one") {
+    const natural n = -7;
+    natural out;
+
+    REQUIRE_THROWS(isqrt(n));
+    REQUIRE_THROWS(isqrt2(n));
+    REQUIRE_THROWS(isqrt3(n));
+    REQUIRE_THROWS(isqrt_hardware(n));
+    REQUIRE_THROWS(iroot(n, 3));
+    REQUIRE_THROWS(is_likely_prime(n, 10));
+    REQUIRE_THROWS(is_possible_square(n));
+    REQUIRE_THROWS(mod63_65(n));
+    REQUIRE_THROWS(factorize(n));
+    REQUIRE_THROWS(log_lower(n, 10));
+    REQUIRE_THROWS(log_upper(n, 10));
+    REQUIRE_THROWS(is_power_of_three(n));
+    REQUIRE_THROWS(binominal(n, 2, out));
+    { natural a = n; REQUIRE_THROWS(complement(a)); }
+    { natural a = n; REQUIRE_THROWS(invert_bits(a)); }
+    { natural whole, root; REQUIRE_THROWS(exact_sqrt(n, whole, root)); }
+
+    // the modular arithmetic takes a residue and a modulus, so all three have to be non negative
+    { natural a = n; REQUIRE_THROWS(add_mod(a, 2_n, 5_n)); }
+    { natural a = 2; REQUIRE_THROWS(add_mod(a, n, 5_n)); }
+    { natural a = 2; REQUIRE_THROWS(add_mod(a, 2_n, n)); }
+    { natural a = n; REQUIRE_THROWS(sub_mod(a, 2_n, 5_n)); }
+    REQUIRE_THROWS(mul_mod(n, 2_n, 5_n, out));
+    REQUIRE_THROWS(mul_mod(2_n, n, 5_n, out));
+    REQUIRE_THROWS(pow_mod(n, 2_n, 5_n, out));
+    REQUIRE_THROWS(pow_mod(2_n, n, 5_n, out));
+    REQUIRE_THROWS(pow_mod(2_n, 2_n, n, out));
+
+    // gcd and lcm are the exception: they are defined on the magnitudes, so a sign is fine
+    REQUIRE(gcd(natural(-12), natural(18)) == 6);
+    REQUIRE(gcd(natural(12), natural(-18)) == 6);
+    REQUIRE(lcm(natural(-4), natural(6)) == 12);
 }

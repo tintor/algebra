@@ -24,7 +24,6 @@ struct real {
 
     constexpr real(std_int auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
-    constexpr real(natural a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
     constexpr real(integer a, int exp, int dummy) : num(std::move(a)), exp(exp) { }
 
     constexpr real(float a) : real(rational(a)) { }
@@ -86,7 +85,7 @@ constexpr real<Base>::real(const rational& s) {
     } else {
         const auto base_factors = factorize(Base);
         // Check if s.den has any prime factors not in base
-        natural a = s.den.to_natural(), q;
+        natural a = abs(s.den), q;
         for (auto [factor, count] : base_factors)
             while (a > 1) {
                 if (div(a, factor, q))

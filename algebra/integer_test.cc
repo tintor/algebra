@@ -21,7 +21,7 @@ integer random_integer(const int bits_max, std::mt19937_64& rng) {
     int bits = std::uniform_int_distribution<int>(0, bits_max)(rng);
     integer a;
     {
-        auto m = a.magnitude();
+        auto m = magnitude(a);
         uniform_sample_bits(bits, rng, *m);
     }
     if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
@@ -135,7 +135,7 @@ TEST_CASE("less_ab_c / less_a_bc / less_ab_cd") {
     auto rnd = [&](int max_bits) {
         integer a;
         {
-            auto m = a.magnitude();
+            auto m = magnitude(a);
             uniform_sample_bits(std::uniform_int_distribution<int>(0, max_bits)(rng), rng, *m);
         }
         if (std::uniform_int_distribution<int>(0, 1)(rng))

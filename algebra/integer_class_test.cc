@@ -31,7 +31,7 @@ TEST_CASE("add_product") {
 
 TEST_CASE("ctor") {
     integer a = -1;
-    integer b(a.to_natural());
+    integer b(abs(a));
     REQUIRE(b == 1);
     REQUIRE(b.sign() == 1);
     integer c(a);
@@ -873,30 +873,30 @@ static_assert([] { integer a = 1; a <<= 100; a >>= 100; return a == 1; }());
 
 // A magnitude borrow must not be copyable or movable: two of them over one backend would each
 // restore in turn, and the second would put the pre-operation value back, losing the result.
-static_assert(!std::is_copy_constructible_v<integer::magnitude_ref>);
-static_assert(!std::is_move_constructible_v<integer::magnitude_ref>);
-static_assert(!std::is_copy_assignable_v<integer::magnitude_ref>);
-static_assert(!std::is_move_assignable_v<integer::magnitude_ref>);
+static_assert(!std::is_copy_constructible_v<algebra::magnitude_ref>);
+static_assert(!std::is_move_constructible_v<algebra::magnitude_ref>);
+static_assert(!std::is_copy_assignable_v<algebra::magnitude_ref>);
+static_assert(!std::is_move_assignable_v<algebra::magnitude_ref>);
 
 TEST_CASE("magnitude borrow restores the sign") {
     integer a = -12345;
-    { auto m = a.magnitude(); *m += 1u; }
+    { auto m = magnitude(a); *m += 1u; }
     REQUIRE(a == -12346);
 
     // a magnitude that reaches zero comes back with no sign, not negative zero
     integer b = -1;
-    { auto m = b.magnitude(); *m -= 1u; }
+    { auto m = magnitude(b); *m -= 1u; }
     REQUIRE(b == 0);
     REQUIRE(b.sign() == 0);
 
     // growing past a word boundary keeps the sign
     integer c = -(integer(1) << 64) + 1;
-    { auto m = c.magnitude(); *m += 1u; }
+    { auto m = magnitude(c); *m += 1u; }
     REQUIRE(c == -(integer(1) << 64));
 
     // the borrow is exception safe: the value is restored even when the operation throws
     integer d = 5;
-    REQUIRE_THROWS([&] { auto m = d.magnitude(); *m -= 99u; }());
+    REQUIRE_THROWS([&] { auto m = magnitude(d); __mag_sub(*m, 99u); }());
     REQUIRE(d.words.size() <= 1);
 }
 

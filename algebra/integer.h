@@ -4,110 +4,12 @@
 
 namespace algebra {
 
-constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
 
-constexpr integer abs(integer a) {
-    if (a.is_negative())
-        a.negate();
-    return a;
-}
-
-// returns abs(a) > abs(b), minimizing memory allocation
-constexpr bool abs_greater(const integer& a, const integer& b) {
-    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
-}
-
-constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
-    integer max_min = max - min;
-    if (max_min.sign() < 0)
-        throw std::runtime_error("max smaller than min in uniform_sample()");
-    ++max_min;
-    return integer(uniform_sample(max_min.to_natural(), rng)) + min;
-}
-
-constexpr integer exp2(std_int auto exp) {
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in exp2(...)");
-    integer out = 1;
-    out <<= exp;
-    return out;
-}
-
-constexpr integer pow(integer base, std_int auto exp) {
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(integer, ...)");
-    if (base == 2)
-        return exp2(exp);
-    if (base == 4)
-        return exp2(static_cast<uint64_t>(exp) * 2);
-    if (base == 8)
-        return exp2(static_cast<uint64_t>(exp) * 3);
-    if (is_power_of_two(base))
-        return exp2(static_cast<uint64_t>(exp) * base.num_trailing_zeros());
-    if (exp == 0)
-        return 1;
-    if (exp == 1)
-        return base;
-    if (exp == 2)
-        return base * base;
-
-    integer result = 1;
-    if (exp & 1)
-        result = base;
-    exp >>= 1;
-    while (exp) {
-        base *= base;
-        if (exp & 1)
-            result *= base;
-        exp >>= 1;
-    }
-    return result;
-}
-
-// returns result * (base ** exp)
-constexpr integer pow(integer base, std_int auto exp, integer result) {
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(integer, ...)");
-    if (base == 2)
-        return result << exp;
-    if (exp == 0)
-        return result;
-    if (exp == 1)
-        return result * base;
-    if (is_power_of_two(base))
-        return result << (static_cast<uint64_t>(exp) * base.num_trailing_zeros());
-
-    if (exp & 1)
-        result *= base;
-    exp >>= 1;
-    while (exp) {
-        base *= base;
-        if (exp & 1)
-            result *= base;
-        exp >>= 1;
-    }
-    return result;
-}
-
-constexpr integer pow(integer base, const natural& exp) {
-    if (exp.is_uint64())
-        return pow(base, static_cast<uint64_t>(exp));
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(integer, ...)");
-
-    integer result = 1;
-    if (exp.is_odd())
-        result = base;
-    for (int i = 1; i < exp.num_bits(); i++) {
-        base *= base;
-        if (exp.bit(i))
-            result *= base;
-    }
-    return result;
-}
 
 // returns x such that (a * x) mod m == 1, (or false if such number doesn't exist)
 constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
+    Check(!a.is_negative(), "inverse_mod() of a negative number");
+    Check(!m.is_negative(), "inverse_mod() of a negative number");
     integer t = 0;
     integer r = m;
     integer new_t = 1;
@@ -131,12 +33,30 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
         return false;
     if (t.is_negative())
         t += m;
-    out = t.to_natural();
+    out = abs(t);
     return true;
 }
 
 // returns (n k) mod m
+constexpr void mod(integer& a, const integer& b) {
+    const bool negative = a.is_negative();
+    a.words.set_negative(false);
+    {
+        const natural bn = abs(b); // b may be a itself, see mul() on aliasing
+        auto m = magnitude(a);
+        __mod_magnitude(*m, bn);
+    }
+    if (negative && !a.words.empty()) {
+        // result is in [0, abs(b)) range
+        natural e = abs(b);
+        e -= abs(a);
+        a = std::move(e);
+    }
+}
+
 constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, natural& out) {
+    Check(!n.is_negative(), "binominal_mod() of a negative number");
+    Check(!m.is_negative(), "binominal_mod() of a negative number");
     // Fast path: multiply by the modular inverse of each i+1, which keeps out below m. It needs
     // every i+1 in [1, k] to be invertible mod m, i.e. m coprime with k!, so inverse_mod can fail.
     out = 1;
@@ -169,21 +89,6 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, nat
     mod(out, m); // k == 0 leaves out == 1, which still has to be reduced
 }
 
-constexpr void mod(integer& a, const integer& b) {
-    const bool negative = a.is_negative();
-    a.words.set_negative(false);
-    {
-        const natural bn = b.to_natural(); // b may be a itself, see mul() on aliasing
-        auto m = a.magnitude();
-        mod(*m, bn);
-    }
-    if (negative && !a.words.empty()) {
-        // result is in [0, abs(b)) range
-        natural e = b.to_natural();
-        e -= a.to_natural();
-        a = std::move(e);
-    }
-}
 
 constexpr int signum(const integer& a) {
     if (a.words.empty())
@@ -191,7 +96,6 @@ constexpr int signum(const integer& a) {
     return a.is_negative() ? -1 : 1;
 }
 
-constexpr integer gcd(const integer& a, const integer& b) { return gcd(a.to_natural(), b.to_natural()); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {

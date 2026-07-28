@@ -1,5 +1,5 @@
 #pragma once
-#include "algebra/natural_class.h"
+#include "algebra/integer_class.h"
 #include <array>
 #include <optional>
 #include <random>
@@ -15,20 +15,45 @@ constexpr natural power_of_two(size_t e) {
     return x;
 }
 
-constexpr natural pow(natural base, std_int auto exp) {
-    if (exp < 0)
-        throw std::runtime_error("negative exponent in pow(natural, ...)");
-    if (base == 2)
-        return power_of_two(exp);
 
+
+constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
+
+// returns abs(a) > abs(b), minimizing memory allocation
+constexpr bool abs_greater(const integer& a, const integer& b) {
+    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
+}
+
+constexpr integer exp2(std_int auto exp) {
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in exp2(...)");
+    integer out = 1;
+    out <<= exp;
+    return out;
+}
+
+constexpr integer pow(integer base, std_int auto exp) {
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
+    if (base == 2)
+        return exp2(exp);
+    if (base == 4)
+        return exp2(static_cast<uint64_t>(exp) * 2);
+    if (base == 8)
+        return exp2(static_cast<uint64_t>(exp) * 3);
+    if (is_power_of_two(base))
+        return exp2(static_cast<uint64_t>(exp) * base.num_trailing_zeros());
     if (exp == 0)
         return 1;
+    if (exp == 1)
+        return base;
+    if (exp == 2)
+        return base * base;
 
-    natural result = 1;
+    integer result = 1;
     if (exp & 1)
         result = base;
     exp >>= 1;
-
     while (exp) {
         base *= base;
         if (exp & 1)
@@ -38,17 +63,44 @@ constexpr natural pow(natural base, std_int auto exp) {
     return result;
 }
 
-constexpr natural pow(natural base, const natural& _exp) {
-    if (_exp.is_uint64())
-        return pow(base, static_cast<uint64_t>(_exp));
+// returns result * (base ** exp)
+constexpr integer pow(integer base, std_int auto exp, integer result) {
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
+    if (base == 2)
+        return result << exp;
+    if (exp == 0)
+        return result;
+    if (exp == 1)
+        return result * base;
+    if (is_power_of_two(base))
+        return result << (static_cast<uint64_t>(exp) * base.num_trailing_zeros());
 
-    natural result = 1;
-    natural exp = _exp;
+    if (exp & 1)
+        result *= base;
+    exp >>= 1;
     while (exp) {
-        if (exp.is_odd())
-            result *= base;
         base *= base;
+        if (exp & 1)
+            result *= base;
         exp >>= 1;
+    }
+    return result;
+}
+
+constexpr integer pow(integer base, const natural& exp) {
+    if (exp.is_uint64())
+        return pow(base, static_cast<uint64_t>(exp));
+    if (exp < 0)
+        throw std::runtime_error("negative exponent in pow(integer, ...)");
+
+    integer result = 1;
+    if (exp.is_odd())
+        result = base;
+    for (int i = 1; i < exp.num_bits(); i++) {
+        base *= base;
+        if (exp.bit(i))
+            result *= base;
     }
     return result;
 }
@@ -133,14 +185,13 @@ constexpr natural uniform_sample(const natural& count, auto& rng) {
     return out;
 }
 
-constexpr natural uniform_sample(const natural& min, const natural& max, auto& rng) {
-    natural count = max;
-    count -= min;
-    count += 1;
-    natural out;
-    uniform_sample(count, rng, /*out*/out);
-    out += min;
-    return out;
+
+constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
+    integer max_min = max - min;
+    if (max_min.sign() < 0)
+        throw std::runtime_error("max smaller than min in uniform_sample()");
+    ++max_min;
+    return integer(uniform_sample(abs(max_min), rng)) + min;
 }
 
 template<std_unsigned_int T>
@@ -169,7 +220,10 @@ constexpr auto gcd(std_int auto a, std_int auto b) -> make_unsigned_t<larger_typ
     return __gcd_inner(ua >> az, ub >> common) << common;
 }
 
+// the greatest common divisor of the magnitudes, so the sign of either argument does not matter
 constexpr natural gcd(natural a, natural b) {
+    a.words.set_negative(false);
+    b.words.set_negative(false);
     if (a.words.size() == 1 && b.words.size() == 1)
         return gcd(a.words[0], b.words[0]);
 
@@ -201,13 +255,16 @@ constexpr natural gcd(natural a, std_int auto b) { return gcd(std::move(a), natu
 constexpr natural gcd(std_int auto a, natural b) { return gcd(natural(abs_unsigned(a)), std::move(b)); }
 
 // least common multiple
+// likewise of the magnitudes
 constexpr natural lcm(const natural& a, const natural& b) {
     if (a.words.empty() || b.words.empty())
         return 0;
     // divide first: a * b would be twice as long as the result
     natural m = a;
+    m.words.set_negative(false);
     m /= gcd(a, b);
     m *= b;
+    m.words.set_negative(false);
     return m;
 }
 
@@ -243,6 +300,7 @@ constexpr uint64_t __isqrt_u128(const uint128_t x) {
 
 /*
 constexpr natural isqrt(const natural& x) {
+    Check(!x.is_negative(), "isqrt() of a negative number");
     using u128 = unsigned __int128;
     using u64 = uint64_t;
 
@@ -302,6 +360,7 @@ constexpr void round_to_zero(const T& a, natural& b) {
 
 // very fast, but only approximate for large A
 constexpr natural isqrt_hardware(const natural& a) {
+    Check(!a.is_negative(), "isqrt_hardware() of a negative number");
     if (a <= 1)
         return a;
 
@@ -357,6 +416,7 @@ constexpr bool __isqrt_small(const natural& a, natural& out) {
 }
 
 constexpr natural isqrt(const natural& a) {
+    Check(!a.is_negative(), "isqrt() of a negative number");
     natural small;
     if (__isqrt_small(a, small))
         return small;
@@ -380,6 +440,7 @@ constexpr natural isqrt(const natural& a) {
 }
 
 constexpr natural isqrt2(const natural& a) {
+    Check(!a.is_negative(), "isqrt2() of a negative number");
     natural small;
     if (__isqrt_small(a, small))
         return small;
@@ -415,6 +476,7 @@ constexpr natural isqrt2(const natural& a) {
 }
 
 constexpr natural isqrt3(const natural& a) {
+    Check(!a.is_negative(), "isqrt3() of a negative number");
     natural small;
     if (__isqrt_small(a, small))
         return small;
@@ -454,6 +516,7 @@ constexpr natural isqrt3(const natural& a) {
 }
 
 constexpr natural iroot(const natural& a, uint32_t n) {
+    Check(!a.is_negative(), "iroot() of a negative number");
     if (a <= 1 || n == 1)
         return a;
     if (n == 0)
@@ -537,6 +600,9 @@ constexpr natural iroot(const natural& a, uint32_t n) {
 // assumes are a and b are in [0, m-1] range
 // a = (a + b) % m
 constexpr void add_mod(natural& a, const natural& b, const natural& m) {
+    Check(!a.is_negative(), "add_mod() of a negative number");
+    Check(!b.is_negative(), "add_mod() of a negative number");
+    Check(!m.is_negative(), "add_mod() of a negative number");
     a += b;
     if (a >= m)
         a -= m;
@@ -545,6 +611,9 @@ constexpr void add_mod(natural& a, const natural& b, const natural& m) {
 // assumes are a and b are in [0, m-1] range
 // a = (a - b) % m
 constexpr void sub_mod(natural& a, const natural& b, const natural& m) {
+    Check(!a.is_negative(), "sub_mod() of a negative number");
+    Check(!b.is_negative(), "sub_mod() of a negative number");
+    Check(!m.is_negative(), "sub_mod() of a negative number");
     if (b > a)
         a += m;
     a -= b;
@@ -560,6 +629,9 @@ constexpr void __mul_mod(natural& a, const natural& b, const natural& m) {
 }
 
 constexpr void mul_mod(const natural& a, const natural& b, const natural& m, natural& out) {
+    Check(!a.is_negative(), "mul_mod() of a negative number");
+    Check(!b.is_negative(), "mul_mod() of a negative number");
+    Check(!m.is_negative(), "mul_mod() of a negative number");
     if (a == 1 || b == 0) {
         out = b;
         return;
@@ -601,6 +673,9 @@ constexpr void mul_mod(const natural& a, const natural& b, const natural& m, nat
 
 // returns (a**b) mod m
 constexpr void pow_mod(natural a, const natural& b, const natural& m, natural& out) {
+    Check(!a.is_negative(), "pow_mod() of a negative number");
+    Check(!b.is_negative(), "pow_mod() of a negative number");
+    Check(!m.is_negative(), "pow_mod() of a negative number");
     out = 1;
     if (a >= m)
         a %= m;
@@ -656,6 +731,7 @@ constexpr bool is_prime(const uint64_t n) {
 // is probably prime.  k is an input parameter that determines
 // accuracy level. Higher value of `rounds` indicates more accuracy.
 constexpr bool is_likely_prime(const natural& n, int rounds) {
+    Check(!n.is_negative(), "is_likely_prime() of a negative number");
     if (n.is_uint64())
         return is_prime(static_cast<uint64_t>(n));
 
@@ -692,6 +768,7 @@ constexpr bool is_likely_prime(const natural& n, int rounds) {
 }
 
 constexpr std::pair<int, int> mod63_65(const natural& a) {
+    Check(!a.is_negative(), "mod63_65() of a negative number");
     int m63 = 0;
     int m65 = 0;
     int i = 0;
@@ -728,6 +805,7 @@ constexpr bool is_one_of(int a, std::initializer_list<int> b) {
 
 // rejects ~98% of all numbers
 constexpr bool is_possible_square(const natural& a) {
+    Check(!a.is_negative(), "is_possible_square() of a negative number");
     if (!is_one_of(a.words[0] % 16, {0,1,4,9}))
         return false;
 
@@ -838,6 +916,7 @@ constexpr std::vector<std::pair<uint64_t, int>> factorize(uint64_t a) {
 }
 
 constexpr std::vector<std::pair<natural, int>> factorize(natural a) {
+    Check(!a.is_negative(), "factorize() of a negative number");
     if (a <= 1)
         return {};
     std::vector<std::pair<natural, int>> out;
@@ -948,6 +1027,7 @@ constexpr std::vector<std::pair<natural, int>> factorize(natural a) {
 }
 
 constexpr uint64_t log_lower(natural a, uint64_t base) {
+    Check(!a.is_negative(), "log_lower() of a negative number");
     uint64_t count = 0;
     if (!a)
         return count;
@@ -960,6 +1040,7 @@ constexpr uint64_t log_lower(natural a, uint64_t base) {
     return count;
 }
 constexpr uint64_t log_upper(natural a, uint64_t base) {
+    Check(!a.is_negative(), "log_upper() of a negative number");
     uint64_t count = 0;
     while (a) {
         a /= base;
@@ -970,6 +1051,7 @@ constexpr uint64_t log_upper(natural a, uint64_t base) {
 
 // returns (n k)
 constexpr void binominal(const natural& n, uint64_t k, natural& out) {
+    Check(!n.is_negative(), "binominal() of a negative number");
     out = 1;
     natural e;
     for (uint64_t i = 0; i < k; i++) {
@@ -1006,6 +1088,7 @@ constexpr bool exact_sqrt(const natural& a, natural& b) { return __exact_sqrt1(a
 
 // assumes that whole and root are already initialized
 constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
+    Check(!a.is_negative(), "exact_sqrt() of a negative number");
     if (a <= 1)
         return;
 
@@ -1082,6 +1165,7 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
 }
 
 constexpr bool is_power_of_three(natural a) {
+    Check(!a.is_negative(), "is_power_of_three() of a negative number");
     if (a.words.empty())
         return false;
     natural m;
@@ -1103,9 +1187,17 @@ constexpr bool is_power_of_three(natural a) {
     return true;
 }
 
-constexpr void invert_bits(natural& a) { a = ~std::move(a); }
+// flips every bit of the magnitude within its current word span, which is what natural's
+// operator~ used to do -- integer's operator~ is -(a+1) and means something else
+constexpr void invert_bits(natural& a) {
+    Check(!a.is_negative(), "invert_bits() of a negative number");
+    for (int i = 0; i < a.words.size(); i++)
+        a.words[i] = ~a.words[i];
+    a.words.normalize();
+}
 
 constexpr void complement(natural& a) {
+    Check(!a.is_negative(), "complement() of a negative number");
     __complement(a);
     a.words.normalize();
 }
