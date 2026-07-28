@@ -159,10 +159,45 @@ TEST_CASE("round_to_zero") {
     REQUIRE(a == 10);
     round_to_zero(10.9, a);
     REQUIRE(a == 10);
+    // truncation towards zero keeps the sign, the same way trunc(rational) does
     round_to_zero(-7.1, a);
-    REQUIRE(a == 7);
+    REQUIRE(a == -7);
     round_to_zero(-7.9, a);
-    REQUIRE(a == 7);
+    REQUIRE(a == -7);
+
+    round_to_zero(0.0, a);
+    REQUIRE(a == 0);
+    round_to_zero(0.5, a);
+    REQUIRE(a == 0);
+    round_to_zero(-0.5, a);
+    REQUIRE(a == 0);
+
+    // exactly representable and wider than a word
+    round_to_zero(std::ldexp(1.0, 100), a);
+    REQUIRE(a == power_of_two(100));
+    round_to_zero(std::ldexp(-3.0, 100), a);
+    REQUIRE(a == -3 * power_of_two(100));
+
+    round_to_zero(-2.5f, a); // the float overload
+    REQUIRE(a == -2);
+
+    // frexp() leaves the exponent unspecified for these, so there is nothing to truncate
+    REQUIRE_THROWS(round_to_zero(std::numeric_limits<double>::infinity(), a));
+    REQUIRE_THROWS(round_to_zero(-std::numeric_limits<double>::infinity(), a));
+    REQUIRE_THROWS(round_to_zero(std::numeric_limits<double>::quiet_NaN(), a));
+}
+
+TEST_CASE("iroot of a value too large for double") {
+    // (double)a is infinite here, so the floating point estimate that narrows the bracket is
+    // unusable and iroot() has to fall back on the bit length bracket alone
+    const integer a = pow(integer(10), 400);
+    REQUIRE(static_cast<double>(a) == std::numeric_limits<double>::infinity());
+    REQUIRE(iroot(a, 2) == pow(integer(10), 200));
+    for (uint32_t n : {2u, 3u, 5u, 7u}) {
+        const integer r = iroot(a, n);
+        REQUIRE(pow(r, n) <= a);
+        REQUIRE(pow(r + 1, n) > a);
+    }
 }
 
 TEST_CASE("iroot 2") {
