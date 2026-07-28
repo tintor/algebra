@@ -131,6 +131,30 @@ void test_isqrt(const auto& fn) {
     }
 }
 
+TEST_CASE("isqrt of an unsigned builtin") {
+    // the one word path
+    REQUIRE(isqrt(ulong(0)) == 0);
+    REQUIRE(isqrt(ulong(1)) == 1);
+    REQUIRE(isqrt(ulong(3)) == 1);
+    REQUIRE(isqrt(ulong(4)) == 2);
+    REQUIRE(isqrt(ulong(99)) == 9);
+    REQUIRE(isqrt(std::numeric_limits<ulong>::max()) == std::numeric_limits<uint>::max());
+
+    // two words, where a 64-bit clamp on the result would cut it down to UINT32_MAX
+    REQUIRE(isqrt(ucent(1) << 80) == (ulong(1) << 40));
+    REQUIRE(isqrt(ucent(1) << 126) == (ulong(1) << 63));
+    REQUIRE(isqrt(std::numeric_limits<ucent>::max()) == std::numeric_limits<ulong>::max());
+    REQUIRE(isqrt(static_cast<ucent>(std::numeric_limits<ulong>::max()) + 1) == (ulong(1) << 32));
+
+    Random rng;
+    for (int i = 0; i < 100'000; i++) {
+        const ucent x = rng.Uniform<ucent>(0, std::numeric_limits<ucent>::max());
+        const ulong q = isqrt(x);
+        REQUIRE(static_cast<ucent>(q) * q <= x);
+        REQUIRE((q == std::numeric_limits<ulong>::max() || static_cast<ucent>(q + 1) * (q + 1) > x));
+    }
+}
+
 constexpr integer isqrt_integer(const integer& x) { return isqrt(x); }
 TEST_CASE("isqrt stress") { test_isqrt(isqrt_integer); }
 TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
