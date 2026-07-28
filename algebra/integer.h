@@ -785,7 +785,7 @@ constexpr void mod(integer& a, const integer& b) {
     a.words.set_negative(false);
     {
         const natural bn = abs(b); // b may be a itself, see mul() on aliasing
-        auto m = a.magnitude();
+        auto m = magnitude(a);
         mod(*m, bn);
     }
     if (negative && !a.words.empty()) {
