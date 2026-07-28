@@ -378,6 +378,11 @@ constexpr int __normalized_size(cnatural a) {
 // supports q == a
 // b != q
 constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init) {
+    // the loop below starts from b[0], which is not there to be read when b is zero
+    if (a.size == 0 || b.size == 0) {
+        q.size = 0;
+        return;
+    }
     Check(a.size + b.size <= q.capacity);
     q.size = a.size + b.size;
     if (init)
