@@ -165,6 +165,9 @@ constexpr std::vector<Ring2<T>> __stitch(std::vector<__Edge<T>> frags) {
 
 template<typename T>
 constexpr MultiPolygon2<T> boolean_op(BoolOp op, const MultiPolygon2<T>& a, const MultiPolygon2<T>& b) {
+    // An integral T truncates the midpoint and the safe step to zero, which puts every sample point
+    // on the boundary and makes the classification below meaningless.
+    static_assert(__exact_halving<T>(), "boolean_op() needs a coordinate type with exact division");
     MultiPolygon2<T> out;
     // Far from every edge only the complement flags matter, and that fixes whether the result is
     // bounded. The rings below then bound the finite structure inside it.

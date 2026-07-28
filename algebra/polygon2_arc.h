@@ -268,6 +268,8 @@ constexpr T __arc_safe_step(const ArcPolygon2<T>& a, const Vec2<T>& p, const Vec
 // same as for the straight edged type.
 template<typename T>
 constexpr bool contains(const ArcPolygon2<T>& a, const Vec2<T>& p) {
+    // __arc_safe_step() halves until it is clear, which never gets off the chord in an integral T
+    static_assert(__exact_halving<T>(), "contains() needs a coordinate type with exact division");
     if (on_boundary(a, p))
         return true;
     Vec2<T> q = p;

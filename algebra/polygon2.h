@@ -22,6 +22,12 @@ using Ring2 = std::vector<Vec2<T>>;
 // region is no rings, and the whole plane is no rings with complement set.
 //
 // T needs exact arithmetic for the predicates to be reliable; rational is the default.
+// True when halving is exact in T, which the boolean and buffer operations need: they take the
+// midpoint of a fragment and step off it by a fraction of the normal. With a truncating T both land
+// back on the boundary, where the winding rule says nothing.
+template<typename T>
+constexpr bool __exact_halving() { return T(1) / T(2) * T(2) == T(1); }
+
 template<typename T = rational>
 struct MultiPolygon2 {
     std::vector<Ring2<T>> rings;
