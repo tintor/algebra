@@ -223,3 +223,59 @@ TEST_CASE("binominal_mod") {
     binominal_mod(10_n, 0, 1_n, out);
     REQUIRE(out == 0u);
 }
+
+// log_lower, log_upper and is_power_of_three moved to integer.h when they were converted to take
+// an integer, so their tests move here with them. They still accept a natural, which converts.
+TEST_CASE("log_lower / log_upper") {
+    // log_lower / log_upper
+    REQUIRE(log_lower(natural(0), 10) == 0);
+    REQUIRE(log_upper(natural(0), 10) == 0);
+    for (uint64_t base : {2ull, 3ull, 10ull}) {
+        for (int e = 0; e < 20; e++) {
+            const natural p = pow(natural(base), e);
+            REQUIRE(log_lower(p, base) == e);
+            REQUIRE(log_upper(p, base) == e + 1);
+            if (e > 0) {
+                REQUIRE(log_lower(p - 1u, base) == e - 1);
+                REQUIRE(log_upper(p - 1u, base) == e);
+            }
+        }
+    }
+    // a negative input is rejected rather than silently treated as its magnitude
+    REQUIRE_THROWS(log_lower(integer(-8), 2));
+    REQUIRE_THROWS(log_upper(integer(-8), 2));
+    // and the magnitude of a negative, taken explicitly, still works
+    REQUIRE(log_lower(abs(integer(-8)), 2) == 3);
+}
+
+TEST_CASE("is_power_of_three") {
+    REQUIRE(!is_power_of_three(0));
+    REQUIRE(is_power_of_three(1));
+    REQUIRE(!is_power_of_three(2));
+    REQUIRE(is_power_of_three(3));
+    REQUIRE(!is_power_of_three(4));
+    REQUIRE(is_power_of_three(9));
+    REQUIRE(is_power_of_three(pow(3_n, 30)));
+    REQUIRE(!is_power_of_three(pow(3_n, 30) - 1));
+}
+
+TEST_CASE("is_power_of_three more") {
+    REQUIRE(!is_power_of_three(natural(0)));
+    REQUIRE(is_power_of_three(natural(1)));
+    REQUIRE(is_power_of_three(natural(3)));
+    REQUIRE(is_power_of_three(natural(9)));
+    REQUIRE(is_power_of_three(natural(81)));
+    REQUIRE(is_power_of_three(pow(natural(3), 40)));
+    REQUIRE(is_power_of_three(pow(natural(3), 64)));  // a perfect square
+    REQUIRE(!is_power_of_three(natural(2)));
+    REQUIRE(!is_power_of_three(natural(6)));
+    REQUIRE(!is_power_of_three(natural(12)));
+    REQUIRE(!is_power_of_three(pow(natural(3), 20) + 1u));
+    REQUIRE(!is_power_of_three(pow(natural(3), 20) * 2u));
+}
+
+TEST_CASE("is_power_of_three rejects a negative") {
+    REQUIRE_THROWS(is_power_of_three(integer(-3)));
+    REQUIRE_THROWS(is_power_of_three(integer(-9)));
+    REQUIRE(is_power_of_three(abs(integer(-9))));
+}

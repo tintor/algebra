@@ -947,26 +947,6 @@ constexpr std::vector<std::pair<natural, int>> factorize(natural a) {
     return out;
 }
 
-constexpr uint64_t log_lower(natural a, uint64_t base) {
-    uint64_t count = 0;
-    if (!a)
-        return count;
-    while (true) {
-        a /= base;
-        if (!a)
-            break;
-        count += 1;
-    }
-    return count;
-}
-constexpr uint64_t log_upper(natural a, uint64_t base) {
-    uint64_t count = 0;
-    while (a) {
-        a /= base;
-        count += 1;
-    }
-    return count;
-}
 
 // returns (n k)
 constexpr void binominal(const natural& n, uint64_t k, natural& out) {
@@ -1081,27 +1061,6 @@ constexpr void exact_sqrt(natural a, natural& whole, natural& root) {
     }
 }
 
-constexpr bool is_power_of_three(natural a) {
-    if (a.words.empty())
-        return false;
-    natural m;
-    while (a > 1) {
-        if (a.mod3())
-            return false;
-        // a power of three that is also a perfect square stays a power of three when
-        // halved in exponent, and the square root is much cheaper to keep dividing
-        if (is_possible_square(a)) {
-            natural s = isqrt(a);
-            mul(s, s, m);
-            if (m == a) {
-                a = std::move(s);
-                continue;
-            }
-        }
-        a /= 3u;
-    }
-    return true;
-}
 
 constexpr void invert_bits(natural& a) { a = ~std::move(a); }
 

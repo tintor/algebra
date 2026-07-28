@@ -179,6 +179,60 @@ constexpr void mod(integer& a, const integer& b) {
     }
 }
 
+// Migrated from natural.h to take an integer. natural.h is included before integer_class.h, so a
+// function there cannot name integer; converted ones move to this side until that order changes.
+// Each takes the magnitude once up front, which costs the same copy the by value natural did.
+
+constexpr uint64_t log_lower(const integer& n, uint64_t base) {
+    Check(!n.is_negative(), "log_lower() of a negative number");
+    natural a = abs(n);
+    uint64_t count = 0;
+    if (!a)
+        return count;
+    while (true) {
+        a /= base;
+        if (!a)
+            break;
+        count += 1;
+    }
+    return count;
+}
+
+constexpr uint64_t log_upper(const integer& n, uint64_t base) {
+    Check(!n.is_negative(), "log_upper() of a negative number");
+    natural a = abs(n);
+    uint64_t count = 0;
+    while (a) {
+        a /= base;
+        count += 1;
+    }
+    return count;
+}
+
+constexpr bool is_power_of_three(const integer& n) {
+    Check(!n.is_negative(), "is_power_of_three() of a negative number");
+    natural a = abs(n);
+    if (a.words.empty())
+        return false;
+    natural m;
+    while (a > 1) {
+        if (a.mod3())
+            return false;
+        // a power of three that is also a perfect square stays a power of three when
+        // halved in exponent, and the square root is much cheaper to keep dividing
+        if (is_possible_square(a)) {
+            natural s = isqrt(a);
+            mul(s, s, m);
+            if (m == a) {
+                a = std::move(s);
+                continue;
+            }
+        }
+        a /= 3u;
+    }
+    return true;
+}
+
 constexpr int signum(const integer& a) {
     if (a.words.empty())
         return 0;
