@@ -219,6 +219,25 @@ TEST_CASE("__mul with a zero size operand") {
     REQUIRE(w[1] == 35);
 }
 
+// copying one would either point into the source's inline array or delete the heap buffer twice
+static_assert(!std::is_copy_constructible_v<maybe_stack<uint64_t, 4>>);
+static_assert(!std::is_move_constructible_v<maybe_stack<uint64_t, 4>>);
+static_assert(!std::is_copy_assignable_v<maybe_stack<uint64_t, 4>>);
+static_assert(!std::is_move_assignable_v<maybe_stack<uint64_t, 4>>);
+
+TEST_CASE("maybe_stack") {
+    maybe_stack<uint64_t, 4> small(4); // fits inline
+    uint64_t* p = small;
+    p[0] = 7;
+    REQUIRE(p[0] == 7);
+
+    maybe_stack<uint64_t, 4> large(100); // goes to the heap
+    uint64_t* q = large;
+    q[99] = 9;
+    REQUIRE(q[99] == 9);
+    REQUIRE(q != p);
+}
+
 TEST_CASE("__add with zero carry into a full buffer") {
     uint64_t w[] = {1, 2};
     vnatural a {{w, 2}, 2}; // size == capacity

@@ -300,6 +300,8 @@ constexpr void integer_backend::push_back(uint64_t a, uint64_t b) {
 
 constexpr void integer_backend::erase_first_n_words(int n) {
     if (n > 0) {
+        // without this the size walks past zero and comes back with the opposite sign
+        Check(n <= size(), "erase_first_n_words() past the end");
         for (int i = n; i < size(); i++)
             operator[](i - n) = operator[](i);
         _size += (_size >= 0) ? -n : n;

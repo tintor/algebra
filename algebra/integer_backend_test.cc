@@ -506,6 +506,28 @@ TEST_CASE("integer_backend - erase_first_n_words of the inline word") {
     REQUIRE(!a.allocated());
 }
 
+TEST_CASE("integer_backend - erase_first_n_words past the end") {
+    // erasing more words than there are used to walk _size past zero, which turned a positive value
+    // into a negative one of whatever magnitude was left over
+    integer_backend a {1, 2, 3};
+    REQUIRE_THROWS(a.erase_first_n_words(4));
+
+    integer_backend b {1, 2, 3};
+    b.negate();
+    REQUIRE_THROWS(b.erase_first_n_words(7));
+
+    integer_backend c; // zero
+    REQUIRE_THROWS(c.erase_first_n_words(1));
+    c.erase_first_n_words(0); // still a no-op
+    REQUIRE(c.empty());
+
+    // erasing exactly the size is fine, and leaves zero
+    integer_backend d {1, 2, 3};
+    d.erase_first_n_words(3);
+    REQUIRE(d.empty());
+    REQUIRE(d.sign() == 0);
+}
+
 // ----- set_negative / set_zero / normalize -----
 
 TEST_CASE("integer_backend - set_negative") {
