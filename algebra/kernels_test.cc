@@ -196,6 +196,29 @@ TEST_CASE("pow of a narrower unsigned") {
         }
 }
 
+TEST_CASE("__mul with a zero size operand") {
+    // b.size == 0 means b is zero, and the product is zero. Reading b[0] to start the loop treats
+    // whatever is at that address as a word instead.
+    uint64_t a[] = {5, 7};
+    uint64_t w[] = {111, 222, 333, 444};
+    vnatural q {{w, 0}, 4};
+
+    __mul(cnatural{a, 2}, cnatural{a, 0}, q);
+    REQUIRE(q.size == 0);
+
+    __mul(cnatural{a, 0}, cnatural{a, 2}, q);
+    REQUIRE(q.size == 0);
+
+    __mul(cnatural{a, 0}, cnatural{a, 0}, q);
+    REQUIRE(q.size == 0);
+
+    // and a non-zero product still works
+    __mul(cnatural{a, 2}, cnatural{a, 1}, q);
+    REQUIRE(q.size == 2);
+    REQUIRE(w[0] == 25);
+    REQUIRE(w[1] == 35);
+}
+
 TEST_CASE("__add with zero carry into a full buffer") {
     uint64_t w[] = {1, 2};
     vnatural a {{w, 2}, 2}; // size == capacity
