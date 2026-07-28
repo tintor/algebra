@@ -199,3 +199,35 @@ TEST_CASE("a straight edged arc ring matches the straight edged type") {
             REQUIRE(contains(a, p) == contains(b, p));
         }
 }
+
+TEST_CASE("contains a point where two chords cross") {
+    // A chord is not part of the boundary, so contains() has to step off one before applying the
+    // winding formula. Stepping along a chord's own direction keeps the point on it, so a point
+    // lying on a horizontal chord and a vertical one at once needs a direction that is neither.
+
+    // a disk of radius 2 whose chord runs vertically through the origin
+    const AR disk{AV{V(0, 2), -1}, AV{V(0, -2), -1}};
+    // a lens whose two arcs both bulge below the x axis, sharing the endpoints (-1,0) and (1,0):
+    // its chords pass through the origin, its body does not
+    const AR lens{AV{V(-1, 0), -half}, AV{V(1, 0), half}};
+    const A a{std::vector<AR>{disk, lens}};
+
+    const V o(0, 0);
+    REQUIRE(!on_boundary(a, o));
+    REQUIRE(__on_any_chord(a, o));
+
+    // the origin is well inside the disk and above the lens, like everything around it
+    REQUIRE(contains(a, V(rational(1, 8), rational(1, 8))));
+    REQUIRE(contains(a, V(rational(-1, 8), rational(1, 8))));
+    REQUIRE(contains(a, V(rational(1, 8), rational(-1, 8))));
+    REQUIRE(contains(a, V(rational(-1, 8), rational(-1, 8))));
+    REQUIRE(contains(a, o));
+
+    // the same for a point on the two chords that is not their crossing point
+    REQUIRE(contains(a, V(half, 0)));
+    REQUIRE(contains(a, V(0, half)));
+
+    // and a point outside is still outside, chord or no chord
+    REQUIRE(!contains(a, V(0, 3)));
+    REQUIRE(!contains(a, V(3, 0)));
+}
