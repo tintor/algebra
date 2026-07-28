@@ -10,7 +10,7 @@ namespace algebra {
 
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
-static const auto UINT128_MAX = std::numeric_limits<uint128_t>::max();
+constexpr uint128_t UINT128_MAX = std::numeric_limits<uint128_t>::max();
 
 // libstdc++ only treats __int128 as an integral type outside of strict standard mode
 // (-std=gnu++23 but not -std=c++23), and leaves std::make_unsigned and std::countr_zero
