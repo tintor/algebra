@@ -209,12 +209,17 @@ constexpr bool operator<(bit_range a, bit_range b) { return a.max < b.min; }
 template<typename A, typename B>
 using larger_type = typename std::conditional_t<sizeof(A) >= sizeof(B), A, B>;
 
+// min() and max() over two builtin integers of the same signedness, widening to whichever type
+// holds both. Mixed signedness is deliberately not offered: the comparison would go through the
+// usual arithmetic conversions, where a negative value turns into a huge unsigned one, and there
+// is no larger_type that can hold both operands either. Use std::cmp_less and pick the type at
+// the call site for that case.
 template<std::unsigned_integral A, std::unsigned_integral B>
 constexpr auto min(const A& a, const B& b) -> larger_type<A, B> { return (a < b) ? a : b; }
 template<std::unsigned_integral A, std::unsigned_integral B>
 constexpr auto max(const A& a, const B& b) -> larger_type<A, B> { return (a > b) ? a : b; }
 
-template<std::signed_integral A, std::unsigned_integral B>
+template<std::signed_integral A, std::signed_integral B>
 constexpr auto min(const A& a, const B& b) -> larger_type<A, B> { return (a < b) ? a : b; }
 template<std::signed_integral A, std::signed_integral B>
 constexpr auto max(const A& a, const B& b) -> larger_type<A, B> { return (a > b) ? a : b; }

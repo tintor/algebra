@@ -710,3 +710,28 @@ TEST_CASE("div_max_size") {
     REQUIRE(div_max_size({max, 1}, {two, 0}) == 0);
     REQUIRE(div_max_size({one, 0}, {two, 0}) == 0);
 }
+
+template<typename A, typename B>
+concept has_min = requires (A a, B b) { algebra::min(a, b); };
+template<typename A, typename B>
+concept has_max = requires (A a, B b) { algebra::max(a, b); };
+
+TEST_CASE("min and max of two builtin integers") {
+    REQUIRE(algebra::min(uint32_t(3), uint64_t(5)) == 3);
+    REQUIRE(algebra::max(uint32_t(3), uint64_t(5)) == 5);
+    static_assert(std::same_as<decltype(algebra::min(uint32_t(3), uint64_t(5))), uint64_t>);
+
+    REQUIRE(algebra::min(int32_t(-1), int64_t(5)) == -1);
+    REQUIRE(algebra::max(int32_t(-1), int64_t(5)) == 5);
+    REQUIRE(algebra::min(int32_t(-1), int32_t(-5)) == -5);
+    REQUIRE(algebra::max(int64_t(-1), int64_t(-5)) == -1);
+
+    // Mixed signedness does not compile. The comparison would go through the usual arithmetic
+    // conversions, where a negative value becomes a huge unsigned one -- min(-1, 5u) returned 5 --
+    // and there is no return type that holds both operands either.
+    static_assert(has_min<uint32_t, uint64_t> && has_max<uint32_t, uint64_t>);
+    static_assert(has_min<int32_t, int64_t> && has_max<int32_t, int64_t>);
+    static_assert(!has_min<int32_t, uint32_t> && !has_max<int32_t, uint32_t>);
+    static_assert(!has_min<uint32_t, int32_t> && !has_max<uint32_t, int32_t>);
+    static_assert(!has_min<int64_t, uint64_t> && !has_max<int64_t, uint64_t>);
+}
