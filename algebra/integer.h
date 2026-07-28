@@ -423,7 +423,7 @@ constexpr void complement(integer& a) {
 
 
 
-constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
+constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cwords>(a)); }
 
 constexpr integer exp2(std_int auto exp) {
     if (exp < 0)
@@ -1163,7 +1163,7 @@ constexpr void exact_sqrt(integer a, integer& whole, integer& root) {
 
 // returns abs(a) > abs(b), minimizing memory allocation
 constexpr bool abs_greater(const integer& a, const integer& b) {
-    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
+    return __less(static_cast<cwords>(b), static_cast<cwords>(a)); // no allocation: views only
 }
 
 constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
@@ -1345,7 +1345,7 @@ constexpr bool less_ab_c(const integer& a, const integer& b, const integer& c) {
     int cc = signum(c);
     if (ab != cc)
         return ab < cc;
-    return (ab > 0) ? __less_ab_c(a, b, c) : __less_a_bc(c, a, b); // integer converts to cnatural
+    return (ab > 0) ? __less_ab_c(a, b, c) : __less_a_bc(c, a, b); // integer converts to cwords
 }
 
 // returns a < b * c (cheaper than naive multiplication)

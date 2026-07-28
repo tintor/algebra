@@ -828,8 +828,8 @@ TEST_CASE(">>=") {
 TEST_CASE("factorial") {
     uint64_t _a = 1;
     uint64_t _b = 1;
-    inatural aa {&_a, 1};
-    cnatural bb {&_b, 1};
+    iwords aa {&_a, 1};
+    cwords bb {&_b, 1};
     auto carry = __add_and_return_carry(aa, bb);
     REQUIRE(_a == 2);
     REQUIRE(carry == 0);

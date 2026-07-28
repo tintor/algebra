@@ -439,11 +439,11 @@ to both sides.
 - returns `a * b < c * d` (cheaper than naive multiplication)
 
 ### algebra/kernels.h
-#### `uint128_t extract_u128(cnatural a, int64_t e)`
+#### `uint128_t extract_u128(cwords a, int64_t e)`
 - returns `static_cast<unsigned __int128>(a >> e)` without memory allocation
-#### `uint64_t extract_u64(cnatural a, int64_t e)`
+#### `uint64_t extract_u64(cwords a, int64_t e)`
 - returns `static_cast<uint64_t>(a >> e)` without memory allocation
-- `integer` converts to `cnatural`, a read only view of its words.
+- `integer` converts to `cwords`, a read only view of its words.
 
 ### algebra/rational.h
 #### `int approx_log2(const rational& a)`
