@@ -339,6 +339,58 @@ TEST_CASE("div stress with ucent") {
     }
 }
 
+TEST_CASE("div by a divisor wider than one word") {
+    const integer a("123456789012345678901234567890");
+    const ucent d = (ucent(1) << 70) + 1;
+    const integer id = d;
+
+    REQUIRE(a / d == a / id);
+    REQUIRE(a / -static_cast<cent>(d) == -(a / id));
+    REQUIRE(-a / d == -(a / id));
+
+    integer b = a;
+    b /= d;
+    REQUIRE(b == a / id);
+
+    integer q;
+    REQUIRE(div(a, d, q) == static_cast<ucent>(a % id));
+    REQUIRE(q == a / id);
+
+    REQUIRE(div(a, static_cast<cent>(d), q) == static_cast<cent>(a % id));
+    REQUIRE(q == a / id);
+
+    // a negative divisor negates the quotient and leaves the remainder with the dividend's sign
+    REQUIRE(div(-a, -static_cast<cent>(d), q) == -static_cast<cent>(a % id));
+    REQUIRE(q == a / id);
+
+    // the divisor's own magnitude, where the quotient is 1 and the remainder is zero
+    REQUIRE(id / d == 1);
+    REQUIRE(div(id, d, q) == 0);
+    REQUIRE(q == 1);
+
+    // a dividend smaller than the divisor
+    REQUIRE(integer(7) / d == 0);
+    REQUIRE(div(7_i, d, q) == 7);
+    REQUIRE(q == 0);
+}
+
+TEST_CASE("div stress with a divisor wider than one word") {
+    Random rng;
+    const ucent m = std::numeric_limits<ucent>::max();
+    for (int i = 0; i < 10'000; i++) {
+        const integer a = integer(rng.Uniform<ucent>(0, m)) * integer(rng.Uniform<ucent>(0, m));
+        const ucent b = rng.Uniform<ucent>(ucent(std::numeric_limits<ulong>::max()) + 1, m);
+        const integer ib = b;
+
+        integer q;
+        const ucent r = div(a, b, q);
+        REQUIRE(q == a / ib);
+        REQUIRE(r == static_cast<ucent>(a % ib));
+        REQUIRE(q * ib + integer(r) == a);
+        REQUIRE(a / b == q);
+    }
+}
+
 TEST_CASE("str stress with ucent") {
     Random rng;
     const ucent m = std::numeric_limits<ucent>::max();
