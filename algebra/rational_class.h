@@ -259,8 +259,8 @@ constexpr void rational::simplify() {
     }
 
     // TODO allocate a and b on stack if they are small enough
-    natural a = abs(num) >> (az - z);
-    natural b = abs(den);
+    integer a = abs(num) >> (az - z);
+    integer b = abs(den);
     do {
         b >>= b.num_trailing_zeros();
         if (a > b)

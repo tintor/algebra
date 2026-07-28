@@ -20,10 +20,7 @@ TEST_CASE("uniform_sample") {
 integer random_integer(const int bits_max, std::mt19937_64& rng) {
     int bits = std::uniform_int_distribution<int>(0, bits_max)(rng);
     integer a;
-    {
-        auto m = a.magnitude();
-        uniform_sample_bits(bits, rng, *m);
-    }
+    uniform_sample_bits(bits, rng, a); // writes an integer now, and always a non negative one
     if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
         a.negate();
     return a;
@@ -134,10 +131,7 @@ TEST_CASE("less_ab_c / less_a_bc / less_ab_cd") {
     std::mt19937_64 rng(0);
     auto rnd = [&](int max_bits) {
         integer a;
-        {
-            auto m = a.magnitude();
-            uniform_sample_bits(std::uniform_int_distribution<int>(0, max_bits)(rng), rng, *m);
-        }
+        uniform_sample_bits(std::uniform_int_distribution<int>(0, max_bits)(rng), rng, a);
         if (std::uniform_int_distribution<int>(0, 1)(rng))
             a.negate();
         return a;

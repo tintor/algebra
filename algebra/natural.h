@@ -8,8 +8,8 @@
 
 namespace algebra {
 
-constexpr natural power_of_two(size_t e) {
-    natural x;
+constexpr integer power_of_two(size_t e) {
+    integer x;
     x.words.reset((e + 64) / 64);
     x.words.back() = uint64_t(1) << (e % 64);
     return x;
@@ -19,7 +19,7 @@ constexpr natural power_of_two(size_t e) {
 // util.h's pow(uint64_t, unsigned) instead would silently truncate a big operand.
 
 // uniformly sample from [0, (2**n)-1]
-constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
+constexpr void uniform_sample_bits(const size_t n, auto& rng, integer& out) {
     static_assert(sizeof(rng()) == 8);
     auto w = (n + 64 - 1) / 64;
     out.words.reset(w, /*initialize*/false);
@@ -30,14 +30,15 @@ constexpr void uniform_sample_bits(const size_t n, auto& rng, natural& out) {
     out.words.normalize();
 }
 
-constexpr natural uniform_sample_bits(const size_t n, auto& rng) {
-    natural out;
+constexpr integer uniform_sample_bits(const size_t n, auto& rng) {
+    integer out;
     uniform_sample_bits(n, rng, /*out*/out);
     return out;
 }
 
 // uniformly sample from [0, count-1]
-constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
+constexpr void uniform_sample(const integer& count, auto& rng, integer& out) {
+    Check(!count.is_negative(), "uniform_sample() with a negative count");
     if (count.is_uint64()) {
         out = std::uniform_int_distribution<uint64_t>(0, static_cast<uint64_t>(count) - 1)(rng);
         return;
@@ -67,8 +68,8 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
         }
     }
     // TODO avoid this division in mq == 2 case
-    natural temp;
-    natural mq = power_of_two(n * 64);
+    integer temp;
+    integer mq = power_of_two(n * 64);
     mq /= count;
     if (mq == 2) {
         temp = count;
@@ -92,21 +93,12 @@ constexpr void uniform_sample(const natural& count, auto& rng, natural& out) {
     }
 }
 
-constexpr natural uniform_sample(const natural& count, auto& rng) {
-    natural out;
+constexpr integer uniform_sample(const integer& count, auto& rng) {
+    integer out;
     uniform_sample(count, rng, /*out*/out);
     return out;
 }
 
-constexpr natural uniform_sample(const natural& min, const natural& max, auto& rng) {
-    natural count = max;
-    count -= min;
-    count += 1;
-    natural out;
-    uniform_sample(count, rng, /*out*/out);
-    out += min;
-    return out;
-}
 
 template<std_unsigned_int T>
 constexpr T __gcd_inner(T a, T b) {
@@ -134,7 +126,10 @@ constexpr auto gcd(std_int auto a, std_int auto b) -> make_unsigned_t<larger_typ
     return __gcd_inner(ua >> az, ub >> common) << common;
 }
 
-constexpr natural gcd(natural a, natural b) {
+// the greatest common divisor of the magnitudes, so the sign of either argument does not matter
+constexpr integer gcd(integer a, integer b) {
+    a.words.set_negative(false);
+    b.words.set_negative(false);
     if (a.words.size() == 1 && b.words.size() == 1)
         return gcd(a.words[0], b.words[0]);
 
@@ -162,15 +157,16 @@ constexpr natural gcd(natural a, natural b) {
     return a;
 }
 
-constexpr natural gcd(natural a, std_int auto b) { return gcd(std::move(a), natural(abs_unsigned(b))); }
-constexpr natural gcd(std_int auto a, natural b) { return gcd(natural(abs_unsigned(a)), std::move(b)); }
+constexpr integer gcd(integer a, std_int auto b) { return gcd(std::move(a), integer(abs_unsigned(b))); }
+constexpr integer gcd(std_int auto a, integer b) { return gcd(integer(abs_unsigned(a)), std::move(b)); }
 
 // least common multiple
-constexpr natural lcm(const natural& a, const natural& b) {
+// likewise of the magnitudes
+constexpr integer lcm(const integer& a, const integer& b) {
     if (a.words.empty() || b.words.empty())
         return 0;
     // divide first: a * b would be twice as long as the result
-    natural m = a;
+    integer m = a;
     m /= gcd(a, b);
     m *= b;
     return m;
@@ -401,9 +397,15 @@ constexpr std::vector<std::pair<uint64_t, int>> factorize(T a) {
     return out;
 }
 
-constexpr void invert_bits(natural& a) { a = ~std::move(a); }
+constexpr void invert_bits(integer& a) {
+    Check(!a.is_negative(), "invert_bits() of a negative number");
+    for (int i = 0; i < a.words.size(); i++)
+        a.words[i] = ~a.words[i];
+    a.words.normalize();
+}
 
-constexpr void complement(natural& a) {
+constexpr void complement(integer& a) {
+    Check(!a.is_negative(), "complement() of a negative number");
     __complement(a);
     a.words.normalize();
 }

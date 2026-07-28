@@ -72,7 +72,7 @@ constexpr integer pow(integer base, std_int auto exp, integer result) {
     return result;
 }
 
-constexpr integer pow(integer base, const natural& exp) {
+constexpr integer pow(integer base, const integer& exp) {
     if (exp.is_uint64())
         return pow(base, static_cast<uint64_t>(exp));
     if (exp < 0)
@@ -138,7 +138,7 @@ constexpr integer isqrt_hardware(const integer& a) {
     auto x_mantissa = std::frexp(x_fp, &x_exp);
 
     const uint64_t x = std::ldexp(x_mantissa, FP_DIGITS);
-    return natural(x) << (x_exp - FP_DIGITS + delta / 2);
+    return integer(x) << (x_exp - FP_DIGITS + delta / 2);
 }
 
 // exact result for values of at most two words, shared by the isqrt implementations
@@ -741,7 +741,7 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     if (max_min.sign() < 0)
         throw std::runtime_error("max smaller than min in uniform_sample()");
     ++max_min;
-    return integer(uniform_sample(abs(max_min), rng)) + min;
+    return uniform_sample(max_min, rng) + min;
 }
 
 
@@ -890,8 +890,6 @@ constexpr int signum(const integer& a) {
         return 0;
     return a.is_negative() ? -1 : 1;
 }
-
-constexpr integer gcd(const integer& a, const integer& b) { return gcd(abs(a), abs(b)); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {

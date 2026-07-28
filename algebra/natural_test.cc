@@ -7,7 +7,7 @@ TEST_CASE("extract_64bits") {
     std::mt19937_64 rng(233);
     for (int i = 0; i < 1000; i++) {
         int bits = std::uniform_int_distribution<int>(32, 256)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
 
         REQUIRE(extract_u64(x, x.num_bits()) == 0);
         for (int j = 0; j < x.num_bits(); j++) {
@@ -17,17 +17,17 @@ TEST_CASE("extract_64bits") {
 }
 
 TEST_CASE("mod63_65") {
-    REQUIRE(mod63_65(1_n) == std::pair{1, 1});
-    REQUIRE(mod63_65(63_n) == std::pair{0, 63});
-    REQUIRE(mod63_65(66_n) == std::pair{3, 1});
-    REQUIRE(mod63_65(130_n) == std::pair{4, 0});
-    REQUIRE(mod63_65(natural(UINT64_MAX)) == std::pair{15, 15});
-    REQUIRE(mod63_65(natural(UINT128_MAX)) == std::pair{3, 60});
+    REQUIRE(mod63_65(1_i) == std::pair{1, 1});
+    REQUIRE(mod63_65(63_i) == std::pair{0, 63});
+    REQUIRE(mod63_65(66_i) == std::pair{3, 1});
+    REQUIRE(mod63_65(130_i) == std::pair{4, 0});
+    REQUIRE(mod63_65(integer(UINT64_MAX)) == std::pair{15, 15});
+    REQUIRE(mod63_65(integer(UINT128_MAX)) == std::pair{3, 60});
 
     std::mt19937_64 rng(234);
     for (int i = 0; i < 1000; i++) {
         int bits = std::uniform_int_distribution<int>(32, 1024)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         auto [m63, m65] = mod63_65(x);
         REQUIRE(m63 == x % 63);
         REQUIRE(m65 == x % 65);
@@ -38,7 +38,7 @@ TEST_CASE("is_possible_square") {
     std::mt19937_64 rng(233);
     for (int i = 0; i < 1000; i++) {
         int bits = std::uniform_int_distribution<int>(32, 256)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         if (!is_possible_square(x)) {
             integer a = isqrt(x);
             REQUIRE(a * a != x);
@@ -65,16 +65,16 @@ void verify_isqrt(const integer& x, const integer& a) {
 
 void test_isqrt(const auto& fn) {
     std::mt19937_64 rng(0);
-    natural x;
+    integer x;
 
     print("small\n");
-    for (int i = 0; i < 1'000'000; i++) verify_isqrt(natural(i), fn(i));
+    for (int i = 0; i < 1'000'000; i++) verify_isqrt(integer(i), fn(i));
 
 #if 0
     print("64 bit\n");
     for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(30, 64)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
     }
@@ -82,7 +82,7 @@ void test_isqrt(const auto& fn) {
     print("96 bit\n");
     for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(65, 96)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
     }
@@ -90,18 +90,18 @@ void test_isqrt(const auto& fn) {
     print("128 bit\n");
     for (int i = 0; i < 100'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(97, 128)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
     }
 #endif
-    natural e("4723193678752028155961467022770253813739277744022718882812203718746");
+    integer e("4723193678752028155961467022770253813739277744022718882812203718746");
     verify_isqrt(e, fn(e));
 
     print("192 bit\n");
     for (int i = 0; i < 1'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(129, 192)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
     }
@@ -109,7 +109,7 @@ void test_isqrt(const auto& fn) {
     print("256 bit\n");
     for (int i = 0; i < 1'000'000; i++) {
         int bits = std::uniform_int_distribution<int>(193, 256)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 1'000'000 == 0) print("{}\n", i / 1'000'000);
     }
@@ -117,7 +117,7 @@ void test_isqrt(const auto& fn) {
     print("512 bit\n");
     for (int i = 0; i < 100'000; i++) {
         int bits = std::uniform_int_distribution<int>(257, 512)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 100'000 == 0) print("{}\n", i / 100'000);
     }
@@ -125,7 +125,7 @@ void test_isqrt(const auto& fn) {
     print("1024 bit\n");
     for (int i = 0; i < 100'000; i++) {
         int bits = std::uniform_int_distribution<int>(513, 1024)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         verify_isqrt(x, fn(x));
         if (i % 100'000 == 0) print("{}\n", i / 10'000);
     }
@@ -140,7 +140,7 @@ TEST_CASE("modX()") {
     std::mt19937_64 rng(0);
     for (int i = 0; i < 10'000; i++) {
         int bits = std::uniform_int_distribution<int>(1, 1024)(rng);
-        natural x = uniform_sample_bits(bits, rng);
+        integer x = uniform_sample_bits(bits, rng);
         REQUIRE(x % 2 == x.mod2());
         REQUIRE(x % 3 == x.mod3());
         REQUIRE(x % 4 == x.mod4());
@@ -166,9 +166,9 @@ TEST_CASE("round_to_zero") {
 }
 
 TEST_CASE("iroot 2") {
-    const auto a = 3213123_n;
+    const auto a = 3213123_i;
     REQUIRE(isqrt(a) == iroot(a, 2));
-    const auto b = 88888888888_n;
+    const auto b = 88888888888_i;
     REQUIRE(isqrt(b) == iroot(b, 2));
 }
 
@@ -246,7 +246,7 @@ TEST_CASE("iroot 7") {
 
 #if 0
 TEST_CASE("factorize") {
-    natural a = pow(2_n, 128);
+    integer a = pow(2_i, 128);
     int ms_max = 0;
     while (a > 1) {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -267,7 +267,7 @@ TEST_CASE("factorize") {
             std::print(" in {} ms (max {} ms)\n", ms, ms_max);
         }
 
-        natural m = 1;
+        integer m = 1;
         for (const auto& [factor, count] : factors) {
             if (!is_likely_prime(factor, 40)) {
                 std::print("returned factor {} is not prime!\n", factor);
@@ -288,24 +288,24 @@ ulong doubleToLongBits(double a) {
 }
 
 // UNTESTED
-natural double_to_natural(double a) {
+integer double_to_natural(double a) {
     ulong bits = doubleToLongBits(a);
     ulong e = ulong(1) << 52;
-    natural b = (bits & e - 1) | e;
+    integer b = (bits & e - 1) | e;
     b <<= ((bits >> 52) & 0x7ff) - 1075;
     return b;
 }
 
 // UNTESTED
-natural fast_isqrt(const natural& x) {
+integer fast_isqrt(const integer& x) {
     if (x == 0)
         return 0;
     double xd = static_cast<double>(x);
-    natural val, q, s;
+    integer val, q, s;
     if (xd < 2.1267e37) { // 2.12e37 largest here since sqrt(long.max*long.max) > long.max
         ulong vInt = (ulong)sqrt(xd);
-        natural nInt = vInt;
-        val = natural((vInt + static_cast<ulong>(x / nInt)) >> 1);
+        integer nInt = vInt;
+        val = integer((vInt + static_cast<ulong>(x / nInt)) >> 1);
     } else if (xd < 4.3322e127) {
         val = double_to_natural(sqrt(xd));
 
@@ -397,10 +397,10 @@ TEST_CASE("fast_isqrt stress") {
 #endif
 
 TEST_CASE("uniform_sample") {
-    natural a = (1_n << 128) - 1;
+    integer a = (1_i << 128) - 1;
     std::mt19937_64 rng(0);
     for (int i = 0; i < 20; i++) {
-        natural m = uniform_sample(0, a, rng);
+        integer m = uniform_sample(0, a, rng);
         REQUIRE(m.words.size() <= a.words.size());
         REQUIRE(0 <= m);
         REQUIRE(m <= a);
@@ -413,13 +413,13 @@ TEST_CASE("uniform_sample") {
 }
 
 TEST_CASE("uniform_sample2") {
-    natural a = 999'999'999'999'999'999'999'999'999'999'999'999_n;
-    natural b = 500'000'000'000'000'000'000'000'000'000'000'000_n;
+    integer a = 999'999'999'999'999'999'999'999'999'999'999'999_i;
+    integer b = 500'000'000'000'000'000'000'000'000'000'000'000_i;
     std::mt19937_64 rng(0);
-    natural sum;
+    integer sum;
     int n = 100000;
     for (int i = 0; i < n; i++) {
-        natural m = uniform_sample(0, a, rng);
+        integer m = uniform_sample(0, a, rng);
         REQUIRE(m.words.size() <= a.words.size());
         REQUIRE(0 <= m);
         REQUIRE(m <= a);
@@ -431,12 +431,12 @@ TEST_CASE("uniform_sample2") {
     }
     sum /= n;
     print("avg {}\n", sum);
-    REQUIRE(abs(diff(sum, b)) <= b / 100); // diff() returns an integer, keep the comparison in naturals
+    REQUIRE(diff(sum, b) <= b / 100);
 }
 
 TEST_CASE("pow") {
-    REQUIRE(pow(natural(2), 3) == 8);
-    REQUIRE(pow(natural(10), 30) == natural("1000000000000000000000000000000"));
+    REQUIRE(pow(integer(2), 3) == 8);
+    REQUIRE(pow(integer(10), 30) == integer("1000000000000000000000000000000"));
 }
 
 TEST_CASE("gcd") {
@@ -450,46 +450,46 @@ TEST_CASE("gcd") {
     REQUIRE(gcd(6u, 15u) == 3u);
     REQUIRE(gcd(7u, 3u) == 1u);
 
-    REQUIRE(gcd(natural(5), natural(5)) == natural(5));
-    REQUIRE(gcd(natural(6), natural(15)) == natural(3));
-    REQUIRE(gcd(natural(7), natural(3)) == natural(1));
+    REQUIRE(gcd(integer(5), integer(5)) == integer(5));
+    REQUIRE(gcd(integer(6), integer(15)) == integer(3));
+    REQUIRE(gcd(integer(7), integer(3)) == integer(1));
 
-    REQUIRE(gcd(natural(5), 5) == 5);
-    REQUIRE(gcd(1, natural(5)) == 1);
+    REQUIRE(gcd(integer(5), 5) == 5);
+    REQUIRE(gcd(1, integer(5)) == 1);
 }
 
 TEST_CASE("isqrt") {
-    REQUIRE(isqrt(natural(0)) == 0);
-    REQUIRE(isqrt(natural(1)) == 1);
-    REQUIRE(isqrt(natural(2)) == 1);
-    REQUIRE(isqrt(natural(3)) == 1);
-    REQUIRE(isqrt(natural(4)) == 2);
-    REQUIRE(isqrt(natural(5)) == 2);
-    REQUIRE(isqrt(natural(9)) == 3);
-    REQUIRE(isqrt(natural(9999)) == 99);
-    REQUIRE(isqrt(natural(10000)) == 100);
+    REQUIRE(isqrt(integer(0)) == 0);
+    REQUIRE(isqrt(integer(1)) == 1);
+    REQUIRE(isqrt(integer(2)) == 1);
+    REQUIRE(isqrt(integer(3)) == 1);
+    REQUIRE(isqrt(integer(4)) == 2);
+    REQUIRE(isqrt(integer(5)) == 2);
+    REQUIRE(isqrt(integer(9)) == 3);
+    REQUIRE(isqrt(integer(9999)) == 99);
+    REQUIRE(isqrt(integer(10000)) == 100);
 }
 
 TEST_CASE("is_prime") {
-    REQUIRE(!is_prime(natural(0)));
-    REQUIRE(!is_prime(natural(1)));
-    REQUIRE(is_prime(natural(2)));
-    REQUIRE(is_prime(natural(3)));
-    REQUIRE(!is_prime(natural(4)));
-    REQUIRE(is_prime(natural(5)));
-    REQUIRE(!is_prime(natural(6)));
+    REQUIRE(!is_prime(integer(0)));
+    REQUIRE(!is_prime(integer(1)));
+    REQUIRE(is_prime(integer(2)));
+    REQUIRE(is_prime(integer(3)));
+    REQUIRE(!is_prime(integer(4)));
+    REQUIRE(is_prime(integer(5)));
+    REQUIRE(!is_prime(integer(6)));
 }
 
 TEST_CASE("is_power_of_two") {
-    REQUIRE(is_power_of_two(1_n));
+    REQUIRE(is_power_of_two(1_i));
     REQUIRE(is_power_of_two(2));
     REQUIRE(!is_power_of_two(3));
     REQUIRE(is_power_of_two(4));
     REQUIRE(!is_power_of_two(5));
 
-    REQUIRE(natural(64).num_bits() == 7);
-    REQUIRE(natural(64).num_trailing_zeros() == 6);
-    natural a = natural(1) << 100;
+    REQUIRE(integer(64).num_bits() == 7);
+    REQUIRE(integer(64).num_trailing_zeros() == 6);
+    integer a = integer(1) << 100;
     REQUIRE(a.words.size() == 2);
     REQUIRE(a.words[0] == 0);
     REQUIRE(a.words[1] == uint64_t(1) << 36);
@@ -497,15 +497,15 @@ TEST_CASE("is_power_of_two") {
     REQUIRE(a.num_trailing_zeros() == 100);
     REQUIRE(is_power_of_two(a));
 
-    REQUIRE(is_power_of_two(1_n << 280));
+    REQUIRE(is_power_of_two(1_i << 280));
 }
 
 
 TEST_CASE("power_of_two") {
-    REQUIRE(pow(2_n, 0) == 1_n);
-    REQUIRE(pow(2_n, 3) == 8_n);
-    REQUIRE(pow(2_n, 63) == 1_n << 63);
-    REQUIRE(pow(2_n, 64) == 1_n << 64);
+    REQUIRE(pow(2_i, 0) == 1_i);
+    REQUIRE(pow(2_i, 3) == 8_i);
+    REQUIRE(pow(2_i, 63) == 1_i << 63);
+    REQUIRE(pow(2_i, 64) == 1_i << 64);
 }
 
 TEST_CASE("factorize(uint64_t)") {
@@ -519,21 +519,21 @@ TEST_CASE("factorize(uint64_t)") {
     REQUIRE(factorize(uint64_t(49)) == f{{7, 2}});
 }
 
-TEST_CASE("factorize(natural)") {
+TEST_CASE("factorize(integer)") {
     using f = std::vector<std::pair<integer, int>>; // factorize() returns integers now
-    REQUIRE(factorize(0_n) == f{});
-    REQUIRE(factorize(1_n) == f{});
-    REQUIRE(factorize(12_n) == f{{2, 2}, {3, 1}});
-    REQUIRE(factorize(16_n) == f{{2, 4}});
-    REQUIRE(factorize(13_n) == f{{13, 1}});
-    REQUIRE(factorize(30_n) == f{{2, 1}, {3, 1}, {5, 1}});
-    REQUIRE(factorize(49_n) == f{{7, 2}});
-    REQUIRE(factorize(340282366920938463463374607431768211453_n) == f{{11, 1}, {6949, 1}, {4451685225093714772084598273548427_n, 1}});
+    REQUIRE(factorize(0_i) == f{});
+    REQUIRE(factorize(1_i) == f{});
+    REQUIRE(factorize(12_i) == f{{2, 2}, {3, 1}});
+    REQUIRE(factorize(16_i) == f{{2, 4}});
+    REQUIRE(factorize(13_i) == f{{13, 1}});
+    REQUIRE(factorize(30_i) == f{{2, 1}, {3, 1}, {5, 1}});
+    REQUIRE(factorize(49_i) == f{{7, 2}});
+    REQUIRE(factorize(340282366920938463463374607431768211453_i) == f{{11, 1}, {6949, 1}, {4451685225093714772084598273548427_i, 1}});
 }
 
 TEST_CASE("is_prime vs is_likely_prime") {
     for (uint64_t p = 50'000'000; p <= 50'100'000; p++) {
-        bool m = is_likely_prime(natural(p), 10);
+        bool m = is_likely_prime(integer(p), 10);
         bool e = is_prime(p);
         REQUIRE(m == e);
     }
@@ -692,9 +692,9 @@ TEST_CASE("modular arithmetic") {
         integer expected = 1;
         for (uint64_t k = 0; k < e; k++)
             expected = (expected * a) % m;
-        REQUIRE(pow_mod(a, natural(e), m) == expected);
+        REQUIRE(pow_mod(a, integer(e), m) == expected);
         integer out;
-        pow_mod(a, natural(e), m, out);
+        pow_mod(a, integer(e), m, out);
         REQUIRE(out == expected);
     }
 
@@ -721,33 +721,33 @@ TEST_CASE("modular arithmetic") {
 TEST_CASE("number theory helpers") {
     // power_of_two
     for (int e = 0; e < 300; e++) {
-        const natural p = power_of_two(e);
-        REQUIRE(p == pow(natural(2), e));
+        const integer p = power_of_two(e);
+        REQUIRE(p == pow(integer(2), e));
         REQUIRE(p.num_bits() == e + 1);
     }
 
     // binominal
     integer out;
-    binominal(natural(5), 0, out);
+    binominal(integer(5), 0, out);
     REQUIRE(out == 1u);
-    binominal(natural(5), 2, out);
+    binominal(integer(5), 2, out);
     REQUIRE(out == 10u);
-    binominal(natural(10), 5, out);
+    binominal(integer(10), 5, out);
     REQUIRE(out == 252u);
-    binominal(natural(52), 5, out);
+    binominal(integer(52), 5, out);
     REQUIRE(out == 2598960u);
     // symmetry: C(n, k) == C(n, n-k)
     integer x, y;
-    binominal(natural(30), 12, x);
-    binominal(natural(30), 18, y);
+    binominal(integer(30), 12, x);
+    binominal(integer(30), 18, y);
     REQUIRE(x == y);
 
     // iroot
-    REQUIRE(iroot(natural(0), 3) == 0);
-    REQUIRE(iroot(natural(1), 5) == 1);
-    REQUIRE(iroot(natural(8), 3) == 2);
-    REQUIRE(iroot(natural(9), 3) == 2);
-    REQUIRE(iroot(natural(27), 3) == 3);
+    REQUIRE(iroot(integer(0), 3) == 0);
+    REQUIRE(iroot(integer(1), 5) == 1);
+    REQUIRE(iroot(integer(8), 3) == 2);
+    REQUIRE(iroot(integer(9), 3) == 2);
+    REQUIRE(iroot(integer(27), 3) == 3);
     for (uint32_t n : {3u, 4u, 5u, 7u}) {
         for (uint64_t v : {2ull, 5ull, 10ull, 1000ull}) {
             const integer p = pow(integer(v), n);
@@ -759,55 +759,55 @@ TEST_CASE("number theory helpers") {
 
     // exact_sqrt, both forms
     integer b;
-    REQUIRE(exact_sqrt(natural(144), b));
+    REQUIRE(exact_sqrt(integer(144), b));
     REQUIRE(b == 12u);
-    REQUIRE(!exact_sqrt(natural(145), b));
+    REQUIRE(!exact_sqrt(integer(145), b));
     integer whole = 1, root = 1;
-    exact_sqrt(natural(72), whole, root); // sqrt(72) == 6 * sqrt(2)
+    exact_sqrt(integer(72), whole, root); // sqrt(72) == 6 * sqrt(2)
     REQUIRE(whole == 6u);
     REQUIRE(root == 2u);
     whole = 1;
     root = 1;
-    exact_sqrt(natural(196), whole, root);
+    exact_sqrt(integer(196), whole, root);
     REQUIRE(whole == 14u);
     REQUIRE(root == 1u);
 
     // is_possible_square never rejects a real square
     for (uint64_t v = 0; v < 3000; v++)
-        REQUIRE(is_possible_square(natural(v) * natural(v)));
+        REQUIRE(is_possible_square(integer(v) * integer(v)));
 
     // concat
     REQUIRE(concat(0, 0) == 0);
     REQUIRE(concat(1, 2) == ((static_cast<uint128_t>(1) << 64) | 2));
 
     // complement: two's complement over the words the value occupies
-    natural c = 1;
+    integer c = 1;
     c <<= 64;
     complement(c);
-    REQUIRE(c == (natural(1) << 128) - (natural(1) << 64));
-    natural c2 = 5;
+    REQUIRE(c == (integer(1) << 128) - (integer(1) << 64));
+    integer c2 = 5;
     complement(c2);
-    REQUIRE(c2 == natural(UINT64_MAX) - 4u);
+    REQUIRE(c2 == integer(UINT64_MAX) - 4u);
 }
 
 
 
 TEST_CASE("lcm") {
-    REQUIRE(lcm(natural(0), natural(0)) == 0);
-    REQUIRE(lcm(natural(0), natural(5)) == 0);
-    REQUIRE(lcm(natural(5), natural(0)) == 0);
-    REQUIRE(lcm(natural(4), natural(6)) == 12);
-    REQUIRE(lcm(natural(21), natural(6)) == 42);
-    REQUIRE(lcm(natural(7), natural(7)) == 7);
-    REQUIRE(lcm(natural(1), natural(13)) == 13);
+    REQUIRE(lcm(integer(0), integer(0)) == 0);
+    REQUIRE(lcm(integer(0), integer(5)) == 0);
+    REQUIRE(lcm(integer(5), integer(0)) == 0);
+    REQUIRE(lcm(integer(4), integer(6)) == 12);
+    REQUIRE(lcm(integer(21), integer(6)) == 42);
+    REQUIRE(lcm(integer(7), integer(7)) == 7);
+    REQUIRE(lcm(integer(1), integer(13)) == 13);
 
     std::mt19937_64 rng(0);
     for (int i = 0; i < 30; i++) {
-        const natural a = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
-        const natural b = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
+        const integer a = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
+        const integer b = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
         if (!a || !b)
             continue;
-        const natural l = lcm(a, b);
+        const integer l = lcm(a, b);
         REQUIRE(l % a == 0);
         REQUIRE(l % b == 0);
         REQUIRE(l * gcd(a, b) == a * b);
@@ -815,16 +815,21 @@ TEST_CASE("lcm") {
 }
 
 TEST_CASE("invert_bits") {
-    natural a = UINT64_MAX;
+    integer a = UINT64_MAX;
     invert_bits(a);
     REQUIRE(a.words.size() == 0);
     REQUIRE(a == 0u);
 
-    natural b = 0xF0F0u;
-    natural c = b;
+    integer b = 0xF0F0u;
+    integer c = b;
     invert_bits(c);
-    REQUIRE(c == ~b);
     REQUIRE(c == (UINT64_MAX ^ 0xF0F0u));
+    // operator~ on an integer is the arithmetic complement, which is a different operation
+    REQUIRE(~b == -integer(0xF0F1u));
+
+    // a negative input has no bit pattern to flip
+    integer d = -1;
+    REQUIRE_THROWS(invert_bits(d));
 }
 
 TEST_CASE("isqrt2 and isqrt3 agree with isqrt") {
@@ -847,15 +852,15 @@ TEST_CASE("isqrt2 and isqrt3 agree with isqrt") {
         REQUIRE(isqrt3(x) == s);
     }
     for (unsigned i = 0; i <= 20; i++) {
-        REQUIRE(isqrt2(natural(i)) == isqrt(natural(i)));
-        REQUIRE(isqrt3(natural(i)) == isqrt(natural(i)));
+        REQUIRE(isqrt2(integer(i)) == isqrt(integer(i)));
+        REQUIRE(isqrt3(integer(i)) == isqrt(integer(i)));
     }
 }
 
 TEST_CASE("isqrt_hardware") {
     // documented as very fast but only approximate for large arguments, so exact only for small
     for (unsigned i = 0; i <= 100; i++)
-        REQUIRE(isqrt_hardware(natural(i)) == isqrt(natural(i)));
+        REQUIRE(isqrt_hardware(integer(i)) == isqrt(integer(i)));
     // for large arguments it must still land close to the true root
     for (int bits : {80, 130, 260, 500}) {
         const integer a = power_of_two(bits);
@@ -879,19 +884,19 @@ TEST_CASE("is_one_of") {
 TEST_CASE("is_possible_square - every square passes the filter") {
     // a filter: every real square must pass, non-squares may or may not
     for (unsigned i = 0; i <= 300; i++)
-        REQUIRE(is_possible_square(natural(i) * natural(i)));
+        REQUIRE(is_possible_square(integer(i) * integer(i)));
     for (int bits : {40, 100, 250}) {
-        const natural a = power_of_two(bits);
+        const integer a = power_of_two(bits);
         REQUIRE(is_possible_square(a * a));
     }
     // zero is a square, including a zero that came out of a subtraction
-    REQUIRE(is_possible_square(0_n));
-    natural z = 5;
+    REQUIRE(is_possible_square(0_i));
+    integer z = 5;
     z -= 5u;
     REQUIRE(is_possible_square(z));
     // and it does reject: 2, 3, 5, 6 are not squares
-    REQUIRE(!is_possible_square(2_n));
-    REQUIRE(!is_possible_square(3_n));
-    REQUIRE(!is_possible_square(5_n));
-    REQUIRE(!is_possible_square(6_n));
+    REQUIRE(!is_possible_square(2_i));
+    REQUIRE(!is_possible_square(3_i));
+    REQUIRE(!is_possible_square(5_i));
+    REQUIRE(!is_possible_square(6_i));
 }
