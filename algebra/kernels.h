@@ -293,6 +293,32 @@ constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
     return (v.size == 0) ? 0 : -1;
 }
 
+// Compares a magnitude against an unsigned builtin, without building a natural for it.
+template<std_unsigned_int T>
+constexpr bool __equal_u(cnatural a, T b) {
+    if constexpr (sizeof(T) <= 8) {
+        return a.size <= 1 && (a.size ? a[0] : 0) == b;
+    } else {
+        if (b <= UINT64_MAX)
+            return a.size <= 1 && (a.size ? a[0] : 0) == static_cast<uint64_t>(b);
+        return a.size == 2 && a[0] == static_cast<uint64_t>(b) && a[1] == static_cast<uint64_t>(b >> 64);
+    }
+}
+
+template<std_unsigned_int T>
+constexpr bool __less_u(cnatural a, T b) {
+    if constexpr (sizeof(T) <= 8) {
+        return a.size == 0 ? b > 0 : (a.size == 1 && a[0] < b);
+    } else {
+        if (b <= UINT64_MAX)
+            return a.size == 0 ? b > 0 : (a.size == 1 && a[0] < static_cast<uint64_t>(b));
+        if (a.size > 2)
+            return false;
+        const uint128_t av = (a.size == 2) ? ((static_cast<uint128_t>(a[1]) << 64) | a[0]) : (a.size ? a[0] : 0);
+        return av < b;
+    }
+}
+
 constexpr bool __equal(cnatural a, cnatural b) {
     if (a.size != b.size)
         return false;

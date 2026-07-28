@@ -31,7 +31,7 @@ TEST_CASE("add_product") {
 
 TEST_CASE("ctor") {
     integer a = -1;
-    integer b(a.abs);
+    integer b(a.to_natural());
     REQUIRE(b == 1);
     REQUIRE(b.sign() == 1);
     integer c(a);
@@ -111,7 +111,7 @@ TEST_CASE("static_cast<int>") {
     REQUIRE(static_cast<int>(integer(a)) == a);
     integer e(b);
     REQUIRE(e.sign() == -1);
-    REQUIRE(e.abs.words[0] == 2147483648);
+    REQUIRE(e.words[0] == 2147483648);
     REQUIRE(static_cast<int>(integer(b)) == b);
 }
 
@@ -263,38 +263,38 @@ TEST_CASE("big add 1") {
     b += a;
     REQUIRE(b > a);
     REQUIRE(b.sign() == 2);
-    REQUIRE(b.abs.words[1] == 1);
-    REQUIRE(b.abs.words[0] == a - 1);
+    REQUIRE(b.words[1] == 1);
+    REQUIRE(b.words[0] == a - 1);
 
     b += b;
     REQUIRE(b.sign() == 2);
-    REQUIRE(b.abs.words[1] == 3);
-    REQUIRE(b.abs.words[0] == a - 3);
+    REQUIRE(b.words[1] == 3);
+    REQUIRE(b.words[0] == a - 3);
 }
 
 TEST_CASE("big add 2") {
     const ulong m = std::numeric_limits<ulong>::max();
 
     integer a;
-    a.abs.words.reset(4);
-    a.abs.words[0] = m;
-    a.abs.words[1] = m;
-    a.abs.words[2] = m;
-    a.abs.words[3] = 1;
+    a.words.reset(4);
+    a.words[0] = m;
+    a.words[1] = m;
+    a.words[2] = m;
+    a.words[3] = 1;
 
     integer b;
-    b.abs.words.reset(4);
-    b.abs.words[0] = 1;
-    b.abs.words[1] = 0;
-    b.abs.words[2] = 0;
-    b.abs.words[3] = 1;
+    b.words.reset(4);
+    b.words[0] = 1;
+    b.words[1] = 0;
+    b.words[2] = 0;
+    b.words[3] = 1;
 
     integer c = a + b;
     REQUIRE(c.sign() == 4);
-    REQUIRE(c.abs.words[0] == 0);
-    REQUIRE(c.abs.words[1] == 0);
-    REQUIRE(c.abs.words[2] == 0);
-    REQUIRE(c.abs.words[3] == 3);
+    REQUIRE(c.words[0] == 0);
+    REQUIRE(c.words[1] == 0);
+    REQUIRE(c.words[2] == 0);
+    REQUIRE(c.words[3] == 3);
 }
 
 TEST_CASE("add stress with ucent") {
@@ -347,8 +347,8 @@ TEST_CASE("str stress with ucent") {
         integer b = a;
         if (a > std::numeric_limits<ulong>::max()) {
             REQUIRE(b.sign() == 2);
-            REQUIRE(b.abs.words[0] == ulong(a));
-            REQUIRE(b.abs.words[1] == ulong(a >> 64));
+            REQUIRE(b.words[0] == ulong(a));
+            REQUIRE(b.words[1] == ulong(a >> 64));
         }
         REQUIRE(format("{}", a) == integer(a).str());
     }
@@ -391,7 +391,7 @@ TEST_CASE("*=") {
 
     integer d(3), e("1000000000000000000000000000000000000");
     d *= e;
-    REQUIRE(d.abs.words.size() == 2);
+    REQUIRE(d.words.size() == 2);
     REQUIRE(d == integer("3000000000000000000000000000000000000"));
 }
 
@@ -818,4 +818,102 @@ TEST_CASE("integer stores its value once") {
     a += 1;                   REQUIRE(a == (integer(1) << 100) + 1);
     integer b = 5, c = 9;
     b.swap(c);                REQUIRE((b == 9 && c == 5));
+}
+
+TEST_CASE("integer operations where the output aliases an input") {
+    // The magnitude borrow used by the in-place operations leaves the borrowed value's words empty
+    // while it is alive, so an output that is also an input has to be read before the borrow starts.
+    // Each of these returned 0 or garbage while that was wrong.
+    integer a = 12345;
+    a *= a;
+    REQUIRE(a == 12345 * 12345);
+
+    integer b = (integer(1) << 100) + 7;
+    b *= b;
+    REQUIRE(b == ((integer(1) << 100) + 7) * ((integer(1) << 100) + 7));
+
+    integer c = 100;
+    c /= c;
+    REQUIRE(c == 1);
+
+    integer d = (integer(1) << 90) + 3;
+    d /= d;
+    REQUIRE(d == 1);
+
+    integer e = 37;
+    e %= e;
+    REQUIRE(e == 0);
+
+    // div() with the quotient or remainder aliasing an operand
+    integer q = 1000, r;
+    div(q, integer(7), q, r);
+    REQUIRE(q == 142);
+    REQUIRE(r == 6);
+
+    integer f = 1000, g = 7;
+    div(f, g, g, f);          // outputs swapped onto the inputs
+    REQUIRE(g == 142);
+    REQUIRE(f == 6);
+}
+
+TEST_CASE("integer hashing keeps the sign") {
+    std::hash<integer> h;
+    REQUIRE(h(integer(5)) != h(integer(-5)));
+    REQUIRE(h(integer(5)) == h(integer(5)));
+    REQUIRE(h(integer(1) << 100) != h(-(integer(1) << 100)));
+    REQUIRE(h(integer(0)) == h(integer(0)));
+}
+
+// The union in integer_backend has to be exchanged through whichever member is active, so that
+// moving and swapping stay usable in a constant expression.
+static_assert([] { integer a = -5; a *= 7; return a == -35; }());
+static_assert([] { integer a = 6; a /= 3; return a == 2; }());
+static_assert([] { integer a = 5, b = 9; a.swap(b); return a == 9 && b == 5; }());
+static_assert([] { integer a = 1; a <<= 100; a >>= 100; return a == 1; }());
+
+// A magnitude borrow must not be copyable or movable: two of them over one backend would each
+// restore in turn, and the second would put the pre-operation value back, losing the result.
+static_assert(!std::is_copy_constructible_v<integer::magnitude_ref>);
+static_assert(!std::is_move_constructible_v<integer::magnitude_ref>);
+static_assert(!std::is_copy_assignable_v<integer::magnitude_ref>);
+static_assert(!std::is_move_assignable_v<integer::magnitude_ref>);
+
+TEST_CASE("magnitude borrow restores the sign") {
+    integer a = -12345;
+    { auto m = a.magnitude(); *m += 1u; }
+    REQUIRE(a == -12346);
+
+    // a magnitude that reaches zero comes back with no sign, not negative zero
+    integer b = -1;
+    { auto m = b.magnitude(); *m -= 1u; }
+    REQUIRE(b == 0);
+    REQUIRE(b.sign() == 0);
+
+    // growing past a word boundary keeps the sign
+    integer c = -(integer(1) << 64) + 1;
+    { auto m = c.magnitude(); *m += 1u; }
+    REQUIRE(c == -(integer(1) << 64));
+
+    // the borrow is exception safe: the value is restored even when the operation throws
+    integer d = 5;
+    REQUIRE_THROWS([&] { auto m = d.magnitude(); *m -= 99u; }());
+    REQUIRE(d.words.size() <= 1);
+}
+
+TEST_CASE("view based accessors on negative values") {
+    const integer a = -(integer(1) << 70);
+    REQUIRE(a.num_bits() == 71);
+    REQUIRE(a.num_trailing_zeros() == 70);
+    REQUIRE(a.bit(70));
+    REQUIRE(!a.bit(69));
+    REQUIRE(!a.is_uint64());
+    REQUIRE(!a.is_uint128()); // the magnitude fits two words, but the value is negative
+    REQUIRE(a.is_int128());
+
+    // comparing a magnitude against a builtin, at the boundaries
+    REQUIRE(integer(0) == 0u);
+    REQUIRE(!(integer(-5) == 5u));
+    REQUIRE(integer(UINT64_MAX) == UINT64_MAX);
+    REQUIRE(!((integer(1) << 64) == UINT64_MAX));
+    REQUIRE(!(integer(-1) < 0u) == false); // a negative value is less than any unsigned
 }

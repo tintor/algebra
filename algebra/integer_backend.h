@@ -50,7 +50,13 @@ public:
         }
     }
 
-    constexpr integer_backend(integer_backend&& o) : _words(o._words), _size(o._size), _capacity(o._capacity) {
+    constexpr integer_backend(integer_backend&& o) : _size(o._size), _capacity(o._capacity) {
+        // read whichever union member o is actually using: reading the inactive one is fine at
+        // runtime but ill-formed in a constant expression
+        if (o._capacity)
+            _words = o._words;
+        else
+            _single_word = o._single_word;
         o._single_word = 0;
         o._size = 0;
         o._capacity = 0;
@@ -100,10 +106,13 @@ public:
             return;
         if (_capacity)
             delete[] _words;
-        _words = o._words;
+        if (o._capacity)
+            _words = o._words;
+        else
+            _single_word = o._single_word;
         _size = o._size;
         _capacity = o._capacity;
-        o._words = 0;
+        o._single_word = 0;
         o._size = 0;
         o._capacity = 0;
     }
@@ -151,9 +160,34 @@ public:
     constexpr uint64_t& back() { return operator[](size() - 1); }
 
     constexpr void swap(integer_backend& o) {
-        std::swap(_words, o._words);
-        std::swap(_size, o._size);
-        std::swap(_capacity, o._capacity);
+        // A union member may only be read while it is the active one, so the exchange goes through
+        // whichever member each side actually uses. std::swap(_words, o._words) reads the inactive
+        // member when either side is in small-buffer mode, which is fine at runtime but ill-formed
+        // in a constant expression -- it is what stopped integer arithmetic from being usable in a
+        // static_assert.
+        const int size = _size, o_size = o._size;
+        const int capacity = _capacity, o_capacity = o._capacity;
+        if (capacity && o_capacity) {
+            uint64_t* t = _words;
+            _words = o._words;
+            o._words = t;
+        } else if (capacity) {
+            uint64_t* t = _words;
+            _single_word = o._single_word;
+            o._words = t;
+        } else if (o_capacity) {
+            uint64_t* t = o._words;
+            o._single_word = _single_word;
+            _words = t;
+        } else {
+            const uint64_t t = _single_word;
+            _single_word = o._single_word;
+            o._single_word = t;
+        }
+        _size = o_size;
+        o._size = size;
+        _capacity = o_capacity;
+        o._capacity = capacity;
     }
 
     constexpr void erase_first_n_words(int n);

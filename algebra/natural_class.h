@@ -624,15 +624,17 @@ constexpr void square(natural& a) {
     __square(a);
 }
 
-constexpr void mul(const natural& a, const natural& b, natural& out) {
-    if (a.words.size() == 0 || b.words.size() == 0) {
+// Inputs are views so that a caller holding the words elsewhere -- integer, for one -- does not
+// have to materialise a natural for them.
+constexpr void mul(cnatural a, cnatural b, natural& out) {
+    if (a.size == 0 || b.size == 0) {
         out.set_zero();
         return;
     }
 
-    if (a.words.size() == 1) {
-        if (b.words.size() == 1) {
-            uint128_t p = __mulq(a.words[0], b.words[0]);
+    if (a.size == 1) {
+        if (b.size == 1) {
+            uint128_t p = __mulq(a[0], b[0]);
             out.words.reset_one_without_init();
             out.words[0] = p;
             uint64_t high = p >> 64;
@@ -640,16 +642,20 @@ constexpr void mul(const natural& a, const natural& b, natural& out) {
                 out.words.push_back(high);
             return;
         }
-        __mul(b, a.words[0], /*carry*/0, out);
+        __mul(b.words, b.size, a[0], /*carry*/0, out);
         return;
     }
 
-    if (b.words.size() == 1) {
-        __mul(a, b.words[0], /*carry*/0, out);
+    if (b.size == 1) {
+        __mul(a.words, a.size, b[0], /*carry*/0, out);
         return;
     }
 
-    __mul(a, b, out);
+    out.set_zero();
+    out.words.resize(a.size + b.size);
+    vnatural vq = out;
+    __mul(a, b, vq, /*init*/false);
+    out.words.downsize(vq.size);
 }
 
 constexpr void mul(natural& a, const natural& b) {
@@ -860,20 +866,27 @@ constexpr void div(const natural& a, const natural& b, natural& q, natural& r) {
 }
 
 // TODO move this kernel to util.h
-constexpr void mod(const natural& a, const natural& b, natural& r) {
-    Check(!b.words.empty(), "division by zero");
-    if (b.words.size() <= 1) {
-        r = __mod(a, b.words[0]);
+// The remainder, taking views so that a caller holding the words elsewhere -- integer -- needs no
+// natural for them. Named apart from mod() so that adding it does not change any overload set.
+constexpr void __mod_into(cnatural a, cnatural b, natural& r) {
+    Check(b.size != 0, "division by zero");
+    if (b.size <= 1) {
+        r = __mod(a, b[0]);
         return;
     }
     r.words.set_zero();
-    for (auto i = a.words.size(); i-- > 0;) {
-        if (r.words.size() || a.words[i])
-            r.words.insert_first_word(a.words[i]);
+    r.words.reserve(b.size + 1); // the remainder never exceeds this, so the loop below never grows it
+    for (auto i = a.size; i-- > 0;) {
+        if (r.words.size() || a[i])
+            r.words.insert_first_word(a[i]);
         const uint64_t q = __saturated_div(r, b);
-        sub_product(r, b, q); // r -= b * q
+        inatural ir = r;
+        Check(__sub_product(ir, b, q), "mod() remainder went negative");
+        r.words.downsize(ir.size);
     }
 }
+
+constexpr void mod(const natural& a, const natural& b, natural& r) { __mod_into(a, b, r); }
 
 // TODO move this kernel to util.h
 constexpr void mod(natural& a, const natural& b) {

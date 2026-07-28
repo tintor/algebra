@@ -4,7 +4,7 @@
 
 namespace algebra {
 
-constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a.abs)); }
+constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
 
 constexpr integer abs(integer a) {
     if (a.is_negative())
@@ -14,7 +14,7 @@ constexpr integer abs(integer a) {
 
 // returns abs(a) > abs(b), minimizing memory allocation
 constexpr bool abs_greater(const integer& a, const integer& b) {
-    return a.abs > b.abs;
+    return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
 }
 
 constexpr integer uniform_sample(const integer& min, const integer& max, auto& rng) {
@@ -22,7 +22,7 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     if (max_min.sign() < 0)
         throw std::runtime_error("max smaller than min in uniform_sample()");
     ++max_min;
-    return integer(uniform_sample(max_min.abs, rng)) + min;
+    return integer(uniform_sample(max_min.to_natural(), rng)) + min;
 }
 
 constexpr integer exp2(std_int auto exp) {
@@ -131,7 +131,7 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
         return false;
     if (t.is_negative())
         t += m;
-    out = t.abs;
+    out = t.to_natural();
     return true;
 }
 
@@ -171,24 +171,27 @@ constexpr void binominal_mod(const natural& n, uint64_t k, const natural& m, nat
 
 constexpr void mod(integer& a, const integer& b) {
     const bool negative = a.is_negative();
-    a.abs.words.set_negative(false);
-    mod(a.abs, b.abs);
-    if (negative && !a.abs.words.empty()) {
+    a.words.set_negative(false);
+    {
+        const natural bn = b.to_natural(); // b may be a itself, see mul() on aliasing
+        auto m = a.magnitude();
+        mod(*m, bn);
+    }
+    if (negative && !a.words.empty()) {
         // result is in [0, abs(b)) range
-        natural e = b.abs;
-        e.words.set_negative(false);
-        e -= a.abs;
+        natural e = b.to_natural();
+        e -= a.to_natural();
         a = std::move(e);
     }
 }
 
 constexpr int signum(const integer& a) {
-    if (a.abs.words.empty())
+    if (a.words.empty())
         return 0;
     return a.is_negative() ? -1 : 1;
 }
 
-constexpr integer gcd(const integer& a, const integer& b) { return gcd(a.abs, b.abs); }
+constexpr integer gcd(const integer& a, const integer& b) { return gcd(a.to_natural(), b.to_natural()); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {
@@ -214,7 +217,7 @@ constexpr bool less_ab_c(const integer& a, const integer& b, const integer& c) {
     int cc = signum(c);
     if (ab != cc)
         return ab < cc;
-    return (ab > 0) ? __less_ab_c(a.abs, b.abs, c.abs) : __less_a_bc(c.abs, a.abs, b.abs);
+    return (ab > 0) ? __less_ab_c(a, b, c) : __less_a_bc(c, a, b); // integer converts to cnatural
 }
 
 // returns a < b * c (cheaper than naive multiplication)
@@ -223,7 +226,7 @@ constexpr bool less_a_bc(const integer& a, const integer& b, const integer& c) {
     int bc = signum(b) * signum(c);
     if (aa != bc)
         return aa < bc;
-    return (aa > 0) ? __less_a_bc(a.abs, b.abs, c.abs) : __less_ab_c(b.abs, c.abs, a.abs);
+    return (aa > 0) ? __less_a_bc(a, b, c) : __less_ab_c(b, c, a);
 }
 
 // returns a * b < c * d (cheaper than naive multiplication)
@@ -233,7 +236,7 @@ constexpr bool less_ab_cd(const integer& a, const integer& b, const integer& c, 
     int cd = signum(c) * signum(d);
     if (ab != cd)
         return ab < cd;
-    return (ab > 0) ? __less_ab_cd(a.abs, b.abs, c.abs, d.abs) : __less_ab_cd(c.abs, d.abs, a.abs, b.abs);
+    return (ab > 0) ? __less_ab_cd(a, b, c, d) : __less_ab_cd(c, d, a, b);
 }
 
 }

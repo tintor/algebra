@@ -12,9 +12,12 @@ constexpr integer sample_integer(auto& rng) {
         return 0;
 
     integer a;
-    a.abs = pow(2_n, bits - 1);
-    a.abs |= uniform_sample_bits(bits - 1, rng);
-    Check(a.abs.num_bits() == bits);
+    {
+        auto m = a.magnitude();
+        *m = pow(2_n, bits - 1);
+        *m |= uniform_sample_bits(bits - 1, rng);
+        Check(m->num_bits() == bits);
+    }
     if (std::uniform_int_distribution<int>(0, 1)(rng) == 0)
         a.negate();
     return a;

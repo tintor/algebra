@@ -7,111 +7,112 @@ struct integer;
 template<> struct IsNumberClass<integer> : std::true_type {};
 
 struct integer {
-    // Step 1 of moving integer onto a single integer_backend. The second buffer that used to sit
-    // here was a stale duplicate: it was copied on construction and assignment but not updated by
-    // the arithmetic, so it diverged from the real value after 13 of 21 operations tried. Nothing
-    // read it, so removing it changes no behaviour and halves the allocations per value.
-    //
-    // Next step is to replace this natural with the integer_backend itself, reaching the magnitude
-    // through the cnatural/vnatural/inatural conversions below, which is why they exist.
-    natural abs;
+    // The whole value: the magnitude in the words, the sign in the sign of the size, which is how
+    // integer_backend already stores it. Magnitude arithmetic goes through the cnatural/vnatural/
+    // inatural conversions below, or through __magnitude() when it has to happen in place.
+    integer_backend words;
 
     constexpr integer() {}
-    constexpr integer(std_int auto a) : abs(abs_unsigned(a)) { if (a < 0) negate(); }
-    constexpr integer(integer&& o) : abs(std::move(o.abs)) { }
-    constexpr integer(natural&& o) : abs(std::move(o)) { abs.words.set_negative(false); }
-    constexpr integer(const integer& o) : abs(o.abs) { }
-    constexpr integer(const natural& o) : abs(o) { abs.words.set_negative(false); }
+    // integer_backend's constructor already puts the sign in the sign of the size
+    constexpr integer(std_int auto a) : words(a) { }
+    constexpr integer(integer&& o) : words(std::move(o.words)) { }
+    constexpr integer(natural&& o) : words(std::move(o.words)) { words.set_negative(false); }
+    constexpr integer(const integer& o) : words(o.words) { }
+    constexpr integer(const natural& o) : words(o.words) { words.set_negative(false); }
 
-    constexpr void operator=(std_int auto a) { abs.words = a; }
-    constexpr void operator=(integer&& o) { abs = std::move(o.abs); }
-    constexpr void operator=(natural&& o) { abs = std::move(o); abs.words.set_negative(false); }
-    constexpr void operator=(const integer& o) { abs = o.abs; }
-    constexpr void operator=(const natural& o) { abs = o; abs.words.set_negative(false); }
+    constexpr void operator=(std_int auto a) { words = a; }
+    constexpr void operator=(integer&& o) { words = std::move(o.words); }
+    constexpr void operator=(natural&& o) { words = std::move(o.words); words.set_negative(false); }
+    constexpr void operator=(const integer& o) { words = o.words; }
+    constexpr void operator=(const natural& o) { words = o.words; words.set_negative(false); }
 
-    constexpr auto sign() const { return abs.words.sign(); }
+    // The low word, which is only meaningful when the value is not zero.
+    constexpr uint64_t low_word() const { return words.size() ? words[0] : 0; }
+
+    constexpr auto sign() const { return words.sign(); }
     constexpr bool is_negative() const { return sign() < 0; }
-    constexpr bool is_even() const { return abs.is_even(); }
-    constexpr bool is_odd() const { return abs.is_odd(); }
-    constexpr bool is_one() const { return abs.words.size() == 1 && abs.words[0] == 1 && sign() >= 0; }
-    constexpr bool is_zero() const { return abs.words.size() == 0; }
+    constexpr bool is_even() const { return (low_word() % 2) == 0; }
+    constexpr bool is_odd() const { return low_word() % 2; }
+    constexpr bool is_one() const { return words.size() == 1 && words[0] == 1 && sign() >= 0; }
+    constexpr bool is_zero() const { return words.size() == 0; }
 
     // TODO remove this and deprecate natural
-    constexpr natural to_natural() const { return abs; }
+    constexpr natural to_natural() const { natural m; m.words = words; m.words.set_negative(false); return m; }
 
     constexpr bool is_int8() const {
-        if (abs.words.size() > 1)
+        if (words.size() > 1)
             return false;
-        if (abs.words[0] <= 127)
+        if (words[0] <= 127)
             return true;
-        return sign() < 0 && abs.words[0] == 128;
+        return sign() < 0 && words[0] == 128;
     }
 
     constexpr bool is_int16() const {
-        if (abs.words.size() > 1)
+        if (words.size() > 1)
             return false;
-        if (abs.words[0] <= INT16_MAX)
+        if (words[0] <= INT16_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT16_MAX) + 1;
+        return sign() < 0 && words[0] == static_cast<uint64_t>(INT16_MAX) + 1;
     }
 
     constexpr bool is_int32() const {
-        if (abs.words.size() > 1)
+        if (words.size() > 1)
             return false;
-        if (abs.words[0] <= INT32_MAX)
+        if (words[0] <= INT32_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT32_MAX) + 1;
+        return sign() < 0 && words[0] == static_cast<uint64_t>(INT32_MAX) + 1;
     }
 
     constexpr bool is_int64() const {
-        if (abs.words.size() > 1)
+        if (words.size() > 1)
             return false;
-        if (abs.words[0] <= INT64_MAX)
+        if (words[0] <= INT64_MAX)
             return true;
-        return sign() < 0 && abs.words[0] == static_cast<uint64_t>(INT64_MAX) + 1;
+        return sign() < 0 && words[0] == static_cast<uint64_t>(INT64_MAX) + 1;
     }
 
     constexpr bool is_int128() const {
-        if (abs.words.size() > 2)
+        if (words.size() > 2)
             return false;
-        if (abs.words.size() < 2)
+        if (words.size() < 2)
             return true;
 
-        uint64_t w = abs.words[1];
+        uint64_t w = words[1];
         if ((w & (uint64_t(1) << 63)) == 0)
             return true;
         // only INT128_MIN itself reaches past the positive range, and its magnitude is exactly
         // 2**127, so the low word has to be zero as well
-        return sign() < 0 && w == uint64_t(1) << 63 && abs.words[0] == 0;
+        return sign() < 0 && w == uint64_t(1) << 63 && words[0] == 0;
     }
 
-    constexpr bool is_uint8() const { return sign() >= 0 && abs.is_uint8(); }
-    constexpr bool is_uint16() const { return sign() >= 0 && abs.is_uint16(); }
-    constexpr bool is_uint32() const { return sign() >= 0 && abs.is_uint32(); }
-    constexpr bool is_uint64() const { return sign() >= 0 && abs.is_uint64(); }
-    constexpr bool is_uint128() const { return sign() >= 0 && abs.is_uint128(); }
+    constexpr bool is_uint8() const { return sign() >= 0 && words.size() <= 1 && low_word() <= UINT8_MAX; }
+    constexpr bool is_uint16() const { return sign() >= 0 && words.size() <= 1 && low_word() <= UINT16_MAX; }
+    constexpr bool is_uint32() const { return sign() >= 0 && words.size() <= 1 && low_word() <= UINT32_MAX; }
+    constexpr bool is_uint64() const { return sign() >= 0 && words.size() <= 1; }
+    constexpr bool is_uint128() const { return sign() >= 0 && words.size() <= 2; }
 
-    constexpr integer(std::string_view s, unsigned base = 10) : abs((s.size() && s[0] == '-') ? s.substr(1) : s, base) {
+    constexpr integer(std::string_view s, unsigned base = 10)
+            : words(natural((s.size() && s[0] == '-') ? s.substr(1) : s, base).words) {
         if (s.size() && s[0] == '-')
-            abs.words.negate();
+            words.negate();
     }
     constexpr integer(const char* s, unsigned base = 10) : integer(std::string_view(s), base) {}
 
     constexpr operator char() const {
         Check(is_int8(), "integer -> int8 overflow");
-        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+        return is_negative() ? -static_cast<int>(words[0]) : words[0];
     }
     constexpr operator uint8_t() const {
         Check(is_uint8(), "integer -> uint8 overflow");
-        return abs.words[0];
+        return words[0];
     }
     constexpr operator short() const {
         Check(is_int16(), "integer -> int16 overflow");
-        return is_negative() ? -static_cast<int>(abs.words[0]) : abs.words[0];
+        return is_negative() ? -static_cast<int>(words[0]) : words[0];
     }
     constexpr operator uint16_t() const {
         Check(is_uint16(), "integer -> uint16 overflow");
-        return abs.words[0];
+        return words[0];
     }
     constexpr operator int() const {
         Check(is_int32(), "integer -> int32 overflow");
@@ -119,46 +120,46 @@ struct integer {
         // so negating after the cast is signed overflow. Converting an out of range unsigned
         // value to a signed type is well defined (modular) since C++20, same as operator int128_t.
         if (is_negative())
-            return static_cast<int>(-static_cast<uint32_t>(abs.words[0]));
-        return static_cast<int>(abs.words[0]);
+            return static_cast<int>(-static_cast<uint32_t>(words[0]));
+        return static_cast<int>(words[0]);
     }
     constexpr operator unsigned() const {
         Check(is_uint32(), "integer -> uint32 overflow");
-        return abs.words[0];
+        return words[0];
     }
     constexpr operator long() const {
         Check(is_int64(), "integer -> int64 overflow");
         // see operator int() for why the negation is done in unsigned
         if (is_negative())
-            return static_cast<long>(-abs.words[0]);
-        return static_cast<long>(abs.words[0]);
+            return static_cast<long>(-words[0]);
+        return static_cast<long>(words[0]);
     }
     constexpr operator unsigned long() const {
         Check(is_uint64(), "integer -> uint64 overflow");
-        return abs.words[0]; // is_uint64() already rejected a negative value
+        return words[0]; // is_uint64() already rejected a negative value
     }
     constexpr operator unsigned long long() const {
         Check(is_uint64(), "integer -> uint64 overflow");
-        return abs.words[0]; // is_uint64() already rejected a negative value
+        return words[0]; // is_uint64() already rejected a negative value
     }
     static_assert(sizeof(long) == 8);
     static_assert(sizeof(long long) == 8);
     constexpr operator int128_t() const {
         Check(is_int128(), "integer -> int128 overflow");
-        if (sign() == 2) return (uint128_t(abs.words[1]) << 64) | abs.words[0];
-        if (sign() == 1) return uint128_t(abs.words[0]);
-        if (sign() == -1) return -uint128_t(abs.words[0]);
-        if (sign() == -2) return -((uint128_t(abs.words[1]) << 64) | abs.words[0]);
+        if (sign() == 2) return (uint128_t(words[1]) << 64) | words[0];
+        if (sign() == 1) return uint128_t(words[0]);
+        if (sign() == -1) return -uint128_t(words[0]);
+        if (sign() == -2) return -((uint128_t(words[1]) << 64) | words[0]);
         return 0;
     }
     constexpr operator uint128_t() const {
         Check(is_uint128(), "integer -> unt128 overflow");
-        if (sign() == 2) return (uint128_t(abs.words[1]) << 64) | abs.words[0];
-        if (sign() == 1) return abs.words[0];
+        if (sign() == 2) return (uint128_t(words[1]) << 64) | words[0];
+        if (sign() == 1) return words[0];
         return 0;
     }
 
-    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + abs.str_size_upper_bound(base); }
+    constexpr int str_size_upper_bound(unsigned base = 10) const { return is_negative() + to_natural().str_size_upper_bound(base); }
     constexpr int str(char* buffer, int buffer_size, unsigned base = 10, bool upper = true) const {
         int result = 0;
         if (is_negative()) {
@@ -168,7 +169,7 @@ struct integer {
             *buffer++ = '-';
             result = 1;
         }
-        return result + abs.str(buffer, buffer_size, base, upper);
+        return result + to_natural().str(buffer, buffer_size, base, upper);
     }
 
     constexpr std::string str(unsigned base = 10, bool upper = true) const {
@@ -179,44 +180,72 @@ struct integer {
     }
     constexpr std::string hex() const { return str(16); }
 
-    constexpr void negate() { abs.words.negate(); }
+    constexpr void negate() { words.negate(); }
 
     constexpr size_t popcount() const {
         if (!is_negative())
-            return abs.popcount();
+            return to_natural().popcount();
 
         size_t c = 0;
         uint64_t carry = 1;
-        for (int i = 0; i < abs.words.size(); i++) {
-            uint128_t w = (uint128_t)abs.words[i] + carry;
+        for (int i = 0; i < words.size(); i++) {
+            uint128_t w = (uint128_t)words[i] + carry;
             carry = w >> 64;
             c += std::popcount(~static_cast<uint64_t>(w));
         }
         return c;
     }
 
-    constexpr int size_of() const { return abs.words.size() * 8; }
+    constexpr int size_of() const { return words.size() * 8; }
 
     constexpr operator bool() const { return sign(); }
 
-    constexpr operator cnatural() const { return {abs.words.data(), abs.words.size()}; }
-    constexpr operator vnatural() { return {{abs.words.data(), abs.words.size()}, abs.words.capacity()}; }
-    constexpr operator inatural() { return {abs.words.data(), abs.words.size()}; }
+    constexpr operator cnatural() const { return {words.data(), words.size()}; }
+    constexpr operator vnatural() { return {{words.data(), words.size()}, words.capacity()}; }
+    constexpr operator inatural() { return {words.data(), words.size()}; }
+
+    // Borrows the magnitude as a natural for work that has to happen in place. natural is exactly
+    // one integer_backend, so the swap is a pointer exchange and not a copy; the sign is restored
+    // when the scope ends, and a result of zero comes back positive.
+    class magnitude_ref {
+        integer_backend& _words;
+        bool _negative;
+    public:
+        natural value;
+        constexpr magnitude_ref(integer_backend& w) : _words(w), _negative(w.sign() < 0) {
+            value.words.swap(w);
+            value.words.set_negative(false);
+        }
+        // Not copyable or movable: two of these over one backend would each restore in turn, and
+        // the second would put the pre-operation value back, losing the result silently. magnitude()
+        // returns a prvalue, so copy elision means nothing here needs to be copied or moved.
+        magnitude_ref(const magnitude_ref&) = delete;
+        magnitude_ref(magnitude_ref&&) = delete;
+        magnitude_ref& operator=(const magnitude_ref&) = delete;
+        magnitude_ref& operator=(magnitude_ref&&) = delete;
+        constexpr ~magnitude_ref() {
+            _words.swap(value.words);
+            _words.set_negative(_negative && _words.size() != 0);
+        }
+        constexpr natural* operator->() { return &value; }
+        constexpr natural& operator*() { return value; }
+    };
+    constexpr magnitude_ref magnitude() { return magnitude_ref(words); }
 
     constexpr integer& operator++() {
-        // natural::operator++/-- work on the magnitude and preserve the sign of abs.words
+        // natural::operator++/-- work on the magnitude and preserve the sign of words
         if (is_negative())
-            --abs;
+            --*magnitude();
         else
-            ++abs;
+            ++*magnitude();
         return *this;
     }
 
     constexpr integer& operator--() {
         if (is_negative())
-            ++abs;
-        else if (abs.words.size() > 0)
-            --abs;
+            ++*magnitude();
+        else if (words.size() > 0)
+            --*magnitude();
         else
             *this = -1;
         return *this;
@@ -225,50 +254,55 @@ struct integer {
     constexpr integer operator++(int) { integer a = *this; operator++(); return a; }
     constexpr integer operator--(int) { integer a = *this; operator--(); return a; }
 
-    constexpr auto bit(size_t i) const { return abs.bit(i); }
-    constexpr auto num_bits() const { return abs.num_bits(); }
-    constexpr auto num_trailing_zeros() const { return abs.num_trailing_zeros(); }
+    constexpr bool bit(int64_t i) const {
+        const size_t w = i / 64;
+        return w < static_cast<size_t>(words.size()) && (words[w] & (uint64_t(1) << (i % 64)));
+    }
+    constexpr auto num_bits() const { return algebra::num_bits(static_cast<cnatural>(*this)); }
+    constexpr auto num_trailing_zeros() const { return algebra::num_trailing_zeros(static_cast<cnatural>(*this)); }
 
     template<std::floating_point T>
     constexpr operator T() const {
-        auto a = static_cast<T>(abs);
+        auto a = static_cast<T>(to_natural());
         return (sign() < 0) ? -a : a;
     }
 
-    constexpr void swap(integer& o) { abs.swap(o.abs); }
+    constexpr void swap(integer& o) { words.swap(o.words); }
 
     constexpr uint64_t mod2() const {
-        return abs.mod2();
+        return low_word() % 2;
     }
 
     constexpr uint64_t mod3() const {
-        uint64_t m = abs.mod3();
+        uint64_t m = algebra::mod3(static_cast<cnatural>(*this));
         if (is_negative())
             m = (m * 2) % 3;
         return m;
     }
 
     constexpr uint64_t mod4() const {
-        uint64_t m = abs.mod4();
+        uint64_t m = low_word() % 4;
         if (is_negative())
             m = (m * 3) % 4;
         return m;
     }
 
     constexpr uint64_t mod5() const {
-        uint64_t m = abs.mod5();
+        uint64_t m = algebra::mod5(static_cast<cnatural>(*this));
         if (is_negative())
             m = (m * 4) % 5;
         return m;
     }
 };
 
-constexpr bool operator==(const integer& a, const integer& b) { return a.abs == b.abs && a.is_negative() == b.is_negative(); }
+constexpr bool operator==(const integer& a, const integer& b) {
+    return a.is_negative() == b.is_negative() && __equal(static_cast<cnatural>(a), static_cast<cnatural>(b));
+}
 
 constexpr bool operator==(const integer& a, std_int auto b) {
     if (b < 0)
-        return a.is_negative() && a.abs == abs_unsigned(b);
-    return !a.is_negative() && a.abs == make_unsigned(b);
+        return a.is_negative() && __equal_u(static_cast<cnatural>(a), abs_unsigned(b));
+    return !a.is_negative() && __equal_u(static_cast<cnatural>(a), make_unsigned(b));
 }
 
 constexpr void negate(integer& a) { a.negate(); }
@@ -276,17 +310,16 @@ constexpr integer operator-(integer a) { a.negate(); return a; }
 
 template<bool plus>
 constexpr integer& __add(integer& a, const integer& b) {
-    integer a_copy = a;
 
-    if (a.abs.words.size() < b.abs.words.size())
-        a.abs.words.resize(b.abs.words.size());
+    if (a.words.size() < b.words.size())
+        a.words.resize(b.words.size());
     bool a_neg = a.is_negative();
     const uint64_t carry = __add_and_return_carry(a, a_neg, b, plus == b.is_negative());
     if (carry)
-        a.abs.words.push_back(carry);
+        a.words.push_back(carry);
     else
-        a.abs.words.normalize();
-    a.abs.words.set_negative(a_neg);
+        a.words.normalize();
+    a.words.set_negative(a_neg);
     return a;
 }
 
@@ -300,17 +333,17 @@ constexpr integer& __add(integer& a, std_int auto b) {
         return __add<!plus>(a, static_cast<decltype(ub)>(~ub + 1));
 
     if (plus == !a.is_negative()) {
-        a.abs += ub;
+        *a.magnitude() += ub;
         return a;
     }
 
-    if (a.abs >= ub) {
-        a.abs -= ub;
+    if (!__less_u(static_cast<cnatural>(a), ub)) {
+        *a.magnitude() -= ub;
         return a;
     }
     // here plus == a.is_negative(), so the result of the magnitude subtraction is
     // negative only for (a >= 0) - b
-    a = ub - static_cast<decltype(ub)>(a.abs);
+    a = ub - static_cast<decltype(ub)>(a.to_natural());
     if constexpr (!plus)
         a.negate();
     return a;
@@ -328,14 +361,30 @@ constexpr integer operator-(integer a, std_int auto b) { return a -= b; }
 constexpr integer operator-(std_int auto a, integer b) { b -= a; return -b; }
 
 constexpr void mul(const integer& a, const integer& b, integer& c) {
-    c.abs = a.abs * b.abs;
-    c.abs.words.set_negative(a.is_negative() != b.is_negative());
+    const bool negative = a.is_negative() != b.is_negative();
+    // views for the operands and a borrow for the result, so nothing is copied. c may alias a or b,
+    // so the views are taken before the borrow empties c.
+    const cnatural ca = a, cb = b;
+    {
+        auto m = c.magnitude();
+        mul(ca, cb, *m);
+    }
+    c.words.set_negative(negative);
 }
 
 constexpr void mul(integer& a, const integer& b) {
     const bool negative = a.is_negative() != b.is_negative();
-    a.abs *= b.abs;
-    a.abs.words.set_negative(negative);
+    if (&a == &b) {
+        auto m = a.magnitude();
+        *m *= *m; // squaring: natural's mul() takes the &a == &b path
+    } else {
+        // b is a distinct object, so a view of it stays valid while a's magnitude is borrowed
+        const cnatural cb = b;
+        natural out;
+        mul(static_cast<cnatural>(a), cb, out);
+        a.words = std::move(out.words);
+    }
+    a.words.set_negative(negative);
 }
 
 constexpr integer operator*(const integer& a, const integer& b) {
@@ -346,8 +395,8 @@ constexpr integer operator*(const integer& a, const integer& b) {
 
 constexpr integer operator*(const integer& a, const natural& b) {
     integer c;
-    c.abs = a.abs * b;
-    c.abs.words.set_negative(a.is_negative());
+    c = a.to_natural() * b;
+    c.words.set_negative(a.is_negative());
     return c;
 }
 constexpr integer operator*(const natural& a, const integer& b) { return b * a; }
@@ -366,51 +415,100 @@ constexpr integer& operator*=(integer& a, const integer& b) {
 
 constexpr integer& operator*=(integer& a, const natural& b) {
     const bool negative = a.is_negative();
-    a.abs *= b;
-    a.abs.words.set_negative(negative);
+    *a.magnitude() *= b;
+    a.words.set_negative(negative);
     return a;
 }
 
 constexpr integer& operator*=(integer& a, std_int auto b) {
     const bool negative = a.is_negative() != (b < 0);
-    a.abs *= abs_unsigned(b);
-    a.abs.words.set_negative(negative);
+    *a.magnitude() *= abs_unsigned(b);
+    a.words.set_negative(negative);
     return a;
 }
 
 constexpr std::string str(const integer& a) {
-    return a.is_negative() ? "-" + str(a.abs) : str(a.abs);
+    return a.is_negative() ? "-" + str(a.to_natural()) : str(a.to_natural());
 }
 
 constexpr std::string stre(const integer& a) {
-    return a.is_negative() ? "-" + stre(a.abs) : stre(a.abs);
+    return a.is_negative() ? "-" + stre(a.to_natural()) : stre(a.to_natural());
+}
+
+// The magnitude products, done on integer's own backend. These mirror natural's add_product and
+// sub_product, which are themselves thin wrappers over the same kernels, so nothing is copied and
+// no natural temporary is built -- which matters because sub_product sits on the division path.
+constexpr void __magnitude_add_product(integer& a, cnatural b, cnatural c) {
+    if (b.size == 0 || c.size == 0)
+        return;
+    const int A = a.words.size();
+    a.words.resize(std::max<int>(A, b.size + c.size) + 1);
+    vnatural va{{a.words.data(), A}, a.words.capacity()};
+    if (b.size < c.size)
+        __add_product(va, b, c);
+    else
+        __add_product(va, c, b);
+    a.words.downsize(va.size);
+}
+
+constexpr void __magnitude_sub_product(integer& a, cnatural b, cnatural c) {
+    if (b.size == 0 || c.size == 0)
+        return;
+    inatural ia{a.words.data(), a.words.size()};
+    const bool ok = (b.size < c.size) ? __sub_product(ia, b, c) : __sub_product(ia, c, b);
+    Check(ok, "sub_product() assumes A >= B * C");
+    a.words.downsize(ia.size);
+}
+
+constexpr void __magnitude_add_product(integer& a, cnatural b, const uint64_t c) {
+    if (b.size == 0 || c == 0)
+        return;
+    const int A = a.words.size();
+    a.words.resize(std::max<int>(A, b.size + 1) + 1);
+    vnatural va{{a.words.data(), A}, a.words.capacity()};
+    __add_product(va, b, c);
+    a.words.downsize(va.size);
+}
+
+constexpr void __magnitude_sub_product(integer& a, cnatural b, const uint64_t c) {
+    if (b.size == 0 || c == 0)
+        return;
+    inatural ia{a.words.data(), a.words.size()};
+    Check(__sub_product(ia, b, c), "sub_product() assumes A >= B * c");
+    a.words.downsize(ia.size);
+}
+
+constexpr void __magnitude_complement(integer& a) {
+    __complement(inatural{a.words.data(), a.words.size()});
+    a.words.normalize();
 }
 
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const integer& c) {
-    if (b.abs.words.empty() || c.abs.words.empty())
+    if (b.words.empty() || c.words.empty())
         return;
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != c.is_negative();
 
+    const cnatural cb = b, cc = c;
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
-        add_product(a.abs, b.abs, c.abs);
-        a.abs.words.set_negative(a_negative);
+        __magnitude_add_product(a, cb, cc);
+        a.words.set_negative(a_negative);
     } else if (a.num_bits() > b.num_bits() + c.num_bits()) {
-        sub_product(a.abs, b.abs, c.abs);
-        a.abs.words.set_negative(a_negative);
+        __magnitude_sub_product(a, cb, cc);
+        a.words.set_negative(a_negative);
     } else {
-        const int m = mul_max_size(b.abs, c.abs);
-        a.abs.words.resize(m + 1);
-        a.abs.words[m] = 1;
-        sub_product(a.abs, b.abs, c.abs);
-        if (a.abs.words.size() > m) {
-            a.abs.words[m] -= 1;
-            a.abs.words.normalize();
+        const int m = mul_max_size(cb, cc);
+        a.words.resize(m + 1);
+        a.words[m] = 1;
+        __magnitude_sub_product(a, cb, cc);
+        if (a.words.size() > m) {
+            a.words[m] -= 1;
+            a.words.normalize();
         } else {
-            a.abs.words.resize(m);
-            complement(a.abs);
-            a.abs.words.set_negative(!a_negative);
+            a.words.resize(m);
+            __magnitude_complement(a);
+            a.words.set_negative(!a_negative);
         }
     }
 }
@@ -421,34 +519,34 @@ constexpr void sub_product(integer& a, const integer& b, const integer& c) { __a
 constexpr int __signum(const integer& a) {
     if (a.is_negative())
         return -1;
-    return (a.abs == 0) ? 0 : 1;
+    return a.is_zero() ? 0 : 1;
 }
 
 template<bool plus>
 constexpr void __add_product(integer& a, const integer& b, const uint64_t cu, const bool c_negative) {
-    if (b.abs.words.empty() || cu == 0)
+    if (b.words.empty() || cu == 0)
         return;
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != c_negative;
 
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
-        add_product(a.abs, b.abs, cu);
-        a.abs.words.set_negative(a_negative);
+        __magnitude_add_product(a, static_cast<cnatural>(b), cu);
+        a.words.set_negative(a_negative);
     } else if (a.num_bits() > b.num_bits() + num_bits(cu)) {
-        sub_product(a.abs, b.abs, cu);
-        a.abs.words.set_negative(a_negative);
+        __magnitude_sub_product(a, static_cast<cnatural>(b), cu);
+        a.words.set_negative(a_negative);
     } else {
-        const int m = mul_max_size(b.abs, {&cu, 1});
-        a.abs.words.resize(m + 1);
-        a.abs.words[m] = 1;
-        sub_product(a.abs, b.abs, cu);
-        if (a.abs.words.size() > m) {
-            a.abs.words[m] -= 1;
-            a.abs.words.normalize();
+        const int m = mul_max_size(static_cast<cnatural>(b), {&cu, 1});
+        a.words.resize(m + 1);
+        a.words[m] = 1;
+        __magnitude_sub_product(a, static_cast<cnatural>(b), cu);
+        if (a.words.size() > m) {
+            a.words[m] -= 1;
+            a.words.normalize();
         } else {
-            a.abs.words.resize(m);
-            complement(a.abs);
-            a.abs.words.set_negative(!a_negative);
+            a.words.resize(m);
+            __magnitude_complement(a);
+            a.words.set_negative(!a_negative);
         }
     }
 }
@@ -469,9 +567,17 @@ constexpr void div(const integer& a, const integer& b, integer& quot, integer& r
     }
     const bool a_negative = a.is_negative();
     const bool negative = a.is_negative() != b.is_negative();
-    div(a.abs, b.abs, quot.abs, rem.abs);
-    quot.abs.words.set_negative(negative);
-    rem.abs.words.set_negative(a_negative);
+    // Take the operand magnitudes before borrowing the outputs: quot or rem may be the same object
+    // as a or b, and a borrow leaves the borrowed value's words empty while it is alive.
+    const natural an = a.to_natural();
+    const natural bn = b.to_natural();
+    {
+        auto q = quot.magnitude();
+        auto r = rem.magnitude();
+        div(an, bn, *q, *r);
+    }
+    quot.words.set_negative(negative);
+    rem.words.set_negative(a_negative);
 }
 
 constexpr integer operator/(const integer& a, const integer& b) {
@@ -490,15 +596,20 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
         quot = -a;
         return 0;
     }
-    int64_t rem = div(a.abs, abs_unsigned(b), quot.abs);
-    if (quot.abs)
-        quot.abs.words.set_negative(a.is_negative() != (b < 0));
+    int64_t rem;
+    {
+        const natural an = a.to_natural(); // quot may alias a, see div() above
+        auto q = quot.magnitude();
+        rem = div(an, abs_unsigned(b), *q);
+    }
+    if (!quot.is_zero())
+        quot.words.set_negative(a.is_negative() != (b < 0));
     return a.is_negative() ? -rem : rem;
 }
 
 constexpr integer operator/(const integer& a, const std_int auto b) {
-    integer c = a.abs / abs_unsigned(b);
-    c.abs.words.set_negative(a.is_negative() != (b < 0));
+    integer c = a.to_natural() / abs_unsigned(b);
+    c.words.set_negative(a.is_negative() != (b < 0));
     return c;
 }
 
@@ -509,20 +620,25 @@ constexpr integer& operator/=(integer& a, const integer& b) {
 }
 constexpr integer& operator/=(integer& a, const std_int auto b) {
     const bool negative = a.is_negative();
-    a.abs /= abs_unsigned(b);
-    a.abs.words.set_negative(negative != (b < 0));
+    *a.magnitude() /= abs_unsigned(b);
+    a.words.set_negative(negative != (b < 0));
     return a;
 }
 
 constexpr integer operator%(const integer& a, const integer& divisor) {
-    integer quotient, remainder;
-    div(a, divisor, quotient, remainder);
-    return remainder;
+    // the remainder alone: going through div() would build a quotient only to discard it
+    const bool negative = a.is_negative();
+    natural r;
+    __mod_into(static_cast<cnatural>(a), static_cast<cnatural>(divisor), r);
+    integer c = std::move(r);
+    c.words.set_negative(negative && !c.is_zero());
+    return c;
 }
 
 // TODO generalize for any std_int
 constexpr int64_t operator%(const integer& a, int64_t b) {
-    uint64_t m = a.abs % abs_unsigned(b);
+    Check(b != 0, "division of integer by zero");
+    uint64_t m = __mod(static_cast<cnatural>(a), abs_unsigned(b));
     return (a.sign() >= 0) ? m : -static_cast<int64_t>(m);
 }
 
@@ -531,21 +647,21 @@ constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)
 
 // Note: return type is integer instead of uint64_t, as it can be negative (can't fit into int64_t either)
 constexpr integer operator%(const integer& a, uint64_t b) {
-    integer c = a.abs % b;
+    Check(b > 0, "division of integer by zero");
+    integer c = __mod(static_cast<cnatural>(a), b);
     if (a.is_negative())
         c.negate();
     return c;
 }
 
 constexpr integer mod(const integer& a, const integer& b) {
-    // Note: mod(a.abs, b.abs) would resolve back to this function, since natural
+    // Note: mod() on the magnitudes would resolve back to this function, since natural
     // converts implicitly to integer. Call the natural kernel explicitly.
     natural r;
-    mod(static_cast<const natural&>(a.abs), static_cast<const natural&>(b.abs), /*out*/r);
+    mod(a.to_natural(), b.to_natural(), /*out*/r);
     if (a.is_negative() && !r.words.empty()) {
         // result is in [0, abs(b)) range
-        natural e = b.abs;
-        e.words.set_negative(false);
+        natural e = b.to_natural();
         e -= r;
         return e;
     }
@@ -553,7 +669,7 @@ constexpr integer mod(const integer& a, const integer& b) {
 }
 
 constexpr uint64_t mod(const integer& a, uint64_t b) {
-    uint64_t m = a.abs % b;
+    uint64_t m = a.to_natural() % b;
     return (a.is_negative() && m) ? (b - m) : m;
 }
 
@@ -566,9 +682,9 @@ constexpr unsigned mod(const integer& a, uint32_t b) {
     m = (m * m) % b;
 
     uint64_t acc = 0;
-    for (auto i = a.abs.words.size(); i-- > 0;) {
+    for (auto i = a.words.size(); i-- > 0;) {
         acc *= m;
-        acc += a.abs.words[i] % b;
+        acc += a.words[i] % b;
         acc %= b;
     }
     if (a.is_negative()) {
@@ -584,8 +700,8 @@ constexpr integer& operator%=(integer& a, std_int auto b) { a = a % integer(b); 
 
 constexpr bool operator<(const integer& a, const integer& b) {
     if (a.is_negative())
-        return !b.is_negative() || a.abs > b.abs;
-    return !b.is_negative() && a.abs < b.abs;
+        return !b.is_negative() || __less(static_cast<cnatural>(b), static_cast<cnatural>(a));
+    return !b.is_negative() && __less(static_cast<cnatural>(a), static_cast<cnatural>(b));
 }
 // TODO issue temporary memory allocation for cent / ucent
 constexpr bool operator<(const integer& a, std_int auto b) { return a < integer(b); }
@@ -608,8 +724,8 @@ constexpr auto operator""_i(const char* s) { return integer(s); }
 
 constexpr void operator<<=(integer& a, int64_t i) {
     const bool negative = a.is_negative();
-    a.abs <<= i;
-    a.abs.words.set_negative(negative);
+    *a.magnitude() <<= i;
+    a.words.set_negative(negative);
 }
 
 ALGEBRA_SHIFT_OP(integer)
@@ -646,6 +762,7 @@ constexpr std::ostream& operator<<(std::ostream& os, const algebra::integer& a) 
 template<>
 struct std::hash<algebra::integer> {
     constexpr size_t operator()(const algebra::integer& a) const {
-        return std::hash<algebra::natural>()(a.abs);
+        // the backend hash includes the sign in the size, which is what makes -x hash apart from x
+        return std::hash<algebra::integer_backend>()(a.words);
     }
 };
