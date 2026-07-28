@@ -1203,7 +1203,9 @@ constexpr void __abs_mod(integer& a, const integer& b) {
         R += 1;
         inatural ir {r, R};
         const uint64_t w = __saturated_div(ir, b);
-        __sub_product(ir, b, w); // r -= b * w
+        // r -= b * w. Unlike the four other call sites this one dropped the result, so an estimate
+        // that was too large would leave a silently corrupted remainder behind instead of failing.
+        Check(__sub_product(ir, b, w), "__saturated_div() overestimated the quotient");
         R = ir.size;
     }
     a.words.resize(R);
