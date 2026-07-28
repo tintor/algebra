@@ -753,7 +753,24 @@ constexpr integer operator/(const integer& a, const integer& b) {
     return quot;
 }
 
-// TODO generalize for any std_int
+// The magnitude divided by an unsigned builtin of any width, returning the remainder.
+// A divisor above UINT64_MAX cannot go through the single word kernel, which would keep only its
+// low word and silently divide by the wrong number, so it takes the general kernel instead. The
+// remainder is below the divisor and so fits into T.
+template<std_unsigned_int T>
+constexpr T __abs_div_word(const integer& a, T b, integer& q) {
+    Check(b != 0, "division by zero");
+    if constexpr (sizeof(T) > 8) {
+        if (b > UINT64_MAX) {
+            integer quot, rem;
+            __abs_div(static_cast<cnatural>(a), static_cast<cnatural>(integer(b)), quot, rem);
+            q = std::move(quot);
+            return static_cast<T>(rem);
+        }
+    }
+    return __abs_div(a, static_cast<uint64_t>(b), q);
+}
+
 // The divisor's signedness decides its own overload. A single int64_t parameter would take a
 // uint64_t above INT64_MAX by conversion and read it as negative, which negated the quotient.
 template<std_signed_int T>
@@ -766,11 +783,11 @@ constexpr T div(const integer& a, T b, integer& quot) {
         quot = -a;
         return 0;
     }
-    uint64_t rem;
+    make_unsigned_t<T> rem; // an int128_t divisor leaves a remainder that does not fit a word
     {
         const integer an = abs(a); // quot may alias a, see div() above
         auto q = magnitude(quot);
-        rem = __abs_div(an, abs_unsigned(b), *q);
+        rem = __abs_div_word(an, abs_unsigned(b), *q);
     }
     if (!quot.is_zero())
         quot.words.set_negative(a.is_negative() != (b < 0));
@@ -784,15 +801,15 @@ constexpr T div(const integer& a, T b, integer& quot) {
         quot = a;
         return 0;
     }
-    uint64_t rem;
+    T rem;
     {
         const integer an = abs(a); // quot may alias a, see div() above
         auto q = magnitude(quot);
-        rem = __abs_div(an, static_cast<uint64_t>(b), *q);
+        rem = __abs_div_word(an, b, *q);
     }
     if (!quot.is_zero())
         quot.words.set_negative(a.is_negative());
-    return static_cast<T>(rem);
+    return rem;
 }
 
 constexpr integer operator/(const integer& a, const std_int auto b) {
@@ -1564,6 +1581,15 @@ constexpr integer& __abs_shl(integer& a, int64_t b) {
 
 constexpr integer& __abs_div(integer& a, std_int auto b) {
     Check(b > 0, "division of integer by zero or negative number");
+    if constexpr (sizeof(b) > 8) {
+        // the single word kernel below would keep only the low word of the divisor
+        if (abs_unsigned(b) > UINT64_MAX) {
+            integer quot, rem;
+            __abs_div(static_cast<cnatural>(a), static_cast<cnatural>(integer(b)), quot, rem);
+            a = std::move(quot);
+            return a;
+        }
+    }
     __abs_div(a, static_cast<uint64_t>(b), a);
     return a;
 }
