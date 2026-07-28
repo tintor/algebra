@@ -5,10 +5,7 @@ cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"
 
 library("kernels",       hdrs = ["util.h", "types.h"])
 library("integer_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
-library("natural_class", deps = [":integer_class"])
-# natural_test.cc includes integer.h: the number theory functions it exercises live there now
-library("natural",       deps = [":integer_class"], test_deps = [":integer"])
-library("integer",       deps = [":natural"])
+library("integer",       deps = [":integer_class"])
 library("rational_class",deps = [":integer"])
 library("rational",      deps = [":rational_class"])
 library("xrational",     deps = [":rational"])
@@ -58,6 +55,20 @@ library("geometry",
 
 library("dual")
 
+cc_test(
+    name = "integer_magnitude_test",
+    srcs = ["integer_magnitude_test.cc"],
+    deps = [":integer_class", ":__test"],
+    args = ["-d=yes"],
+)
+
+cc_test(
+    name = "integer_number_theory_test",
+    srcs = ["integer_number_theory_test.cc"],
+    deps = [":integer", ":__test"],
+    args = ["-d=yes"],
+)
+
 cc_library(
     name = "algebra",
     hdrs = ["algebra.h"],
@@ -67,7 +78,7 @@ cc_library(
 cc_test(
     name = "integer_backend_test",
     srcs = ["integer_backend_test.cc"],
-    deps = [":natural_class", ":__test"],
+    deps = [":integer_class", ":__test"],
     args = ["-d=yes"],
 )
 

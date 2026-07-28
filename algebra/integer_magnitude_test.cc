@@ -1,4 +1,4 @@
-#include "algebra/natural_class.h"
+#include "algebra/integer_class.h"
 #include "algebra/__test.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 
