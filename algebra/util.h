@@ -109,7 +109,10 @@ constexpr uint64_t __divq(uint128_t a, uint64_t b) { return a / b; }
 constexpr uint64_t __divq_mod(uint128_t a, uint64_t b) { return a % b; }
 #endif
 
-constexpr uint64_t pow(uint64_t base, unsigned exp) {
+// Constrained so a bignum class never converts into this by accident; without it a missing
+// pow(integer, ...) overload resolves here and truncates the operand to 64 bits.
+template<std_unsigned_int T>
+constexpr uint64_t pow(T base, unsigned exp) {
     if (base == 2)
         return (exp < 64) ? (static_cast<uint64_t>(1) << exp) : 0; // 0 matches the wrap-around of the loop below
     if (exp == 0)

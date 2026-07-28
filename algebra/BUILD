@@ -6,7 +6,8 @@ cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"
 library("kernels",       hdrs = ["util.h", "types.h"])
 library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
 library("integer_class", deps = [":natural_class"])
-library("natural",       deps = [":integer_class"])
+# natural_test.cc includes integer.h: the number theory functions it exercises live there now
+library("natural",       deps = [":integer_class"], test_deps = [":integer"])
 library("integer",       deps = [":natural"])
 library("rational_class",deps = [":integer"])
 library("rational",      deps = [":rational_class"])
@@ -85,4 +86,4 @@ cc_test(
 )
 
 cc_binary(name = "long_stress_test", srcs = ["long_stress_test.cc", "__stress_test.h"], deps = [":rational", ":xrational", ":real"])
-cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":natural"])
+cc_binary(name = "isqrt_benchmark", srcs = ["isqrt_benchmark.cc"], deps = ["@google_benchmark//:benchmark", ":integer"])

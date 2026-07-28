@@ -69,7 +69,7 @@ TEST_CASE("add/sub_product") {
 }
 
 TEST_CASE("inverse_mod") {
-    natural out;
+    integer out;
 
     REQUIRE(inverse_mod(3_n, 11_n, out));
     REQUIRE(out == 4u); // 3 * 4 == 12 == 1 (mod 11)
@@ -94,11 +94,11 @@ TEST_CASE("inverse_mod") {
         }
 
     // multi-word
-    natural big = 1;
+    integer big = 1;
     big <<= 130;
     big += 7u;
     REQUIRE(inverse_mod(3_n, big, out));
-    REQUIRE((3_n * out) % big == 1);
+    REQUIRE((integer(3) * out) % big == 1);
 }
 
 TEST_CASE("in place mod is euclidean") {
@@ -198,7 +198,7 @@ TEST_CASE("pow(integer, natural)") {
 
 TEST_CASE("binominal_mod") {
     // reference values: C(10,3) = 120, C(20,5) = 15504, C(6,4) = 15, C(10,5) = 252, C(8,3) = 56
-    natural out;
+    integer out;
     binominal_mod(10_n, 3, 7_n, out);
     REQUIRE(out == 120u % 7u);
     binominal_mod(20_n, 5, 101_n, out);
@@ -232,7 +232,7 @@ TEST_CASE("log_lower / log_upper") {
     REQUIRE(log_upper(natural(0), 10) == 0);
     for (uint64_t base : {2ull, 3ull, 10ull}) {
         for (int e = 0; e < 20; e++) {
-            const natural p = pow(natural(base), e);
+            const integer p = pow(integer(base), e);
             REQUIRE(log_lower(p, base) == e);
             REQUIRE(log_upper(p, base) == e + 1);
             if (e > 0) {
