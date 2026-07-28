@@ -11,10 +11,7 @@ template<> struct IsNumberClass<integer> : std::true_type {};
 // operations through the __abs_ functions instead, which is what keeps the two layers apart.
 constexpr integer abs(const integer& a);
 
-// natural used to be a separate class holding a magnitude with no sign. integer covers that case
-// and the magnitude only operations live on integer itself, so the name is an alias now. Code that
-// needs a value to be non negative says so with a Check rather than with the type.
-using natural = integer;
+
 
 struct integer {
 
@@ -914,7 +911,6 @@ constexpr integer operator~(integer a) {
 
 namespace literals {
 constexpr auto operator""_i(const char* s) { return integer(s); }
-constexpr auto operator""_n(const char* s) { return integer(s); } // the old spelling still works
 }
 
 constexpr void operator<<=(integer& a, int64_t i) {
@@ -1800,7 +1796,7 @@ constexpr void integer::__abs_parse(std::string_view s, unsigned base) {
 
 constexpr integer abs(const integer& a) { integer m; m.words = a.words; m.words.set_negative(false); return m; }
 
-// Borrows the magnitude as a integer for work that has to happen in place. integer is exactly
+// Borrows the magnitude for work that has to happen in place. The value is exactly
 // one integer_backend, so the swap is a pointer exchange and not a copy; the sign is restored
 // when the scope ends, and a result of zero comes back positive.
 

@@ -184,10 +184,10 @@ TEST_CASE("invert") {
 // The whole library is marked constexpr; these check that it can actually be evaluated at
 // compile time. Nothing below compiles if a kernel accessor or the division helper is not
 // usable in a constant expression.
-static_assert([] { natural a = 12345; a *= 6789u; return a == 83810205u; }());
-static_assert([] { natural a = 1; a <<= 200; a -= 1u; return a.num_bits() == 200; }());
-static_assert([] { natural a("123456789012345678901234567890"); return a % 97u == 52u; }());
-static_assert([] { natural a = 1; a <<= 128; natural q, r; div(a, natural(1000), q, r); return r == 456u; }());
+static_assert([] { integer a = 12345; a *= 6789u; return a == 83810205u; }());
+static_assert([] { integer a = 1; a <<= 200; a -= 1u; return a.num_bits() == 200; }());
+static_assert([] { integer a("123456789012345678901234567890"); return a % 97u == 52u; }());
+static_assert([] { integer a = 1; a <<= 128; integer q, r; div(a, integer(1000), q, r); return r == 456u; }());
 static_assert([] { integer a = -5; a *= 7; return a == -35; }());
 static_assert([] { integer a("-123456789012345678901234567890"); return a.is_negative() && a.num_bits() == 97; }());
 static_assert([] { rational a(1, 3); a += rational(1, 6); return a == rational(1, 2); }());
@@ -254,7 +254,7 @@ TEST_CASE("is_integer") {
     REQUIRE(rational(-7).is_integer());
     REQUIRE(rational(8, 4).is_integer());
     REQUIRE(rational(0, 5).is_integer());
-    REQUIRE(rational(natural(9)).is_integer());
+    REQUIRE(rational(integer(9)).is_integer());
     REQUIRE(!rational(1, 2).is_integer());
     REQUIRE(!rational(-1, 2).is_integer());
     REQUIRE(!rational(7, 2).is_integer());

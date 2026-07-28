@@ -59,7 +59,7 @@ constexpr void uniform_sample(const integer& count, auto& rng, integer& out) {
     const auto n = (b + 64 - 1) / 64;
     if (b == 64 * n) {
         // Note: power of two case is handled above!
-        // mq = pow(2_n, 64 * n) / count
+        // mq = pow(2_i, 64 * n) / count
         // assert mq == 1
         while (true) {
             uniform_sample_bits(n * 64, rng, /*out*/out);
@@ -172,8 +172,8 @@ constexpr integer lcm(const integer& a, const integer& b) {
     return m;
 }
 
-// Constrained so that a class type never matches it. An unconstrained uint64_t parameter made
-// isqrt(natural) ambiguous, since a natural converts to uint64_t and to integer equally well.
+// Constrained so that a class type never matches it. With a plain uint64_t parameter, isqrt(integer)
+// was ambiguous: integer converts to uint64_t just as readily as it binds to the integer overload.
 template<std_unsigned_int T>
 constexpr uint64_t isqrt(const T x) {
     constexpr uint64_t MAX = UINT32_MAX; // isqrt(UINT64_MAX), also the largest q with q*q <= UINT64_MAX
@@ -206,7 +206,7 @@ constexpr uint64_t __isqrt_u128(const uint128_t x) {
 }
 
 /*
-constexpr natural isqrt(const natural& x) {
+constexpr integer isqrt(const integer& x) {
     using u128 = unsigned __int128;
     using u64 = uint64_t;
 
@@ -318,8 +318,8 @@ inline uint64_t try_fermat_factorize(uint64_t n) {
 
 constexpr bool is_likely_prime(const integer& n, int rounds);
 
-// Constrained for the same reason as isqrt() above: an unconstrained uint64_t parameter made
-// factorize(natural) ambiguous between this and the integer overload.
+// Constrained for the same reason as isqrt() above: with a plain uint64_t parameter,
+// factorize(integer) was ambiguous between this and the integer overload.
 template<std_unsigned_int T>
 constexpr std::vector<std::pair<uint64_t, int>> factorize(T a) {
     if (a <= 1)

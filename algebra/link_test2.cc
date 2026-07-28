@@ -6,7 +6,7 @@
 #include "algebra/dual.h"
 
 int second_translation_unit() {
-    algebra::natural a = 1;
+    algebra::integer a = 1;
     a <<= 100;
     return (a > 0u) ? 42 : 0;
 }
