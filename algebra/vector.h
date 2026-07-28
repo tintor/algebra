@@ -1,5 +1,6 @@
 #pragma once
 #include "algebra/util.h"
+#include <cmath>
 #include <cstdint>
 #include <format>
 
@@ -127,6 +128,7 @@ constexpr bool is_zero(const Vec<D, T>& a) {
 
 template<int D, typename T>
 constexpr Vec<D, T> abs(const Vec<D, T>& a) {
+    using std::abs; // for a floating point T; the number classes are still found by argument lookup
     Vec<D, T> c;
     for (int i = 0; i < D; i++)
         c[i] = abs(a[i]);

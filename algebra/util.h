@@ -205,7 +205,13 @@ struct bit_range {
     constexpr bit_range(uint64_t a) { min = max = a; }
 };
 
-constexpr bit_range operator*(bit_range a, bit_range b) { return {a.min + b.min - 1, a.max + b.max}; }
+// The product of two values has the sum of their bit counts, or one less. A zero operand has no
+// bits at all and makes the product zero, which the -1 would otherwise wrap into a huge minimum.
+constexpr bit_range operator*(bit_range a, bit_range b) {
+    if (a.max == 0 || b.max == 0)
+        return {0, 0};
+    return {a.min + b.min - 1, a.max + b.max};
+}
 constexpr bit_range operator+(bit_range a, bit_range b) { return {std::min(a.min, b.min), std::max(a.max, b.max) + 1}; }
 constexpr bool operator<(bit_range a, bit_range b) { return a.max < b.min; }
 

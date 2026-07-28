@@ -5,6 +5,20 @@
 using V2 = Vec2<rational>;
 using V3 = Vec3<rational>;
 
+TEST_CASE("abs of a vector") {
+    // an exact element type
+    REQUIRE(abs(V2(rational(-3, 2), rational(4))) == V2(rational(3, 2), rational(4)));
+    REQUIRE(abs(V3(rational(-1), rational(0), rational(-2))) == V3(rational(1), rational(0), rational(2)));
+
+    // a floating point element type: unqualified abs() must not pick up ::abs(int) and truncate
+    const Vec2<double> d = abs(Vec2<double>(-2.5, 1.5));
+    REQUIRE(d.x == 2.5);
+    REQUIRE(d.y == 1.5);
+    const Vec2<float> f = abs(Vec2<float>(-0.25f, -4.5f));
+    REQUIRE(f.x == 0.25f);
+    REQUIRE(f.y == 4.5f);
+}
+
 TEST_CASE("cross 2d") {
     REQUIRE(cross(V2{1, 0}, V2{0, 1}) == 1);
     REQUIRE(cross(V2{0, 1}, V2{1, 0}) == -1);
