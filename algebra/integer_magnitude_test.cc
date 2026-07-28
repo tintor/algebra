@@ -18,25 +18,38 @@ TEST_CASE("div test") {
     REQUIRE(r < b);
 }
 
+// Fills `a` with random words and then gives its top word a random bit length, keeping the word
+// count exactly as asked and the value normalized. Drawing every word from the full 64-bit range
+// leaves the top word with 64 bits every time, so nothing reaches the paths that depend on the
+// operand's bit length rather than its word count -- which is how an unnormalized mul_karatsuba()
+// result survived 10M iterations of the stress tests below.
+void __rand_words(integer& a, Random& rng) {
+    for (int i = 0; i < a.words.size(); i++)
+        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    if (a.words.size() > 0) {
+        const int bits = rng.Uniform<int>(1, 64);
+        if (bits < 64)
+            a.words.back() &= (uint64_t(1) << bits) - 1;
+        a.words.back() |= uint64_t(1) << (bits - 1);
+    }
+}
+
 integer rand_integer(int min_size, int max_size, Random& rng) {
     integer a;
     a.words.reset(rng.Uniform<int>(min_size, max_size));
-    for (int i = 0; i < a.words.size(); i++)
-        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    __rand_words(a, rng);
     return a;
 }
 
 void rand_integer(integer& a, int min_size, int max_size, Random& rng) {
     a.words.reset(rng.Uniform<int>(min_size, max_size));
-    for (int i = 0; i < a.words.size(); i++)
-        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    __rand_words(a, rng);
 }
 
 integer rand_integer(int size, Random& rng) {
     integer a;
     a.words.reset(size);
-    for (int i = 0; i < size; i++)
-        a.words[i] = rng.Uniform<uint64_t>(0, std::numeric_limits<uint64_t>::max());
+    __rand_words(a, rng);
     return a;
 }
 
