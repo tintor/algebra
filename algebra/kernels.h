@@ -706,6 +706,7 @@ constexpr int mod10(cnatural a) {
 }
 
 constexpr int KARATSUBA_LIMIT = 32;
+constexpr int BZ_BASE_CASE_SIZE = 8;
 
 // long mul  16384               takes 235/230ms*
 // karatsuba 16384 with 8 limit  takes ****ms (fails, likely due to small W buffer size)

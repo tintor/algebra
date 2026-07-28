@@ -4,8 +4,6 @@
 
 namespace algebra {
 
-// Migrated out of natural.h as these converted to integer. natural.h holds only what still
-// operates on natural, and goes away with that class.
 
 constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
 
@@ -280,7 +278,7 @@ constexpr integer iroot(const integer& a, uint32_t n) {
     round_to_zero(std::pow(static_cast<double>(a), 1.0 / n), m);
     if (m > 1u) {
         const integer w = (m >> 19) + 2;
-        integer lo = (m > w) ? (m - w) : natural(1);
+        integer lo = (m > w) ? (m - w) : integer(1);
         if (lo > left && pow(lo, n) <= a)
             left = std::move(lo);
         integer hi = m + w;
@@ -784,13 +782,13 @@ constexpr void mod(integer& a, const integer& b) {
     const bool negative = a.is_negative();
     a.words.set_negative(false);
     {
-        const natural bn = abs(b); // b may be a itself, see mul() on aliasing
+        const integer bn = abs(b); // b may be a itself, see mul() on aliasing
         auto m = magnitude(a);
-        mod(*m, bn);
+        __abs_mod(*m, bn); // by name: mod() here would resolve back to this function
     }
     if (negative && !a.words.empty()) {
         // result is in [0, abs(b)) range
-        natural e = abs(b);
+        integer e = abs(b);
         e -= abs(a);
         a = std::move(e);
     }
@@ -831,13 +829,10 @@ constexpr void binominal_mod(const integer& n, uint64_t k, const integer& m, int
 }
 
 
-// Migrated from natural.h to take an integer. natural.h is included before integer_class.h, so a
-// function there cannot name integer; converted ones move to this side until that order changes.
-// Each takes the magnitude once up front, which costs the same copy the by value natural did.
 
 constexpr uint64_t log_lower(const integer& n, uint64_t base) {
     Check(!n.is_negative(), "log_lower() of a negative number");
-    natural a = abs(n);
+    integer a = abs(n);
     uint64_t count = 0;
     if (!a)
         return count;
@@ -852,7 +847,7 @@ constexpr uint64_t log_lower(const integer& n, uint64_t base) {
 
 constexpr uint64_t log_upper(const integer& n, uint64_t base) {
     Check(!n.is_negative(), "log_upper() of a negative number");
-    natural a = abs(n);
+    integer a = abs(n);
     uint64_t count = 0;
     while (a) {
         a /= base;

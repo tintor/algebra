@@ -970,7 +970,7 @@ TEST_CASE("operator% uint128 with more than two words") {
     bn += 7u; // 2**100 + 7
     const uint128_t b = (static_cast<uint128_t>(1) << 100) + 7;
 
-    REQUIRE(natural(a % b) == a % bn);
+    REQUIRE(integer(a.__abs_mod_word(b)) == a % bn); // % by a uint128 magnitude, by name
 
     // and a case where the modulus needs the full 128 bits
     natural c = 1;
@@ -980,7 +980,7 @@ TEST_CASE("operator% uint128 with more than two words") {
     dn <<= 127;
     dn += 12345u;
     const uint128_t d = (static_cast<uint128_t>(1) << 127) + 12345;
-    REQUIRE(natural(c % d) == c % dn);
+    REQUIRE(integer(c.__abs_mod_word(d)) == c % dn);
 }
 
 TEST_CASE("operator-- normalizes") {
@@ -1164,26 +1164,29 @@ TEST_CASE("move assignment does not leak") {
     REQUIRE(g_array_allocs == before);
 }
 
-TEST_CASE("subtraction below zero throws") {
-    REQUIRE_THROWS(natural(3) - natural(5));
-    REQUIRE_THROWS(natural(3) - 5u);
-    REQUIRE_THROWS(natural(3) - static_cast<uint64_t>(5));
-    REQUIRE_THROWS(3u - natural(5));
-    REQUIRE_THROWS(static_cast<uint128_t>(3) - natural(5));
-    REQUIRE_THROWS((natural(1) << 64) - (natural(1) << 65));
-    REQUIRE_THROWS(natural(0) - 1u);
-
-    natural a = 1;
-    a <<= 100;
-    REQUIRE_THROWS((static_cast<uint128_t>(1) << 90) - a);
+// Subtraction is signed now, so going below zero is a negative result rather than an error. Only
+// the magnitude level subtraction still refuses, since it has nowhere to put the sign.
+TEST_CASE("subtraction below zero is signed") {
+    REQUIRE(natural(3) - natural(5) == -2);
+    REQUIRE(natural(3) - 5u == -2);
+    REQUIRE(natural(3) - static_cast<uint64_t>(5) == -2);
+    REQUIRE(3u - natural(5) == -2);
+    REQUIRE((natural(1) << 64) - (natural(1) << 65) == -(natural(1) << 64));
+    REQUIRE(natural(0) - 1u == -1);
 
     {
         natural b = 5;
-        REQUIRE_THROWS(b -= natural(6));
+        b -= natural(6);
+        REQUIRE(b == -1);
     }
     {
         natural b = 5;
-        REQUIRE_THROWS(b -= static_cast<uint64_t>(6));
+        b -= static_cast<uint64_t>(6);
+        REQUIRE(b == -1);
+    }
+    {
+        natural b = 5;
+        REQUIRE_THROWS([&] { auto m = magnitude(b); __abs_sub(*m, 6u); }());
     }
 
     // valid subtractions keep working
@@ -1204,11 +1207,11 @@ TEST_CASE("division by zero throws") {
 
     REQUIRE_THROWS(a / zero);
     REQUIRE_THROWS(a % zero);
-    REQUIRE_THROWS(div(a, zero, q, r));
-    REQUIRE_THROWS(mod(a, zero, r));
+    REQUIRE_THROWS(__abs_div(a, zero, q, r));
+    REQUIRE_THROWS(__abs_mod(a, zero, r));
     q = a;
-    REQUIRE_THROWS(mod(q, zero));
-    REQUIRE_THROWS(div(a, static_cast<uint64_t>(0), q));
+    REQUIRE_THROWS(__abs_mod(q, zero));
+    REQUIRE_THROWS(__abs_div(a, static_cast<uint64_t>(0), q));
     REQUIRE_THROWS(a / 0);
     REQUIRE_THROWS(a % 0);
     q = a;
@@ -1260,6 +1263,8 @@ TEST_CASE("str matches digit at a time conversion") {
     }
 }
 
+// The bitwise operations are on magnitudes and are spelled __abs_and and friends: integer has no
+// two's complement bitwise layer, so an operator spelling would promise something it does not do.
 TEST_CASE("bitwise and with operands of different size") {
     natural b = 1;
     b <<= 200;
@@ -1267,16 +1272,16 @@ TEST_CASE("bitwise and with operands of different size") {
 
     natural a = 0xF0F0F0F0ull;
     natural c = a;
-    c &= b;
+    __abs_and(c, b);
     REQUIRE(c == 0xF0F0u);
-    REQUIRE(c == (a & b));
+    REQUIRE(c == __abs_and_copy(a, b));
 
     natural d = b;
-    d &= a;
+    __abs_and(d, a);
     REQUIRE(d == 0xF0F0u);
 
     natural e = b;
-    e &= natural(0);
+    __abs_and(e, natural(0));
     REQUIRE(e == 0u);
     REQUIRE(e.words.size() == 0);
 
@@ -1285,8 +1290,8 @@ TEST_CASE("bitwise and with operands of different size") {
         const natural x = rand_natural(1, 8, rng);
         const natural y = rand_natural(1, 8, rng);
         natural z = x;
-        z &= y;
-        REQUIRE(z == (x & y));
+        __abs_and(z, y);
+        REQUIRE(z == __abs_and_copy(x, y));
         REQUIRE(z <= x);
         REQUIRE(z <= y);
     }
@@ -1298,11 +1303,14 @@ TEST_CASE("sub_product rejects a violated precondition") {
     b <<= 200;
     natural c = 3;
 
+    // sub_product is the sign aware one, so an underflow gives a negative result
     natural a = 5; // much smaller than b * c
-    REQUIRE_THROWS(sub_product(a, b, c));
+    sub_product(a, b, c);
+    REQUIRE(a == natural(5) - b * c);
 
     natural a2 = 5;
-    REQUIRE_THROWS(sub_product(a2, b, static_cast<uint64_t>(7)));
+    sub_product(a2, b, static_cast<uint64_t>(7));
+    REQUIRE(a2 == natural(5) - b * 7u);
 
     // valid uses keep working
     natural d = b * c;
@@ -1396,16 +1404,15 @@ TEST_CASE("square matches multiplication") {
     REQUIRE(c == b * b);
 }
 
-TEST_CASE("operator~ normalizes") {
+// operator~ is the arithmetic complement -(a+1). Flipping the words of a magnitude is invert_bits().
+TEST_CASE("operator~ is the arithmetic complement") {
     natural a = UINT64_MAX;
-    natural b = ~a;
-    REQUIRE(b.words.size() == 0);
-    REQUIRE(b == 0u);
-    REQUIRE(!b);
+    REQUIRE(~a == -(a + 1u));
+    REQUIRE(~natural(0) == -1);
+    REQUIRE(~~a == a);
 
     natural d = 0xF0F0u;
-    natural e = ~d;
-    REQUIRE(e == (UINT64_MAX ^ 0xF0F0u));
+    REQUIRE(~d == -natural(0xF0F1u));
 }
 
 TEST_CASE("resize clears the inline word") {

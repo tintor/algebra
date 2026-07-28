@@ -24,7 +24,6 @@ struct real {
 
     constexpr real(std_int auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
-    constexpr real(natural a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
     constexpr real(integer a, int exp, int dummy) : num(std::move(a)), exp(exp) { }
 
     constexpr real(float a) : real(rational(a)) { }
@@ -79,17 +78,17 @@ constexpr real<Base>::real(const rational& s) {
             throw std::runtime_error("inexact conversion");
 
         if (twos > fives)
-            num *= pow(natural(5), twos - fives);
+            num *= pow(integer(5), twos - fives);
         if (fives > twos)
             num <<= fives - twos;
         exp = -std::max(twos, fives);
     } else {
         const auto base_factors = factorize(Base);
         // Check if s.den has any prime factors not in base
-        natural a = abs(s.den), q;
+        integer a = abs(s.den), q;
         for (auto [factor, count] : base_factors)
             while (a > 1) {
-                if (div(a, factor, q))
+                if (div(a, static_cast<uint64_t>(factor), q))
                     break;
                 std::swap(a, q);
             }
