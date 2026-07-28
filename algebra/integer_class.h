@@ -1,5 +1,5 @@
 #pragma once
-#include "algebra/natural.h"
+#include "algebra/natural_class.h"
 
 namespace algebra {
 
@@ -589,7 +589,10 @@ constexpr integer operator/(const integer& a, const integer& b) {
 }
 
 // TODO generalize for any std_int
-constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
+// The divisor's signedness decides its own overload. A single int64_t parameter would take a
+// uint64_t above INT64_MAX by conversion and read it as negative, which negated the quotient.
+template<std_signed_int T>
+constexpr T div(const integer& a, T b, integer& quot) {
     if (b == 1) {
         quot = a;
         return 0;
@@ -598,7 +601,7 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
         quot = -a;
         return 0;
     }
-    int64_t rem;
+    uint64_t rem;
     {
         const natural an = abs(a); // quot may alias a, see div() above
         auto q = quot.magnitude();
@@ -606,7 +609,25 @@ constexpr int64_t div(const integer& a, int64_t b, integer& quot) {
     }
     if (!quot.is_zero())
         quot.words.set_negative(a.is_negative() != (b < 0));
-    return a.is_negative() ? -rem : rem;
+    const T r = static_cast<T>(rem);
+    return a.is_negative() ? -r : r;
+}
+
+template<std_unsigned_int T>
+constexpr T div(const integer& a, T b, integer& quot) {
+    if (b == 1) {
+        quot = a;
+        return 0;
+    }
+    uint64_t rem;
+    {
+        const natural an = abs(a); // quot may alias a, see div() above
+        auto q = quot.magnitude();
+        rem = div(an, static_cast<uint64_t>(b), *q);
+    }
+    if (!quot.is_zero())
+        quot.words.set_negative(a.is_negative());
+    return static_cast<T>(rem);
 }
 
 constexpr integer operator/(const integer& a, const std_int auto b) {

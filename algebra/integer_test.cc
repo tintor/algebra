@@ -279,3 +279,39 @@ TEST_CASE("is_power_of_three rejects a negative") {
     REQUIRE_THROWS(is_power_of_three(integer(-9)));
     REQUIRE(is_power_of_three(abs(integer(-9))));
 }
+
+// A uint64_t divisor above INT64_MAX used to bind to the int64_t overload and be read as a
+// negative one, which left the quotient with the right magnitude and the wrong sign.
+TEST_CASE("div by an unsigned divisor above INT64_MAX") {
+    const uint64_t big = uint64_t(1) << 63;
+    const integer a("100000000000000000000000");
+    integer q;
+    const uint64_t r = div(a, big, q);
+
+    REQUIRE(q * integer(big) + integer(r) == a);
+    REQUIRE(q > 0);
+    REQUIRE(r < big);
+    REQUIRE(q == a / big);
+
+    // and with a negative dividend the quotient is negative, the remainder follows the dividend
+    integer qn;
+    const uint64_t rn = div(-a, big, qn);
+    REQUIRE(qn == -q);
+    REQUIRE(rn == r);
+    REQUIRE(qn * integer(big) - integer(rn) == -a);
+
+    // UINT64_MAX is the extreme case
+    integer q2;
+    const uint64_t r2 = div(a, UINT64_MAX, q2);
+    REQUIRE(q2 > 0);
+    REQUIRE(q2 * integer(UINT64_MAX) + integer(r2) == a);
+
+    // a signed divisor still behaves as before
+    integer q3;
+    REQUIRE(div(integer(100), int64_t(7), q3) == 2);
+    REQUIRE(q3 == 14);
+    REQUIRE(div(integer(-100), int64_t(7), q3) == -2);
+    REQUIRE(q3 == -14);
+    REQUIRE(div(integer(100), int64_t(-7), q3) == 2);
+    REQUIRE(q3 == -14);
+}
