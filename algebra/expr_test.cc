@@ -271,3 +271,25 @@ TEST_CASE("expressions containing a variable can be built") {
     REQUIRE_THROWS_AS(s->sign(), unknown_sign_error);
     REQUIRE(safe_sign(s) == std::nullopt);
 }
+
+TEST_CASE("sign of a matrix") {
+    // a 1x1 matrix is its single element, and every other shape has no sign of its own
+    expr_matrix one;
+    one.rows = 1;
+    one.cols = 1;
+    one.data.push_back(make_integer(-5));
+    REQUIRE(one.sign() == -1);
+    REQUIRE(safe_sign(std::make_shared<expr_matrix>(one)) == -1);
+
+    expr_matrix empty;
+    empty.rows = 0;
+    empty.cols = 0;
+    REQUIRE_THROWS_AS(empty.sign(), unknown_sign_error);
+
+    expr_matrix row;
+    row.rows = 1;
+    row.cols = 2;
+    row.data.push_back(make_integer(1));
+    row.data.push_back(make_integer(2));
+    REQUIRE_THROWS_AS(row.sign(), unknown_sign_error);
+}
