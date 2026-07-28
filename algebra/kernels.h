@@ -5,7 +5,9 @@
 
 namespace algebra {
 
-struct cnatural {
+// The three views over a word array that the kernels below work on: read only, writable, and
+// writable with room to grow. None of them owns the words.
+struct cwords {
     const uint64_t* words; // the words are const, the reference to them is assignable
     int size;
 
@@ -14,7 +16,7 @@ struct cnatural {
     constexpr int countl_zero() const { return std::countl_zero(back()); }
 };
 
-struct inatural {
+struct iwords {
     uint64_t* const words; // pointer address can't change, but words can
     int size;
 
@@ -26,10 +28,10 @@ struct inatural {
         while (size > 0 && back() == 0)
             size -= 1;
     }
-    constexpr operator cnatural() const { return {words, size}; }
+    constexpr operator cwords() const { return {words, size}; }
 };
 
-struct vnatural : public inatural {
+struct vwords : public iwords {
     const int capacity;
 
     constexpr void push_back(uint64_t a) {
@@ -59,7 +61,7 @@ private:
     T* _t;
 };
 
-constexpr int64_t add_max_size(cnatural a, cnatural b) {
+constexpr int64_t add_max_size(cwords a, cwords b) {
     // adding zero can't grow the result, and back() would read out of bounds
     if (a.size == 0)
         return b.size;
@@ -72,19 +74,19 @@ constexpr int64_t add_max_size(cnatural a, cnatural b) {
     return can_overflow_with_carry(a.back(), b.back()) ? a.size + 1 : a.size;
 }
 
-constexpr int64_t mul_max_size(cnatural a, cnatural b) {
+constexpr int64_t mul_max_size(cwords a, cwords b) {
     return (a.size && b.size) ? a.size + b.size - 1 + (127 - a.countl_zero() - b.countl_zero()) / 64 : 0;
 }
 
-constexpr int64_t div_max_size(cnatural a, cnatural b) {
+constexpr int64_t div_max_size(cwords a, cwords b) {
     if (a.size == 0 || b.size == 0) // b == 0 has no quotient, and back() would read out of bounds
         return 0;
     return (a.size >= b.size) ? a.size - b.size + (64 + b.countl_zero() - a.countl_zero()) / 64 : 0;
 }
 
-constexpr int64_t num_bits(cnatural a) { return a.size ? 64 * a.size - a.countl_zero() : 0; }
+constexpr int64_t num_bits(cwords a) { return a.size ? 64 * a.size - a.countl_zero() : 0; }
 
-constexpr int64_t num_trailing_zeros(cnatural a) {
+constexpr int64_t num_trailing_zeros(cwords a) {
     for (int i = 0; i < a.size; i++)
         if (a[i])
             return std::countr_zero(a[i]) + i * 64;
@@ -93,7 +95,7 @@ constexpr int64_t num_trailing_zeros(cnatural a) {
 
 constexpr bool is_power_of_two(uint64_t a) { return a && (a & (a - 1)) == 0; }
 
-constexpr bool is_power_of_two(cnatural a) {
+constexpr bool is_power_of_two(cwords a) {
     if (a.size == 0)
         return false;
     auto e = a.words + a.size - 1;
@@ -105,7 +107,7 @@ constexpr bool is_power_of_two(cnatural a) {
     return true;
 }
 
-constexpr bool __less(cnatural a, cnatural b) {
+constexpr bool __less(cwords a, cwords b) {
     if (a.size > b.size)
         return false;
     if (a.size < b.size)
@@ -120,7 +122,7 @@ constexpr bool __less(cnatural a, cnatural b) {
 }
 
 // return A < B * c
-constexpr bool __less_a_bc_scalar(cnatural a, cnatural b, uint64_t c) {
+constexpr bool __less_a_bc_scalar(cwords a, cwords b, uint64_t c) {
     if (c == 0 || a.size > b.size + 1)
         return false;
     if (a.size < b.size)
@@ -150,10 +152,10 @@ constexpr bool __less_a_bc_scalar(cnatural a, cnatural b, uint64_t c) {
     return (aa == bc) ? (cmp < 0) : (aa < bc);
 }
 
-constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init = true);
+constexpr void __mul(cwords a, cwords b, vwords& q, bool init = true);
 
 // unsafe, because if ignores words beyond the first two
-constexpr uint128_t __unsafe_u128(cnatural a) {
+constexpr uint128_t __unsafe_u128(cwords a) {
     uint128_t c = a[0];
     if (a.size > 1)
         c |= static_cast<uint128_t>(a[1]) << 64;
@@ -161,7 +163,7 @@ constexpr uint128_t __unsafe_u128(cnatural a) {
 }
 
 // returns A < B * C
-constexpr bool __less_a_bc(cnatural a, cnatural b, cnatural c) {
+constexpr bool __less_a_bc(cwords a, cwords b, cwords c) {
     if (b.size == 0 || c.size == 0)
         return false;
     if (a.size == 0)
@@ -181,13 +183,13 @@ constexpr bool __less_a_bc(cnatural a, cnatural b, cnatural c) {
         return false;
 
     maybe_stack<uint64_t, 1024 / 8> w(b.size + c.size);
-    vnatural v {{w, 0}, b.size + c.size};
+    vwords v {{w, 0}, b.size + c.size};
     __mul(b, c, v);
     return __less(a, v);
 }
 
 // returns A * B < C
-constexpr bool __less_ab_c(cnatural a, cnatural b, cnatural c) {
+constexpr bool __less_ab_c(cwords a, cwords b, cwords c) {
     if (c.size == 0)
         return false;
     if (a.size == 0 || b.size == 0)
@@ -207,15 +209,15 @@ constexpr bool __less_ab_c(cnatural a, cnatural b, cnatural c) {
         return false;
 
     maybe_stack<uint64_t, 1024 / 8> w(a.size + b.size);
-    vnatural v {{w, 0}, a.size + b.size};
+    vwords v {{w, 0}, a.size + b.size};
     __mul(a, b, v);
     return __less(v, c);
 }
 
-constexpr bool __sub_product(inatural& a, cnatural b, cnatural c);
+constexpr bool __sub_product(iwords& a, cwords b, cwords c);
 
 // returns A * B < C * D
-constexpr bool __less_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
+constexpr bool __less_ab_cd(cwords a, cwords b, cwords c, cwords d) {
     if (c.size == 0 || d.size == 0)
         return false;
     if (a.size == 0 || b.size == 0)
@@ -240,19 +242,19 @@ constexpr bool __less_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
 
     if (a.size + b.size <= c.size + d.size) {
         maybe_stack<uint64_t, 1024 / 8> w(a.size + b.size);
-        vnatural v {{w, 0}, a.size + b.size};
+        vwords v {{w, 0}, a.size + b.size};
         __mul(a, b, v);
         return !__sub_product(v, c, d);
     }
 
     maybe_stack<uint64_t, 1024 / 8> w(c.size + d.size);
-    vnatural v {{w, 0}, c.size + d.size};
+    vwords v {{w, 0}, c.size + d.size};
     __mul(c, d, v);
     return __sub_product(v, a, b) && v.size > 0;
 }
 
 // returns signum(A * B - C * D)
-constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
+constexpr int __det_ab_cd(cwords a, cwords b, cwords c, cwords d) {
     if (a.size == 0 || b.size == 0)
         return (c.size == 0 || d.size == 0) ? 0 : -1;
     if (c.size == 0 || d.size == 0)
@@ -283,7 +285,7 @@ constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
 
     if (a.size + b.size <= c.size + d.size) {
         maybe_stack<uint64_t, 1024 / 8> w(a.size + b.size);
-        vnatural v {{w, 0}, a.size + b.size};
+        vwords v {{w, 0}, a.size + b.size};
         __mul(a, b, v);
         if (!__sub_product(v, c, d))
             return -1;
@@ -291,7 +293,7 @@ constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
     }
 
     maybe_stack<uint64_t, 1024 / 8> w(c.size + d.size);
-    vnatural v {{w, 0}, c.size + d.size};
+    vwords v {{w, 0}, c.size + d.size};
     __mul(c, d, v);
     if (!__sub_product(v, a, b))
         return 1;
@@ -300,7 +302,7 @@ constexpr int __det_ab_cd(cnatural a, cnatural b, cnatural c, cnatural d) {
 
 // Compares a magnitude against an unsigned builtin, without building an integer for it.
 template<std_unsigned_int T>
-constexpr bool __equal_u(cnatural a, T b) {
+constexpr bool __equal_u(cwords a, T b) {
     if constexpr (sizeof(T) <= 8) {
         return a.size <= 1 && (a.size ? a[0] : 0) == b;
     } else {
@@ -311,7 +313,7 @@ constexpr bool __equal_u(cnatural a, T b) {
 }
 
 template<std_unsigned_int T>
-constexpr bool __less_u(cnatural a, T b) {
+constexpr bool __less_u(cwords a, T b) {
     if constexpr (sizeof(T) <= 8) {
         return a.size == 0 ? b > 0 : (a.size == 1 && a[0] < b);
     } else {
@@ -324,7 +326,7 @@ constexpr bool __less_u(cnatural a, T b) {
     }
 }
 
-constexpr bool __equal(cnatural a, cnatural b) {
+constexpr bool __equal(cwords a, cwords b) {
     if (a.size != b.size)
         return false;
     for (auto i = a.size; i-- > 0;)
@@ -333,14 +335,14 @@ constexpr bool __equal(cnatural a, cnatural b) {
     return true;
 }
 
-constexpr bool __increment_and_return_carry(inatural a) {
+constexpr bool __increment_and_return_carry(iwords a) {
     for (int i = 0; i < a.size; ++i)
         if (++a[i])
             return false;
     return true;
 }
 
-constexpr void __increment(vnatural& a) {
+constexpr void __increment(vwords& a) {
     for (int i = 0; i < a.size; ++i)
         if (++a[i])
             return;
@@ -348,7 +350,7 @@ constexpr void __increment(vnatural& a) {
 }
 
 // assumes A != 0
-constexpr void __decrement(inatural& a) {
+constexpr void __decrement(iwords& a) {
     for (int i = 0; i < a.size; ++i)
         if (a[i]--) {
             a.normalize(); // top word can become zero
@@ -359,7 +361,7 @@ constexpr void __decrement(inatural& a) {
 }
 
 // returns ~a + 1 (except for 0, which returns 0)
-constexpr void __complement(inatural a) {
+constexpr void __complement(iwords a) {
     for (int i = 0; i < a.size; ++i) {
         a[i] = ~a[i];
         if (++a[i]) {
@@ -373,7 +375,7 @@ constexpr void __complement(inatural a) {
     }
 }
 
-constexpr int __normalized_size(cnatural a) {
+constexpr int __normalized_size(cwords a) {
     int s = a.size;
     while (s > 0 && a[s - 1] == 0)
         s -= 1;
@@ -382,7 +384,7 @@ constexpr int __normalized_size(cnatural a) {
 
 // supports q == a
 // b != q
-constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init) {
+constexpr void __mul(cwords a, cwords b, vwords& q, bool init) {
     // the loop below starts from b[0], which is not there to be read when b is zero
     if (a.size == 0 || b.size == 0) {
         q.size = 0;
@@ -428,7 +430,7 @@ constexpr void __mul(cnatural a, cnatural b, vnatural& q, bool init) {
     q.normalize();
 }
 
-constexpr void __add(vnatural& a, const uint64_t b, int shift = 0) {
+constexpr void __add(vwords& a, const uint64_t b, int shift = 0) {
     if (b == 0)
         return;
     Check(a.capacity >= shift);
@@ -445,7 +447,7 @@ constexpr void __add(vnatural& a, const uint64_t b, int shift = 0) {
     a.push_back(carry);
 }
 
-constexpr uint64_t __add_and_return_carry(inatural a, const uint64_t b) {
+constexpr uint64_t __add_and_return_carry(iwords a, const uint64_t b) {
     if (b == 0)
         return 0;
     uint128_t carry = b;
@@ -459,7 +461,7 @@ constexpr uint64_t __add_and_return_carry(inatural a, const uint64_t b) {
     return carry;
 }
 
-constexpr uint128_t __add_and_return_carry(inatural a, const uint128_t b) {
+constexpr uint128_t __add_and_return_carry(iwords a, const uint128_t b) {
     if (b == 0)
         return 0;
     uint128_t carry = b;
@@ -476,7 +478,7 @@ constexpr uint128_t __add_and_return_carry(inatural a, const uint128_t b) {
     return carry;
 }
 
-constexpr uint64_t __add_and_return_carry(inatural a, cnatural b, int shift = 0) {
+constexpr uint64_t __add_and_return_carry(iwords a, cwords b, int shift = 0) {
     if (b.size == 0)
         return 0;
     Check(a.size >= b.size + shift);
@@ -499,7 +501,7 @@ constexpr uint64_t __add_and_return_carry(inatural a, cnatural b, int shift = 0)
     return carry;
 }
 
-constexpr void __add(vnatural& a, cnatural b, int shift = 0) {
+constexpr void __add(vwords& a, cwords b, int shift = 0) {
     if (b.size == 0)
         return;
     Check(a.capacity >= b.size + shift);
@@ -518,7 +520,7 @@ constexpr void __add(vnatural& a, cnatural b, int shift = 0) {
 // subtracts without a borrow, the second one with. `goto borrow` and `goto no_borrow` jump
 // between them (into the body of the other loop, which is legal here because no variable
 // initialization is skipped), so each word costs one comparison and one subtraction.
-constexpr bool __diff(inatural a, cnatural b) {
+constexpr bool __diff(iwords a, cwords b) {
     Check(a.size >= b.size);
     int i = 0;
 
@@ -547,7 +549,7 @@ constexpr bool __diff(inatural a, cnatural b) {
 // basic building block for integer += and -=
 // a += b
 // NOTE: caller needs to normalize A (if carry == 0)
-constexpr uint64_t __add_and_return_carry(inatural a, bool& a_neg, cnatural b, bool b_neg) {
+constexpr uint64_t __add_and_return_carry(iwords a, bool& a_neg, cwords b, bool b_neg) {
     if (a_neg == b_neg)
         return __add_and_return_carry(a, b);
     if (__diff(a, b))
@@ -557,7 +559,7 @@ constexpr uint64_t __add_and_return_carry(inatural a, bool& a_neg, cnatural b, b
 
 // assuming a >= b
 // (same borrow state machine as __diff() above)
-constexpr void __sub(inatural& a, cnatural b) {
+constexpr void __sub(iwords& a, cwords b) {
     int i = 0;
     for (; i < b.size; ++i) {
         if (a[i] < b[i])
@@ -583,7 +585,7 @@ constexpr void __sub(inatural& a, cnatural b) {
 }
 
 // assuming a >= b
-constexpr void __sub(inatural& a, const uint64_t b) {
+constexpr void __sub(iwords& a, const uint64_t b) {
     if (b == 0)
         return;
     const bool borrow = a[0] < b;
@@ -597,13 +599,13 @@ constexpr void __sub(inatural& a, const uint64_t b) {
 }
 
 // assuming a >= b
-constexpr void __sub(inatural& a, const uint128_t b) {
+constexpr void __sub(iwords& a, const uint128_t b) {
     const uint64_t words[2] = {static_cast<uint64_t>(b), static_cast<uint64_t>(b >> 64)};
-    __sub(a, cnatural{words, (words[1] != 0) ? 2 : 1});
+    __sub(a, cwords{words, (words[1] != 0) ? 2 : 1});
 }
 
 // A = A * b + c
-constexpr uint64_t __mul_add_return_carry(inatural a, const uint64_t b, const uint64_t c) {
+constexpr uint64_t __mul_add_return_carry(iwords a, const uint64_t b, const uint64_t c) {
     uint128_t carry = c;
     for (int i = 0; i < a.size; ++i) {
         carry += __mulq(a[i], b);
@@ -613,7 +615,7 @@ constexpr uint64_t __mul_add_return_carry(inatural a, const uint64_t b, const ui
     return carry;
 }
 
-constexpr uint64_t __mod(cnatural a, const uint64_t b) {
+constexpr uint64_t __mod(cwords a, const uint64_t b) {
     uint128_t acc = 0;
     for (int i = a.size; i-- > 0;) {
         acc <<= 64;
@@ -623,7 +625,7 @@ constexpr uint64_t __mod(cnatural a, const uint64_t b) {
     return acc;
 }
 
-constexpr uint128_t __mod(cnatural a, const uint128_t b) {
+constexpr uint128_t __mod(cwords a, const uint128_t b) {
     // compute m = (2**128) % b
     uint128_t m = UINT128_MAX % b;
     m += 1;
@@ -644,7 +646,7 @@ constexpr uint128_t __mod(cnatural a, const uint128_t b) {
 }
 
 // (2**64) mod 3 == 1
-constexpr int mod3(cnatural a) {
+constexpr int mod3(cwords a) {
     uint64_t acc = 0;
     for (int i = a.size; i-- > 0;)
         acc += a[i] % 3;
@@ -652,7 +654,7 @@ constexpr int mod3(cnatural a) {
 }
 
 // (2**64) mod 5 == 1
-constexpr int mod5(cnatural a) {
+constexpr int mod5(cwords a) {
     // acc overflow is not possible since 4 * UINT32_MAX < UINT64_MAX
     static_assert(sizeof(a.size) == 4);
     uint64_t acc = 0;
@@ -662,7 +664,7 @@ constexpr int mod5(cnatural a) {
 }
 
 // (2**64) mod 6 == 4
-constexpr int mod6(cnatural a) {
+constexpr int mod6(cwords a) {
     uint64_t m = 0;
     int i = a.size;
     while (i > 0) {
@@ -673,7 +675,7 @@ constexpr int mod6(cnatural a) {
 }
 
 // (2**64) mod 7 == 2, so the word weights cycle 1, 2, 4
-constexpr int mod7(cnatural a) {
+constexpr int mod7(cwords a) {
     uint64_t m = 0;
     int i = 0;
     while (i + 2 < a.size) {
@@ -689,7 +691,7 @@ constexpr int mod7(cnatural a) {
 }
 
 // (2**64) mod 9 == 7, so the word weights cycle 1, 7, 4
-constexpr int mod9(cnatural a) {
+constexpr int mod9(cwords a) {
     uint64_t m = 0;
     int i = 0;
     while (i + 2 < a.size) {
@@ -705,7 +707,7 @@ constexpr int mod9(cnatural a) {
 }
 
 // (2**64) mod 10 == 6
-constexpr int mod10(cnatural a) {
+constexpr int mod10(cwords a) {
     uint64_t m = 0;
     int i = a.size;
     while (i > 0) {
@@ -724,14 +726,14 @@ constexpr int BZ_BASE_CASE_SIZE = 8;
 // karatsuba 16384 with 32 limit takes  26ms*
 // karatsuba 16384 with 64 limit takes  26ms*
 
-constexpr void swap(cnatural& a, cnatural& b) {
-    const cnatural t = a;
+constexpr void swap(cwords& a, cwords& b) {
+    const cwords t = a;
     a = b;
     b = t;
 }
 
 // assuming a.size >= b.size
-constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t* w, const uint64_t* we) {
+constexpr void __mul_karatsuba_rec(cwords a, cwords b, vwords& q, uint64_t* w, const uint64_t* we) {
     if (a.size < b.size)
         swap(a, b);
     if (a.size < KARATSUBA_LIMIT) {
@@ -742,30 +744,30 @@ constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t
     const int m = (a.size + 1) / 2; // m >= 2
 
     // AA and BB are stored in Q, while R and P are stored in W
-    cnatural a0 {a.words, m};
-    cnatural a1 {a.words + m, a.size - m};
+    cwords a0 {a.words, m};
+    cwords a1 {a.words + m, a.size - m};
 
     if (b.size <= m) {
-        vnatural r {{w, 0}, a1.size + b.size};
+        vwords r {{w, 0}, a1.size + b.size};
         w += r.capacity;
         Check(w <= we);
         __mul_karatsuba_rec(a1, b, r, w, we); // r = a1 * b
         __mul_karatsuba_rec(a0, b, q, w, we); // q = a0 * b
         __add(q, r, m); // q = a * b
     } else {
-        vnatural aa {{q.words, m}, m + 1};
+        vwords aa {{q.words, m}, m + 1};
         std::copy(a.words, a.words + m, aa.words);
         __add(aa, a1); // aa += a1
 
         // Top of b0 might be 0 (un-normalized), __add() needs to be robust to that!
-        cnatural b0 {b.words, m};
-        cnatural b1 {b.words + m, b.size - m};
+        cwords b0 {b.words, m};
+        cwords b1 {b.words + m, b.size - m};
 
-        vnatural bb {{q.words + aa.capacity, m}, q.capacity - aa.capacity};
+        vwords bb {{q.words + aa.capacity, m}, q.capacity - aa.capacity};
         std::copy(b.words, b.words + m, bb.words);
         __add(bb, b1); // bb = b0 + b1
 
-        vnatural r {{w, 0}, aa.size + bb.size + 1};
+        vwords r {{w, 0}, aa.size + bb.size + 1};
         w += r.capacity;
         Check(w <= we);
         // r = aa * bb. Note: aa and bb live in Q, but the nested call writes its result and
@@ -773,7 +775,7 @@ constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t
         // by which point aa and bb have been consumed.
         __mul_karatsuba_rec(aa, bb, r, w, we);
 
-        vnatural p {{w, 0}, a1.size + b1.size};
+        vwords p {{w, 0}, a1.size + b1.size};
         w += p.capacity;
         Check(w <= we);
         __mul_karatsuba_rec(a1, b1, p, w, we); // p = a1 * b1
@@ -787,7 +789,7 @@ constexpr void __mul_karatsuba_rec(cnatural a, cnatural b, vnatural& q, uint64_t
 }
 
 // supports a == q
-constexpr uint64_t __div(cnatural a, uint64_t b, vnatural& q) {
+constexpr uint64_t __div(cwords a, uint64_t b, vwords& q) {
     Check(a.size <= q.capacity);
     q.size = a.size;
     uint128_t acc = 0;
@@ -803,7 +805,7 @@ constexpr uint64_t __div(cnatural a, uint64_t b, vnatural& q) {
 }
 
 // A += B * c
-constexpr void __add_product(vnatural& a, cnatural b, const uint64_t c, int shift = 0) {
+constexpr void __add_product(vwords& a, cwords b, const uint64_t c, int shift = 0) {
     while (a.size < b.size + shift)
         a.push_back(0);
     uint128_t carry = 0;
@@ -829,7 +831,7 @@ constexpr void __add_product(vnatural& a, cnatural b, const uint64_t c, int shif
 }
 
 // A += B * C
-constexpr void __add_product(vnatural& a, cnatural b, cnatural c) {
+constexpr void __add_product(vwords& a, cwords b, cwords c) {
     if (c.size == 0)
         return;
     for (int i = b.size; i-- > 0;)
@@ -839,7 +841,7 @@ constexpr void __add_product(vnatural& a, cnatural b, cnatural c) {
 
 // Assumes A >= B * c (returns false otherwise)
 // A -= (B * c) << (shift * 64)
-constexpr bool __sub_product(inatural& a, cnatural b, const uint64_t c, int shift = 0) {
+constexpr bool __sub_product(iwords& a, cwords b, const uint64_t c, int shift = 0) {
     if (c == 0)
         return true; // subtracting zero always fits, whatever the sizes are
     if (a.size < b.size + shift)
@@ -868,7 +870,7 @@ constexpr bool __sub_product(inatural& a, cnatural b, const uint64_t c, int shif
 
 // Assumes A >= B * C (returns false otherwise)
 // A -= B * C
-constexpr bool __sub_product(inatural& a, cnatural b, cnatural c) {
+constexpr bool __sub_product(iwords& a, cwords b, cwords c) {
     for (int i = b.size; i-- > 0; )
         if (b[i] != 0)
             if (!__sub_product(a, c, b[i], i))
@@ -876,13 +878,13 @@ constexpr bool __sub_product(inatural& a, cnatural b, cnatural c) {
     return true;
 }
 
-constexpr std::string str(cnatural a) {
+constexpr std::string str(cwords a) {
     if (a.size == 0)
         return "0";
     std::vector<uint64_t> aa;
     aa.resize(a.size);
     std::copy(a.words, a.words + a.size, aa.data());
-    vnatural b {{aa.data(), a.size}, a.size};
+    vwords b {{aa.data(), a.size}, a.size};
 
     std::string s;
     while (b.size)
@@ -892,7 +894,7 @@ constexpr std::string str(cnatural a) {
 }
 
 // returns static_cast<ucent>((a >> e) & UINT128_MAX) - without memory allocation
-constexpr uint128_t extract_u128(cnatural a, int64_t e) {
+constexpr uint128_t extract_u128(cwords a, int64_t e) {
     Check(e >= 0);
     const auto i = e / 64;
     const auto b = e % 64;
@@ -918,7 +920,7 @@ constexpr uint128_t extract_u128(cnatural a, int64_t e) {
 }
 
 // returns (a >> e).words[0] - without memory allocation
-constexpr uint64_t extract_u64(cnatural a, int64_t e) {
+constexpr uint64_t extract_u64(cwords a, int64_t e) {
     Check(e >= 0);
     const auto word_shift = e / 64;
     const auto bit_shift = e % 64;
@@ -936,7 +938,7 @@ constexpr uint64_t extract_u64(cnatural a, int64_t e) {
 }
 
 // returns largest uint64_t Q such that A >= B * Q (assuming B != 0)
-constexpr uint64_t __saturated_div(cnatural a, cnatural b) {
+constexpr uint64_t __saturated_div(cwords a, cwords b) {
     if (__less(a, b))
         return 0;
     if (__equal(a, b))

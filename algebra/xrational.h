@@ -287,8 +287,8 @@ constexpr bool operator==(const rational_like auto& a, const xrational& b) { ret
 
 // returns abs(a) < abs(b)
 constexpr bool __less_abs(const rational& a, const rational& b) {
-    return __equal(static_cast<cnatural>(a.den), static_cast<cnatural>(b.den))
-        ? __less(static_cast<cnatural>(a.num), static_cast<cnatural>(b.num))
+    return __equal(static_cast<cwords>(a.den), static_cast<cwords>(b.den))
+        ? __less(static_cast<cwords>(a.num), static_cast<cwords>(b.num))
         : __less_ab_cd(a.num, b.den, b.num, a.den);
 }
 

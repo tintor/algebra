@@ -127,7 +127,7 @@ TEST_CASE("__add_and_return_carry - regression alt") {
 
 TEST_CASE("__sub scalar - low word becomes zero") {
     uint64_t a[] = {5, 1}; // 2**64 + 5
-    inatural ia {a, 2};
+    iwords ia {a, 2};
     __sub(ia, static_cast<uint64_t>(5));
     REQUIRE(ia.size == 2);
     REQUIRE(a[0] == 0);
@@ -136,7 +136,7 @@ TEST_CASE("__sub scalar - low word becomes zero") {
 
 TEST_CASE("__sub scalar - result normalized after borrow") {
     uint64_t a[] = {0, 1}; // 2**64
-    inatural ia {a, 2};
+    iwords ia {a, 2};
     __sub(ia, static_cast<uint64_t>(1));
     REQUIRE(ia.size == 1);
     REQUIRE(a[0] == UINT64_MAX);
@@ -144,14 +144,14 @@ TEST_CASE("__sub scalar - result normalized after borrow") {
 
 TEST_CASE("__sub scalar - result is zero") {
     uint64_t a[] = {7};
-    inatural ia {a, 1};
+    iwords ia {a, 1};
     __sub(ia, static_cast<uint64_t>(7));
     REQUIRE(ia.size == 0);
 }
 
 TEST_CASE("__sub uint128 - no borrow out of low word") {
     uint64_t a[] = {5, 9}; // 9 * 2**64 + 5
-    inatural ia {a, 2};
+    iwords ia {a, 2};
     __sub(ia, static_cast<uint128_t>(1) << 64 | 3); // 2**64 + 3
     REQUIRE(ia.size == 2);
     REQUIRE(a[0] == 2);
@@ -160,7 +160,7 @@ TEST_CASE("__sub uint128 - no borrow out of low word") {
 
 TEST_CASE("__sub uint128 - borrow into third word") {
     uint64_t a[] = {0, 0, 1}; // 2**128
-    inatural ia {a, 3};
+    iwords ia {a, 3};
     __sub(ia, static_cast<uint128_t>(1)); // 2**128 - 1
     REQUIRE(ia.size == 2);
     REQUIRE(a[0] == UINT64_MAX);
@@ -201,19 +201,19 @@ TEST_CASE("__mul with a zero size operand") {
     // whatever is at that address as a word instead.
     uint64_t a[] = {5, 7};
     uint64_t w[] = {111, 222, 333, 444};
-    vnatural q {{w, 0}, 4};
+    vwords q {{w, 0}, 4};
 
-    __mul(cnatural{a, 2}, cnatural{a, 0}, q);
+    __mul(cwords{a, 2}, cwords{a, 0}, q);
     REQUIRE(q.size == 0);
 
-    __mul(cnatural{a, 0}, cnatural{a, 2}, q);
+    __mul(cwords{a, 0}, cwords{a, 2}, q);
     REQUIRE(q.size == 0);
 
-    __mul(cnatural{a, 0}, cnatural{a, 0}, q);
+    __mul(cwords{a, 0}, cwords{a, 0}, q);
     REQUIRE(q.size == 0);
 
     // and a non-zero product still works
-    __mul(cnatural{a, 2}, cnatural{a, 1}, q);
+    __mul(cwords{a, 2}, cwords{a, 1}, q);
     REQUIRE(q.size == 2);
     REQUIRE(w[0] == 25);
     REQUIRE(w[1] == 35);
@@ -259,9 +259,9 @@ TEST_CASE("bit_range") {
 
 TEST_CASE("__add with zero carry into a full buffer") {
     uint64_t w[] = {1, 2};
-    vnatural a {{w, 2}, 2}; // size == capacity
+    vwords a {{w, 2}, 2}; // size == capacity
     uint64_t b[] = {1};
-    __add(a, cnatural{b, 1}); // fits, no carry out
+    __add(a, cwords{b, 1}); // fits, no carry out
     REQUIRE(a.size == 2);
     REQUIRE(w[0] == 2);
     REQUIRE(w[1] == 2);
@@ -269,9 +269,9 @@ TEST_CASE("__add with zero carry into a full buffer") {
 
 TEST_CASE("__add with zero carry into a full buffer, shifted") {
     uint64_t w[] = {1, 2, 3};
-    vnatural a {{w, 3}, 3};
+    vwords a {{w, 3}, 3};
     uint64_t b[] = {1};
-    __add(a, cnatural{b, 1}, 2);
+    __add(a, cwords{b, 1}, 2);
     REQUIRE(a.size == 3);
     REQUIRE(w[2] == 4);
 }
@@ -279,22 +279,22 @@ TEST_CASE("__add with zero carry into a full buffer, shifted") {
 TEST_CASE("__sub_product by zero succeeds") {
     uint64_t a[] = {7};
     uint64_t b[] = {1, 2, 3};
-    inatural ia {a, 1};
+    iwords ia {a, 1};
     // b is longer than a, but b * 0 is zero, so there is nothing to subtract
-    REQUIRE(__sub_product(ia, cnatural{b, 3}, static_cast<uint64_t>(0)));
+    REQUIRE(__sub_product(ia, cwords{b, 3}, static_cast<uint64_t>(0)));
     REQUIRE(ia.size == 1);
     REQUIRE(a[0] == 7);
 
     // and it still reports a violated precondition for a non-zero multiplier
-    REQUIRE(!__sub_product(ia, cnatural{b, 3}, static_cast<uint64_t>(1)));
+    REQUIRE(!__sub_product(ia, cwords{b, 3}, static_cast<uint64_t>(1)));
 }
 
-TEST_CASE("inatural back() constness") {
-    static_assert(std::is_same_v<decltype(std::declval<const inatural&>().back()), uint64_t>);
-    static_assert(std::is_same_v<decltype(std::declval<inatural&>().back()), uint64_t&>);
+TEST_CASE("iwords back() constness") {
+    static_assert(std::is_same_v<decltype(std::declval<const iwords&>().back()), uint64_t>);
+    static_assert(std::is_same_v<decltype(std::declval<iwords&>().back()), uint64_t&>);
 
     uint64_t w[] = {1, 2, 3};
-    inatural a {w, 3};
+    iwords a {w, 3};
     REQUIRE(a.back() == 3);
     a.back() = 7;
     REQUIRE(w[2] == 7);
@@ -302,7 +302,7 @@ TEST_CASE("inatural back() constness") {
 
 TEST_CASE("extract_u128 - word aligned") {
     uint64_t w[] = {5, 6, 7};
-    cnatural a {w, 3};
+    cwords a {w, 3};
     REQUIRE(extract_u128(a, 0) == (static_cast<uint128_t>(6) << 64 | 5));
     REQUIRE(extract_u128(a, 64) == (static_cast<uint128_t>(7) << 64 | 6));
     REQUIRE(extract_u128(a, 128) == 7);
@@ -312,7 +312,7 @@ TEST_CASE("extract_u128 - word aligned") {
 
 TEST_CASE("extract_u128 - inside a single word") {
     uint64_t w[] = {160}; // 0b1010'0000
-    cnatural a {w, 1};
+    cwords a {w, 1};
     REQUIRE(extract_u128(a, 0) == 160);
     REQUIRE(extract_u128(a, 4) == 10);
     REQUIRE(extract_u128(a, 7) == 1);
@@ -323,7 +323,7 @@ TEST_CASE("extract_u128 - inside a single word") {
 TEST_CASE("extract_u128 - unaligned across two words") {
     // 0x99aabbccddeeff001122334455667788 >> 8
     uint64_t w[] = {0x1122334455667788, 0x99aabbccddeeff00};
-    cnatural a {w, 2};
+    cwords a {w, 2};
     const uint128_t expected = static_cast<uint128_t>(0x0099aabbccddeeff) << 64 | 0x0011223344556677;
     REQUIRE(extract_u128(a, 8) == expected);
 }
@@ -331,7 +331,7 @@ TEST_CASE("extract_u128 - unaligned across two words") {
 TEST_CASE("extract_u128 - unaligned across three words") {
     // 0x0f1e2d3c4b5a697899aabbccddeeff001122334455667788 >> 8, truncated to 128 bits
     uint64_t w[] = {0x1122334455667788, 0x99aabbccddeeff00, 0x0f1e2d3c4b5a6978};
-    cnatural a {w, 3};
+    cwords a {w, 3};
     const uint128_t expected = static_cast<uint128_t>(0x7899aabbccddeeff) << 64 | 0x0011223344556677;
     REQUIRE(extract_u128(a, 8) == expected);
     REQUIRE(extract_u128(a, 8 + 64) == (static_cast<uint128_t>(0x000f1e2d3c4b5a69) << 64 | 0x7899aabbccddeeff));
@@ -340,7 +340,7 @@ TEST_CASE("extract_u128 - unaligned across three words") {
 TEST_CASE("extract_u128 - low word agrees with extract_u64") {
     uint64_t w[] = {0x1122334455667788, 0x99aabbccddeeff00, 0x0f1e2d3c4b5a6978};
     for (int size = 0; size <= 3; size++) {
-        cnatural a {w, size};
+        cwords a {w, size};
         for (int64_t e = 0; e <= 64 * 4; e++)
             REQUIRE(static_cast<uint64_t>(extract_u128(a, e)) == extract_u64(a, e));
     }
@@ -348,7 +348,7 @@ TEST_CASE("extract_u128 - low word agrees with extract_u64") {
 
 TEST_CASE("extract_u128 - negative shift is rejected") {
     uint64_t w[] = {1};
-    REQUIRE_THROWS(extract_u128(cnatural{w, 1}, -1));
+    REQUIRE_THROWS(extract_u128(cwords{w, 1}, -1));
 }
 
 TEST_CASE("__complement - single word") {
@@ -398,7 +398,7 @@ TEST_CASE("__complement - twice is identity") {
 
 TEST_CASE("__increment - no carry") {
     uint64_t w[] = {5, 9, 0};
-    vnatural a {{w, 2}, 3};
+    vwords a {{w, 2}, 3};
     __increment(a);
     REQUIRE(a.size == 2);
     REQUIRE(w[0] == 6);
@@ -407,7 +407,7 @@ TEST_CASE("__increment - no carry") {
 
 TEST_CASE("__increment - carry into a new word") {
     uint64_t w[] = {UINT64_MAX, 0};
-    vnatural a {{w, 1}, 2};
+    vwords a {{w, 1}, 2};
     __increment(a); // 2**64
     REQUIRE(a.size == 2);
     REQUIRE(w[0] == 0);
@@ -416,7 +416,7 @@ TEST_CASE("__increment - carry into a new word") {
 
 TEST_CASE("__increment - carry through several words") {
     uint64_t w[] = {UINT64_MAX, UINT64_MAX, 0};
-    vnatural a {{w, 2}, 3};
+    vwords a {{w, 2}, 3};
     __increment(a); // 2**128
     REQUIRE(a.size == 3);
     REQUIRE(w[0] == 0);
@@ -426,7 +426,7 @@ TEST_CASE("__increment - carry through several words") {
 
 TEST_CASE("__increment - carry stops at the first non-max word") {
     uint64_t w[] = {UINT64_MAX, 4, 7};
-    vnatural a {{w, 3}, 3};
+    vwords a {{w, 3}, 3};
     __increment(a);
     REQUIRE(a.size == 3);
     REQUIRE(w[0] == 0);
@@ -436,7 +436,7 @@ TEST_CASE("__increment - carry stops at the first non-max word") {
 
 TEST_CASE("__increment - zero") {
     uint64_t w[] = {0};
-    vnatural a {{w, 0}, 1};
+    vwords a {{w, 0}, 1};
     __increment(a);
     REQUIRE(a.size == 1);
     REQUIRE(w[0] == 1);
@@ -444,7 +444,7 @@ TEST_CASE("__increment - zero") {
 
 TEST_CASE("__increment - overflowing the buffer is reported") {
     uint64_t w[] = {UINT64_MAX};
-    vnatural a {{w, 1}, 1};
+    vwords a {{w, 1}, 1};
     REQUIRE_THROWS(__increment(a));
 }
 
@@ -482,7 +482,7 @@ TEST_CASE("__increment_and_return_carry - no words at all") {
 
 TEST_CASE("__decrement - no borrow") {
     uint64_t w[] = {5, 9};
-    inatural a {w, 2};
+    iwords a {w, 2};
     __decrement(a);
     REQUIRE(a.size == 2);
     REQUIRE(w[0] == 4);
@@ -491,7 +491,7 @@ TEST_CASE("__decrement - no borrow") {
 
 TEST_CASE("__decrement - result becomes zero") {
     uint64_t w[] = {1};
-    inatural a {w, 1};
+    iwords a {w, 1};
     __decrement(a);
     REQUIRE(a.size == 0);
     REQUIRE(w[0] == 0);
@@ -499,7 +499,7 @@ TEST_CASE("__decrement - result becomes zero") {
 
 TEST_CASE("__decrement - top word becomes zero") {
     uint64_t w[] = {0, 1};
-    inatural a {w, 2};
+    iwords a {w, 2};
     __decrement(a); // 2**64 - 1
     REQUIRE(a.size == 1);
     REQUIRE(w[0] == UINT64_MAX);
@@ -508,7 +508,7 @@ TEST_CASE("__decrement - top word becomes zero") {
 
 TEST_CASE("__decrement - borrow through several words") {
     uint64_t w[] = {0, 0, 1};
-    inatural a {w, 3};
+    iwords a {w, 3};
     __decrement(a); // 2**128 - 1
     REQUIRE(a.size == 2);
     REQUIRE(w[0] == UINT64_MAX);
@@ -518,7 +518,7 @@ TEST_CASE("__decrement - borrow through several words") {
 
 TEST_CASE("__decrement - borrow keeps the size when a higher word survives") {
     uint64_t w[] = {0, 1, 1};
-    inatural a {w, 3};
+    iwords a {w, 3};
     __decrement(a);
     REQUIRE(a.size == 3);
     REQUIRE(w[0] == UINT64_MAX);
@@ -528,7 +528,7 @@ TEST_CASE("__decrement - borrow keeps the size when a higher word survives") {
 
 TEST_CASE("__decrement - zero is rejected") {
     uint64_t w[] = {0};
-    inatural a {w, 0};
+    iwords a {w, 0};
     REQUIRE_THROWS(__decrement(a));
 }
 
@@ -569,25 +569,25 @@ TEST_CASE("__less - same size") {
 
 TEST_CASE("__mod uint64") {
     uint64_t a[] = {10};
-    REQUIRE(__mod(cnatural{a, 1}, static_cast<uint64_t>(7)) == 3);
-    REQUIRE(__mod(cnatural{a, 1}, static_cast<uint64_t>(10)) == 0);
-    REQUIRE(__mod(cnatural{a, 1}, static_cast<uint64_t>(1)) == 0);
-    REQUIRE(__mod(cnatural{a, 0}, static_cast<uint64_t>(7)) == 0);
+    REQUIRE(__mod(cwords{a, 1}, static_cast<uint64_t>(7)) == 3);
+    REQUIRE(__mod(cwords{a, 1}, static_cast<uint64_t>(10)) == 0);
+    REQUIRE(__mod(cwords{a, 1}, static_cast<uint64_t>(1)) == 0);
+    REQUIRE(__mod(cwords{a, 0}, static_cast<uint64_t>(7)) == 0);
 }
 
 TEST_CASE("__mod uint64 - multi word") {
     uint64_t a[] = {0, 1}; // 2**64 == 18446744073709551616
-    REQUIRE(__mod(cnatural{a, 2}, static_cast<uint64_t>(10)) == 6);
-    REQUIRE(__mod(cnatural{a, 2}, static_cast<uint64_t>(3)) == 1);
-    REQUIRE(__mod(cnatural{a, 2}, static_cast<uint64_t>(7)) == 2);
+    REQUIRE(__mod(cwords{a, 2}, static_cast<uint64_t>(10)) == 6);
+    REQUIRE(__mod(cwords{a, 2}, static_cast<uint64_t>(3)) == 1);
+    REQUIRE(__mod(cwords{a, 2}, static_cast<uint64_t>(7)) == 2);
 
     uint64_t b[] = {0, 0, 1}; // 2**128, and 2**128 % 7 == 2 * 2 == 4
-    REQUIRE(__mod(cnatural{b, 3}, static_cast<uint64_t>(7)) == 4);
-    REQUIRE(__mod(cnatural{b, 3}, static_cast<uint64_t>(2)) == 0);
+    REQUIRE(__mod(cwords{b, 3}, static_cast<uint64_t>(7)) == 4);
+    REQUIRE(__mod(cwords{b, 3}, static_cast<uint64_t>(2)) == 0);
 
     uint64_t c[] = {UINT64_MAX, UINT64_MAX};
-    REQUIRE(__mod(cnatural{c, 2}, static_cast<uint64_t>(2)) == 1);
-    REQUIRE(__mod(cnatural{c, 2}, UINT64_MAX) == 0); // (2**128 - 1) == (2**64 + 1) * (2**64 - 1)
+    REQUIRE(__mod(cwords{c, 2}, static_cast<uint64_t>(2)) == 1);
+    REQUIRE(__mod(cwords{c, 2}, UINT64_MAX) == 0); // (2**128 - 1) == (2**64 + 1) * (2**64 - 1)
 }
 
 TEST_CASE("__mod uint128") {
@@ -596,25 +596,25 @@ TEST_CASE("__mod uint128") {
     const uint128_t b = (static_cast<uint128_t>(1) << 64) + 1;
 
     uint64_t small[] = {7};
-    REQUIRE(__mod(cnatural{small, 1}, p100) == 7);
-    REQUIRE(__mod(cnatural{small, 0}, p100) == 0);
+    REQUIRE(__mod(cwords{small, 1}, p100) == 7);
+    REQUIRE(__mod(cwords{small, 0}, p100) == 0);
 
     uint64_t a[] = {5, 0, 1}; // 2**128 + 5 == 2 * 2**127 + 5
-    REQUIRE(__mod(cnatural{a, 3}, p127) == 5);
+    REQUIRE(__mod(cwords{a, 3}, p127) == 5);
     a[0] = 0;
-    REQUIRE(__mod(cnatural{a, 3}, p127) == 0);
+    REQUIRE(__mod(cwords{a, 3}, p127) == 0);
     // 2**128 - 1 == (2**64 - 1) * (2**64 + 1), so 2**128 == 1 (mod 2**64 + 1)
-    REQUIRE(__mod(cnatural{a, 3}, b) == 1);
+    REQUIRE(__mod(cwords{a, 3}, b) == 1);
 
     uint64_t c[] = {UINT64_MAX, UINT64_MAX}; // 2**128 - 1
-    REQUIRE(__mod(cnatural{c, 2}, b) == 0);
-    REQUIRE(__mod(cnatural{c, 2}, p127) == p127 - 1);
+    REQUIRE(__mod(cwords{c, 2}, b) == 0);
+    REQUIRE(__mod(cwords{c, 2}, p127) == p127 - 1);
 }
 
 TEST_CASE("__mod uint64 - agrees with the mod3/5/7/9 kernels") {
     uint64_t a[] = {0x1122334455667788, 0x99aabbccddeeff00, 0x0f1e2d3c4b5a6978};
     for (int size = 0; size <= 3; size++) {
-        cnatural x {a, size};
+        cwords x {a, size};
         REQUIRE(__mod(x, static_cast<uint64_t>(3)) == static_cast<uint64_t>(mod3(x)));
         REQUIRE(__mod(x, static_cast<uint64_t>(5)) == static_cast<uint64_t>(mod5(x)));
         REQUIRE(__mod(x, static_cast<uint64_t>(6)) == static_cast<uint64_t>(mod6(x)));
@@ -682,24 +682,24 @@ TEST_CASE("__normalized_size") {
     REQUIRE(__normalized_size({d, 3}) == 3);
 }
 
-TEST_CASE("inatural normalize") {
+TEST_CASE("iwords normalize") {
     uint64_t w[] = {1, 0, 0};
-    inatural a {w, 3};
+    iwords a {w, 3};
     a.normalize();
     REQUIRE(a.size == 1);
     REQUIRE(w[0] == 1); // the words themselves are untouched
 
-    inatural b {w, 0};
+    iwords b {w, 0};
     b.normalize();
     REQUIRE(b.size == 0);
 
     uint64_t z[] = {0, 0};
-    inatural c {z, 2};
+    iwords c {z, 2};
     c.normalize();
     REQUIRE(c.size == 0);
 
     uint64_t d[] = {0, 5};
-    inatural e {d, 2};
+    iwords e {d, 2};
     e.normalize();
     REQUIRE(e.size == 2);
 }
@@ -737,8 +737,8 @@ TEST_CASE("add_max_size - is an upper bound") {
                 w[0] = a0;
                 w[1] = a1;
                 w[2] = b0;
-                cnatural a {w, a1 ? 2 : (a0 ? 1 : 0)};
-                cnatural b {w + 2, b0 ? 1 : 0};
+                cwords a {w, a1 ? 2 : (a0 ? 1 : 0)};
+                cwords b {w + 2, b0 ? 1 : 0};
                 // hand computed size of a + b
                 const uint128_t low = static_cast<uint128_t>(a0) + b0;
                 const uint128_t high = static_cast<uint128_t>(a1) + static_cast<uint64_t>(low >> 64);

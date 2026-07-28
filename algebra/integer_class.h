@@ -16,8 +16,8 @@ constexpr integer abs(const integer& a);
 struct integer {
 
     // The whole value: the magnitude in the words, the sign in the sign of the size, which is how
-    // integer_backend already stores it. Magnitude arithmetic goes through the cnatural/vnatural/
-    // inatural conversions below, or through __magnitude() when it has to happen in place.
+    // integer_backend already stores it. Magnitude arithmetic goes through the cwords/vwords/
+    // iwords conversions below, or through __magnitude() when it has to happen in place.
     integer_backend words;
 
     constexpr integer(std::initializer_list<uint64_t> a) : words(a) { } // words, least significant first
@@ -220,7 +220,7 @@ struct integer {
         // note: spelled out instead of *this >= b, because operator<(integer, unsigned) is
         // declared further down this header and is not visible from inside the class
         Check(words.size() > 1 || words[0] >= b, "integer can't be negative");
-        inatural a = *this;
+        iwords a = *this;
         __sub(a, b);
         words.downsize(a.size);
         return *this;
@@ -230,7 +230,7 @@ struct integer {
         if (b <= UINT64_MAX)
             return __abs_sub_word(static_cast<uint64_t>(b));
         Check(words.size() > 2 || (words.size() == 2 && unsafe_u128() >= b), "integer can't be negative");
-        inatural a = *this;
+        iwords a = *this;
         __sub(a, b);
         words.downsize(a.size);
         return *this;
@@ -244,7 +244,7 @@ struct integer {
 
     constexpr integer& __abs_decrement() {
         Check(!words.empty(), "decrementing zero integer");
-        inatural a = *this;
+        iwords a = *this;
         __decrement(a);
         words.downsize(a.size);
         return *this;
@@ -271,8 +271,8 @@ struct integer {
     constexpr uint128_t __abs_mod_word(const uint128_t b) const {
         Check(b > 0, "division by zero");
         if (b <= UINT64_MAX)
-            return __mod(static_cast<cnatural>(*this), static_cast<uint64_t>(b));
-        return __mod(static_cast<cnatural>(*this), b);
+            return __mod(static_cast<cwords>(*this), static_cast<uint64_t>(b));
+        return __mod(static_cast<cwords>(*this), b);
     }
 
     constexpr void set_zero() { words.set_zero(); }
@@ -296,9 +296,9 @@ struct integer {
 
     constexpr operator bool() const { return sign(); }
 
-    constexpr operator cnatural() const { return {words.data(), words.size()}; }
-    constexpr operator vnatural() { return {{words.data(), words.size()}, words.capacity()}; }
-    constexpr operator inatural() { return {words.data(), words.size()}; }
+    constexpr operator cwords() const { return {words.data(), words.size()}; }
+    constexpr operator vwords() { return {{words.data(), words.size()}, words.capacity()}; }
+    constexpr operator iwords() { return {words.data(), words.size()}; }
 
 
     constexpr integer& operator++();
@@ -310,8 +310,8 @@ struct integer {
         const size_t w = i / 64;
         return w < static_cast<size_t>(words.size()) && (words[w] & (uint64_t(1) << (i % 64)));
     }
-    constexpr auto num_bits() const { return algebra::num_bits(static_cast<cnatural>(*this)); }
-    constexpr auto num_trailing_zeros() const { return algebra::num_trailing_zeros(static_cast<cnatural>(*this)); }
+    constexpr auto num_bits() const { return algebra::num_bits(static_cast<cwords>(*this)); }
+    constexpr auto num_trailing_zeros() const { return algebra::num_trailing_zeros(static_cast<cwords>(*this)); }
 
     template<std::floating_point T> constexpr T __abs_to_float() const;
 
@@ -328,7 +328,7 @@ struct integer {
     }
 
     constexpr uint64_t mod3() const {
-        uint64_t m = algebra::mod3(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod3(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 2) % 3;
         return m;
@@ -342,35 +342,35 @@ struct integer {
     }
 
     constexpr uint64_t mod5() const {
-        uint64_t m = algebra::mod5(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod5(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 4) % 5;
         return m;
     }
 
     constexpr uint64_t mod6() const {
-        uint64_t m = algebra::mod6(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod6(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 5) % 6;
         return m;
     }
 
     constexpr uint64_t mod7() const {
-        uint64_t m = algebra::mod7(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod7(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 6) % 7;
         return m;
     }
 
     constexpr uint64_t mod9() const {
-        uint64_t m = algebra::mod9(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod9(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 8) % 9;
         return m;
     }
 
     constexpr uint64_t mod10() const {
-        uint64_t m = algebra::mod10(static_cast<cnatural>(*this));
+        uint64_t m = algebra::mod10(static_cast<cwords>(*this));
         if (is_negative())
             m = (m * 9) % 10;
         return m;
@@ -415,7 +415,7 @@ constexpr void __mul(const uint64_t* a, const int A, uint64_t b, uint64_t carry,
 constexpr void __mul(const integer& a, uint64_t b, uint64_t carry, integer& out);
 
 constexpr void __square(integer& a);
-constexpr void __abs_mul(cnatural a, cnatural b, integer& out);
+constexpr void __abs_mul(cwords a, cwords b, integer& out);
 constexpr void __abs_mul(integer& a, const integer& b);
 constexpr integer& __abs_mul(integer& a, std_unsigned_int auto b);
 constexpr integer __low_words(const integer& a, int n);
@@ -423,8 +423,8 @@ constexpr void __divide_2n1n(const integer& a, const integer& b, int n, integer&
 constexpr void __divide_3n2n(const integer& a, const integer& b, int n, integer& q, integer& r);
 constexpr void divide_bz(const integer& a, const integer& d, integer& q, integer& r);
 constexpr uint64_t __abs_div(const integer& a, uint64_t b, integer& q);
-constexpr void __abs_div(cnatural a, cnatural b, integer& q, integer& r);
-constexpr void __abs_mod(cnatural a, cnatural b, integer& r);
+constexpr void __abs_div(cwords a, cwords b, integer& q, integer& r);
+constexpr void __abs_mod(cwords a, cwords b, integer& r);
 constexpr void __abs_mod(integer& a, const integer& b);
 constexpr integer& __abs_shl(integer& a, int64_t b);
 constexpr integer& __abs_div(integer& a, std_int auto b);
@@ -451,7 +451,7 @@ constexpr int __abs_str_size_upper_bound(const integer& a, unsigned base) { retu
 constexpr int __abs_str(const integer& a, char* buffer, int buffer_size, unsigned base, bool upper) {
     return a.__abs_str_buffer(buffer, buffer_size, base, upper);
 }
-constexpr std::string __abs_str(const integer& a) { return str(static_cast<cnatural>(a)); }
+constexpr std::string __abs_str(const integer& a) { return str(static_cast<cwords>(a)); }
 
 
 constexpr integer& integer::operator++() {
@@ -475,13 +475,13 @@ constexpr integer& integer::operator--() {
 }
 
 constexpr bool operator==(const integer& a, const integer& b) {
-    return a.is_negative() == b.is_negative() && __equal(static_cast<cnatural>(a), static_cast<cnatural>(b));
+    return a.is_negative() == b.is_negative() && __equal(static_cast<cwords>(a), static_cast<cwords>(b));
 }
 
 constexpr bool operator==(const integer& a, std_int auto b) {
     if (b < 0)
-        return a.is_negative() && __equal_u(static_cast<cnatural>(a), abs_unsigned(b));
-    return !a.is_negative() && __equal_u(static_cast<cnatural>(a), make_unsigned(b));
+        return a.is_negative() && __equal_u(static_cast<cwords>(a), abs_unsigned(b));
+    return !a.is_negative() && __equal_u(static_cast<cwords>(a), make_unsigned(b));
 }
 
 constexpr void negate(integer& a) { a.negate(); }
@@ -516,7 +516,7 @@ constexpr integer& __add(integer& a, std_int auto b) {
         return a;
     }
 
-    if (!__less_u(static_cast<cnatural>(a), ub)) {
+    if (!__less_u(static_cast<cwords>(a), ub)) {
         __abs_sub(*magnitude(a), ub);
         return a;
     }
@@ -543,7 +543,7 @@ constexpr void mul(const integer& a, const integer& b, integer& c) {
     const bool negative = a.is_negative() != b.is_negative();
     // views for the operands and a borrow for the result, so nothing is copied. c may alias a or b,
     // so the views are taken before the borrow empties c.
-    const cnatural ca = a, cb = b;
+    const cwords ca = a, cb = b;
     {
         auto m = magnitude(c);
         __abs_mul(ca, cb, *m);
@@ -558,9 +558,9 @@ constexpr void mul(integer& a, const integer& b) {
         __abs_mul(*m, *m); // squaring: the magnitude mul() takes the &a == &b path
     } else {
         // b is a distinct object, so a view of it stays valid while a's magnitude is borrowed
-        const cnatural cb = b;
+        const cwords cb = b;
         integer out;
-        __abs_mul(static_cast<cnatural>(a), cb, out);
+        __abs_mul(static_cast<cwords>(a), cb, out);
         a.words = std::move(out.words);
     }
     a.words.set_negative(negative);
@@ -605,12 +605,12 @@ constexpr std::string stre(const integer& a) {
 // The magnitude products, done on integer's own backend. These mirror integer's add_product and
 // sub_product, which are themselves thin wrappers over the same kernels, so nothing is copied and
 // no integer temporary is built -- which matters because sub_product sits on the division path.
-constexpr void __magnitude_add_product(integer& a, cnatural b, cnatural c) {
+constexpr void __magnitude_add_product(integer& a, cwords b, cwords c) {
     if (b.size == 0 || c.size == 0)
         return;
     const int A = a.words.size();
     a.words.resize(std::max<int>(A, b.size + c.size) + 1);
-    vnatural va{{a.words.data(), A}, a.words.capacity()};
+    vwords va{{a.words.data(), A}, a.words.capacity()};
     if (b.size < c.size)
         __add_product(va, b, c);
     else
@@ -618,35 +618,35 @@ constexpr void __magnitude_add_product(integer& a, cnatural b, cnatural c) {
     a.words.downsize(va.size);
 }
 
-constexpr void __magnitude_sub_product(integer& a, cnatural b, cnatural c) {
+constexpr void __magnitude_sub_product(integer& a, cwords b, cwords c) {
     if (b.size == 0 || c.size == 0)
         return;
-    inatural ia{a.words.data(), a.words.size()};
+    iwords ia{a.words.data(), a.words.size()};
     const bool ok = (b.size < c.size) ? __sub_product(ia, b, c) : __sub_product(ia, c, b);
     Check(ok, "sub_product() assumes A >= B * C");
     a.words.downsize(ia.size);
 }
 
-constexpr void __magnitude_add_product(integer& a, cnatural b, const uint64_t c) {
+constexpr void __magnitude_add_product(integer& a, cwords b, const uint64_t c) {
     if (b.size == 0 || c == 0)
         return;
     const int A = a.words.size();
     a.words.resize(std::max<int>(A, b.size + 1) + 1);
-    vnatural va{{a.words.data(), A}, a.words.capacity()};
+    vwords va{{a.words.data(), A}, a.words.capacity()};
     __add_product(va, b, c);
     a.words.downsize(va.size);
 }
 
-constexpr void __magnitude_sub_product(integer& a, cnatural b, const uint64_t c) {
+constexpr void __magnitude_sub_product(integer& a, cwords b, const uint64_t c) {
     if (b.size == 0 || c == 0)
         return;
-    inatural ia{a.words.data(), a.words.size()};
+    iwords ia{a.words.data(), a.words.size()};
     Check(__sub_product(ia, b, c), "sub_product() assumes A >= B * c");
     a.words.downsize(ia.size);
 }
 
 constexpr void __magnitude_complement(integer& a) {
-    __complement(inatural{a.words.data(), a.words.size()});
+    __complement(iwords{a.words.data(), a.words.size()});
     a.words.normalize();
 }
 
@@ -657,7 +657,7 @@ constexpr void __add_product(integer& a, const integer& b, const integer& c) {
     const bool a_negative = a.is_negative();
     const bool bc_negative = b.is_negative() != c.is_negative();
 
-    const cnatural cb = b, cc = c;
+    const cwords cb = b, cc = c;
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
         __magnitude_add_product(a, cb, cc);
         a.words.set_negative(a_negative);
@@ -697,16 +697,16 @@ constexpr void __add_product(integer& a, const integer& b, const uint64_t cu, co
     const bool bc_negative = b.is_negative() != c_negative;
 
     if ((plus && a_negative == bc_negative) || (!plus && a_negative != bc_negative)) {
-        __magnitude_add_product(a, static_cast<cnatural>(b), cu);
+        __magnitude_add_product(a, static_cast<cwords>(b), cu);
         a.words.set_negative(a_negative);
     } else if (a.num_bits() > b.num_bits() + num_bits(cu)) {
-        __magnitude_sub_product(a, static_cast<cnatural>(b), cu);
+        __magnitude_sub_product(a, static_cast<cwords>(b), cu);
         a.words.set_negative(a_negative);
     } else {
-        const int m = mul_max_size(static_cast<cnatural>(b), {&cu, 1});
+        const int m = mul_max_size(static_cast<cwords>(b), {&cu, 1});
         a.words.resize(m + 1);
         a.words[m] = 1;
-        __magnitude_sub_product(a, static_cast<cnatural>(b), cu);
+        __magnitude_sub_product(a, static_cast<cwords>(b), cu);
         if (a.words.size() > m) {
             a.words[m] -= 1;
             a.words.normalize();
@@ -767,7 +767,7 @@ constexpr T __abs_div_word(const integer& a, T b, integer& q) {
     if constexpr (sizeof(T) > 8) {
         if (b > UINT64_MAX) {
             integer quot, rem;
-            __abs_div(static_cast<cnatural>(a), static_cast<cnatural>(integer(b)), quot, rem);
+            __abs_div(static_cast<cwords>(a), static_cast<cwords>(integer(b)), quot, rem);
             q = std::move(quot);
             return static_cast<T>(rem);
         }
@@ -841,7 +841,7 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
     // the remainder alone: going through div() would build a quotient only to discard it
     const bool negative = a.is_negative();
     integer r;
-    __abs_mod(static_cast<cnatural>(a), static_cast<cnatural>(divisor), r);
+    __abs_mod(static_cast<cwords>(a), static_cast<cwords>(divisor), r);
     integer c = std::move(r);
     c.words.set_negative(negative && !c.is_zero());
     return c;
@@ -850,7 +850,7 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
 // TODO generalize for any std_int
 constexpr int64_t operator%(const integer& a, int64_t b) {
     Check(b != 0, "division of integer by zero");
-    uint64_t m = __mod(static_cast<cnatural>(a), abs_unsigned(b));
+    uint64_t m = __mod(static_cast<cwords>(a), abs_unsigned(b));
     return (a.sign() >= 0) ? m : -static_cast<int64_t>(m);
 }
 
@@ -860,7 +860,7 @@ constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)
 // Note: return type is integer instead of uint64_t, as it can be negative (can't fit into int64_t either)
 constexpr integer operator%(const integer& a, uint64_t b) {
     Check(b > 0, "division of integer by zero");
-    integer c = __mod(static_cast<cnatural>(a), b);
+    integer c = __mod(static_cast<cwords>(a), b);
     if (a.is_negative())
         c.negate();
     return c;
@@ -881,7 +881,7 @@ constexpr integer mod(const integer& a, const integer& b) {
 }
 
 constexpr uint64_t mod(const integer& a, uint64_t b) {
-    const uint64_t m = __mod(static_cast<cnatural>(a), b); // by name: abs(a) % b would recurse
+    const uint64_t m = __mod(static_cast<cwords>(a), b); // by name: abs(a) % b would recurse
     return (a.is_negative() && m) ? (b - m) : m;
 }
 
@@ -912,8 +912,8 @@ constexpr integer& operator%=(integer& a, std_int auto b) { a = a % integer(b); 
 
 constexpr bool operator<(const integer& a, const integer& b) {
     if (a.is_negative())
-        return !b.is_negative() || __less(static_cast<cnatural>(b), static_cast<cnatural>(a));
-    return !b.is_negative() && __less(static_cast<cnatural>(a), static_cast<cnatural>(b));
+        return !b.is_negative() || __less(static_cast<cwords>(b), static_cast<cwords>(a));
+    return !b.is_negative() && __less(static_cast<cwords>(a), static_cast<cwords>(b));
 }
 // TODO issue temporary memory allocation for cent / ucent
 constexpr bool operator<(const integer& a, std_int auto b) { return a < integer(b); }
@@ -948,7 +948,7 @@ constexpr void __mul(const integer& a, const integer& b, integer& q) {
     auto A = a.words.size();
     auto B = b.words.size();
     q.words.resize(A + B);
-    vnatural vq = q;
+    vwords vq = q;
     __mul({a.words.data(), A}, {b.words.data(), B}, vq, /*init*/false);
     q.words.downsize(vq.size);
 }
@@ -1127,7 +1127,7 @@ constexpr void mul_karatsuba(const integer& a, const integer& b, integer& q) {
         return;
     }
 
-    if (is_power_of_two(static_cast<cnatural>(a))) { // the kernel by name: integer converts to both cnatural and uint64_t
+    if (is_power_of_two(static_cast<cwords>(a))) { // the kernel by name: integer converts to both cwords and uint64_t
         const size_t z = (A - 1) * 64 + std::countr_zero(a.words[A - 1]); // = a.num_trailing_zeros() but O(1)
         const size_t bits = b.num_bits() + z;
         const size_t words = (bits + 63) / 64;
@@ -1137,7 +1137,7 @@ constexpr void mul_karatsuba(const integer& a, const integer& b, integer& q) {
         q <<= z;
         return;
     }
-    if (is_power_of_two(static_cast<cnatural>(b))) {
+    if (is_power_of_two(static_cast<cwords>(b))) {
         const size_t z = (B - 1) * 64 + std::countr_zero(b.words[B - 1]); // = b.num_trailing_zeros() but O(1)
         const size_t bits = a.num_bits() + z;
         const size_t words = (bits + 63) / 64;
@@ -1150,9 +1150,9 @@ constexpr void mul_karatsuba(const integer& a, const integer& b, integer& q) {
 
     int Q = mul_max_size(a, b);
     q.words.reset(Q);
-    vnatural vq = q;
+    vwords vq = q;
     if (std::min(A, B) <= 2 || std::max(A, B) < KARATSUBA_LIMIT) {
-        __add_product(vq, static_cast<cnatural>(a), static_cast<cnatural>(b));
+        __add_product(vq, static_cast<cwords>(a), static_cast<cwords>(b));
     } else {
         const int W = 4 * std::max(A, B);
         if (W <= 1024) {
@@ -1205,7 +1205,7 @@ constexpr void __abs_mod(integer& a, const integer& b) {
     for (auto i = A; i-- > 0;) {
         r -= 1;
         R += 1;
-        inatural ir {r, R};
+        iwords ir {r, R};
         const uint64_t w = __saturated_div(ir, b);
         // r -= b * w. Unlike the four other call sites this one dropped the result, so an estimate
         // that was too large would leave a silently corrupted remainder behind instead of failing.
@@ -1309,7 +1309,7 @@ constexpr void __square(integer& a) {
     a = std::move(r);
 }
 
-constexpr void __abs_mul(cnatural a, cnatural b, integer& out) {
+constexpr void __abs_mul(cwords a, cwords b, integer& out) {
     if (a.size == 0 || b.size == 0) {
         out.set_zero();
         return;
@@ -1336,7 +1336,7 @@ constexpr void __abs_mul(cnatural a, cnatural b, integer& out) {
 
     out.set_zero();
     out.words.resize(a.size + b.size);
-    vnatural vq = out;
+    vwords vq = out;
     __mul(a, b, vq, /*init*/false);
     out.words.downsize(vq.size);
 }
@@ -1466,18 +1466,18 @@ constexpr uint64_t __abs_div(const integer& a, uint64_t b, integer& q) {
     Check(b != 0, "division by zero");
     if (&a != &q)
         q.words.reset(a.words.size());
-    vnatural vq = q;
+    vwords vq = q;
     uint64_t r = __div(a, b, vq);
     q.words.downsize(vq.size);
     return r;
 }
 
-constexpr void __abs_div(cnatural a, cnatural b, integer& q, integer& r) {
+constexpr void __abs_div(cwords a, cwords b, integer& q, integer& r) {
     Check(b.size != 0, "division by zero");
     if (b.size <= 1) {
         if (a.words != q.words.data())
             q.words.reset(a.size);
-        vnatural vq = q;
+        vwords vq = q;
         r = __div(a, b[0], vq);
         q.words.resize(vq.size);
         return;
@@ -1500,7 +1500,7 @@ constexpr void __abs_div(cnatural a, cnatural b, integer& q, integer& r) {
         const uint64_t w = __saturated_div(a, b);
         r.words.reset(a.size - 1, /*initialize*/false);
         std::copy(a.words + 1, a.words + a.size, r.words.data());
-        vnatural vr = r;
+        vwords vr = r;
         sub_product(vr, b, w);
         r.words.downsize(vr.size);
         q.words[0] = w;
@@ -1517,7 +1517,7 @@ constexpr void __abs_div(cnatural a, cnatural b, integer& q, integer& r) {
             r.words.insert_first_word(a[i]);
 
         const uint64_t w = __saturated_div(r, b);
-        vnatural vr = r;
+        vwords vr = r;
         Check(__sub_product(vr, b, w), "__saturated_div() overestimated the quotient");
         r.words.downsize(vr.size);
         q.words[i] = w;
@@ -1526,7 +1526,7 @@ constexpr void __abs_div(cnatural a, cnatural b, integer& q, integer& r) {
     q.words.normalize();
 }
 
-constexpr void __abs_mod(cnatural a, cnatural b, integer& r) {
+constexpr void __abs_mod(cwords a, cwords b, integer& r) {
     Check(b.size != 0, "division by zero");
     if (b.size <= 1) {
         r = __mod(a, b[0]);
@@ -1538,7 +1538,7 @@ constexpr void __abs_mod(cnatural a, cnatural b, integer& r) {
         if (r.words.size() || a[i])
             r.words.insert_first_word(a[i]);
         const uint64_t q = __saturated_div(r, b);
-        inatural ir = r;
+        iwords ir = r;
         Check(__sub_product(ir, b, q), "mod() remainder went negative");
         r.words.downsize(ir.size);
     }
@@ -1594,7 +1594,7 @@ constexpr integer& __abs_div(integer& a, std_int auto b) {
         // the single word kernel below would keep only the low word of the divisor
         if (abs_unsigned(b) > UINT64_MAX) {
             integer quot, rem;
-            __abs_div(static_cast<cnatural>(a), static_cast<cnatural>(integer(b)), quot, rem);
+            __abs_div(static_cast<cwords>(a), static_cast<cwords>(integer(b)), quot, rem);
             a = std::move(quot);
             return a;
         }
