@@ -1725,6 +1725,16 @@ constexpr void integer::__abs_parse(std::string_view s, unsigned base) {
         return;
     }
 
+    // Appends the low `bits` bits of acc. The chunk widths below are not all whole words, so the
+    // shift has to be by bits: insert_first_word() would shift a 63 bit octal chunk by 64.
+    const auto append = [this](uint64_t acc, unsigned bits) {
+        *this <<= bits;
+        if (words.size() == 0)
+            words.push_back(acc);
+        else
+            words[0] |= acc;
+    };
+
     if (base == 2) {
         while (p < end) {
             if (*p == '\'') {
@@ -1736,7 +1746,7 @@ constexpr void integer::__abs_parse(std::string_view s, unsigned base) {
             acc = acc * 2 + c - '0';
             count += 1;
             if (count == 64) {
-                words.insert_first_word(acc);
+                append(acc, count);
                 acc = 0;
                 count = 0;
             }
@@ -1752,7 +1762,7 @@ constexpr void integer::__abs_parse(std::string_view s, unsigned base) {
             acc = acc * 8 + c - '0';
             count += 3;
             if (count == 63) {
-                words.insert_first_word(acc);
+                append(acc, count);
                 acc = 0;
                 count = 0;
             }
@@ -1776,20 +1786,15 @@ constexpr void integer::__abs_parse(std::string_view s, unsigned base) {
             acc = acc * 16 + d;
             count += 4;
             if (count == 64) {
-                words.insert_first_word(acc);
+                append(acc, count);
                 acc = 0;
                 count = 0;
             }
         }
     } else
         Fail("unsupported base");
-    if (count) {
-        *this <<= count;
-        if (words.size() == 0)
-            words.push_back(acc);
-        else
-            words[0] |= acc;
-    }
+    if (count)
+        append(acc, count);
     words.normalize();
 }
 
