@@ -598,8 +598,8 @@ TEST_CASE("num_bits") {
 #include <bit>
 
 TEST_CASE("popcount") {
-    for (uint i: {0, -1, 4, 31231, -3123121})
-        REQUIRE(integer(i).popcount() == std::popcount(i));
+    for (uint i: {0u, ~0u, 4u, 31231u, static_cast<uint>(-3123121)})
+        REQUIRE(integer(i).popcount() == static_cast<size_t>(std::popcount(i)));
 }
 
 TEST_CASE("<<") {

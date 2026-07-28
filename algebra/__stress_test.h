@@ -93,7 +93,7 @@ void catch_exceptions(const M<T>& m, const auto& fn) {
     }
 }
 
-std::string shorten(const std::string& a, int pre, int post) {
+std::string shorten(const std::string& a, size_t pre, size_t post) {
     return (a.size() <= pre + post) ? a : (a.substr(0, pre) + "..." + a.substr(a.size() - post));
 }
 
@@ -214,7 +214,7 @@ void stress_test(const auto& fn, int max_errors = 6) {
     };
 
     std::vector<std::thread> threads;
-    for (int i = 0; i < std::thread::hardware_concurrency(); i++)
+    for (unsigned i = 0; i < std::thread::hardware_concurrency(); i++)
         threads.push_back(std::thread(func));
     threads[0].join();
 }

@@ -84,7 +84,7 @@ TEST_CASE("__add_and_return_carry - add negative") {
     REQUIRE(a[1] == 21);
 }
 
-constexpr uint128_t operator"" _u128(const char* str) {
+constexpr uint128_t operator""_u128(const char* str) {
     uint128_t result = 0;
     for ( ; *str; ++str)
         result = result * 10 + *str - '0';
@@ -549,12 +549,12 @@ TEST_CASE("__mod uint64 - agrees with the mod3/5/7/9 kernels") {
     uint64_t a[] = {0x1122334455667788, 0x99aabbccddeeff00, 0x0f1e2d3c4b5a6978};
     for (int size = 0; size <= 3; size++) {
         cnatural x {a, size};
-        REQUIRE(__mod(x, static_cast<uint64_t>(3)) == mod3(x));
-        REQUIRE(__mod(x, static_cast<uint64_t>(5)) == mod5(x));
-        REQUIRE(__mod(x, static_cast<uint64_t>(6)) == mod6(x));
-        REQUIRE(__mod(x, static_cast<uint64_t>(7)) == mod7(x));
-        REQUIRE(__mod(x, static_cast<uint64_t>(9)) == mod9(x));
-        REQUIRE(__mod(x, static_cast<uint64_t>(10)) == mod10(x));
+        REQUIRE(__mod(x, static_cast<uint64_t>(3)) == static_cast<uint64_t>(mod3(x)));
+        REQUIRE(__mod(x, static_cast<uint64_t>(5)) == static_cast<uint64_t>(mod5(x)));
+        REQUIRE(__mod(x, static_cast<uint64_t>(6)) == static_cast<uint64_t>(mod6(x)));
+        REQUIRE(__mod(x, static_cast<uint64_t>(7)) == static_cast<uint64_t>(mod7(x)));
+        REQUIRE(__mod(x, static_cast<uint64_t>(9)) == static_cast<uint64_t>(mod9(x)));
+        REQUIRE(__mod(x, static_cast<uint64_t>(10)) == static_cast<uint64_t>(mod10(x)));
     }
 }
 

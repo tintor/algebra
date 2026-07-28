@@ -165,15 +165,16 @@ TEST_CASE("modX()") {
     for (int i = 0; i < 10'000; i++) {
         int bits = std::uniform_int_distribution<int>(1, 1024)(rng);
         integer x = uniform_sample_bits(bits, rng);
-        REQUIRE(x % 2 == x.mod2());
-        REQUIRE(x % 3 == x.mod3());
-        REQUIRE(x % 4 == x.mod4());
-        REQUIRE(x % 5 == x.mod5());
-        REQUIRE(x % 6 == x.mod6());
-        REQUIRE(x % 7 == x.mod7());
-        REQUIRE(x % 8 == x.mod8());
-        REQUIRE(x % 9 == x.mod9());
-        REQUIRE(x % 10 == x.mod10());
+        // operator% returns a signed value, modN() an unsigned one; x is non-negative here
+        REQUIRE(static_cast<uint64_t>(x % 2) == x.mod2());
+        REQUIRE(static_cast<uint64_t>(x % 3) == x.mod3());
+        REQUIRE(static_cast<uint64_t>(x % 4) == x.mod4());
+        REQUIRE(static_cast<uint64_t>(x % 5) == x.mod5());
+        REQUIRE(static_cast<uint64_t>(x % 6) == x.mod6());
+        REQUIRE(static_cast<uint64_t>(x % 7) == x.mod7());
+        REQUIRE(static_cast<uint64_t>(x % 8) == x.mod8());
+        REQUIRE(static_cast<uint64_t>(x % 9) == x.mod9());
+        REQUIRE(static_cast<uint64_t>(x % 10) == x.mod10());
     }
 }
 

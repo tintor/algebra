@@ -132,7 +132,7 @@ constexpr real<B> sample_real(auto& rng) {
     }
 
 std::string str(uint64_t a) { return format("{}", a); }
-std::string stre(uint64_t a) { return ""; }
+std::string stre(uint64_t) { return ""; } // the builtin has no word list to print
 
 #define STR(A) format(#A "={} {}\n", str(A), stre(A))
 
@@ -202,8 +202,7 @@ void integer_test(uint64_t seed) {
         m = rng();
     const uint64_t am = mod(a, m); // TODO
     const uint64_t bm = mod(b, m);
-    TEST(0 <= am);
-    TEST(am < m);
+    TEST(am < m); // am is unsigned, so there is nothing to check on the low side
     using U = unsigned __int128;
     TEST(mod(U(am) + U(bm), m) == mod(a + b, m));
     TEST(mod(U(am) * U(bm), m) == mod(a * b, m));
