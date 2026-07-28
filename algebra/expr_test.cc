@@ -245,6 +245,29 @@ TEST_CASE("safe_sign") {
     REQUIRE(safe_sign(-2 + sin(2_e)) == -1);
 }
 
+TEST_CASE("sign of a power of a negative base") {
+    using namespace algebra::literals;
+    // a negative base that is not a rational, so pow() keeps it as an expr_power node
+    const expr_ptr neg = -sqrt(2_e);
+    REQUIRE(neg->sign() == -1);
+
+    // an odd exponent keeps the sign of the base, an even one makes the power positive
+    REQUIRE(pow(neg, 3)->sign() == -1);
+    REQUIRE(pow(neg, 5)->sign() == -1);
+    REQUIRE(pow(neg, 2)->sign() == 1);
+    REQUIRE(pow(neg, 4)->sign() == 1);
+    REQUIRE(safe_sign(pow(neg, 3)) == -1);
+
+    // and the comparisons that are built on the sign of a difference
+    REQUIRE(pow(neg, 3) < 0);
+    REQUIRE(pow(neg, 3) != 0);
+    REQUIRE(pow(neg, 3) < pow(neg, 2));
+    REQUIRE(pow(neg, 3) + pow(neg, 2) < pow(neg, 2));
+
+    // a fractional exponent of a negative base is not a real number, and stays an error
+    REQUIRE_THROWS(pow(neg, rational(1, 2))->sign());
+}
+
 TEST_CASE("expr_var has no sign") {
     REQUIRE_THROWS(make_var("x")->sign());
     REQUIRE(safe_sign(make_var("x")) == std::nullopt);
