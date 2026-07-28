@@ -131,8 +131,8 @@ void test_isqrt(const auto& fn) {
     }
 }
 
-constexpr integer isqrt_natural(const integer& x) { return isqrt(x); }
-TEST_CASE("isqrt stress") { test_isqrt(isqrt_natural); }
+constexpr integer isqrt_integer(const integer& x) { return isqrt(x); }
+TEST_CASE("isqrt stress") { test_isqrt(isqrt_integer); }
 TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
 TEST_CASE("isqrt3") { test_isqrt(isqrt3); }
 
@@ -288,7 +288,7 @@ ulong doubleToLongBits(double a) {
 }
 
 // UNTESTED
-integer double_to_natural(double a) {
+integer double_to_integer(double a) {
     ulong bits = doubleToLongBits(a);
     ulong e = ulong(1) << 52;
     integer b = (bits & e - 1) | e;
@@ -307,7 +307,7 @@ integer fast_isqrt(const integer& x) {
         integer nInt = vInt;
         val = integer((vInt + static_cast<ulong>(x / nInt)) >> 1);
     } else if (xd < 4.3322e127) {
-        val = double_to_natural(sqrt(xd));
+        val = double_to_integer(sqrt(xd));
 
         div(x, val, q, s);
         q += val;
