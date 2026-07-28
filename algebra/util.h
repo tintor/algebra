@@ -118,15 +118,18 @@ constexpr uint64_t pow(T base, unsigned exp) {
     if (exp == 0)
         return 1;
 
+    // the squaring below has to happen at the width of the result: in a narrower T it would wrap
+    // at that width instead, and a wider T is truncated to the same value modulo 2**64 anyway
+    uint64_t b = static_cast<uint64_t>(base);
     uint64_t result = 1;
     if (exp & 1)
-        result = base;
+        result = b;
     exp >>= 1;
 
     while (exp) {
-        base *= base;
+        b *= b;
         if (exp & 1)
-            result *= base;
+            result *= b;
         exp >>= 1;
     }
     return result;
