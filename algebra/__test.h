@@ -48,17 +48,24 @@ public:
             return dist(_rng);
         } else {
             using U = algebra::make_unsigned_t<T>;
+            const U max_u = algebra::UINT128_MAX;
             const U span = static_cast<U>(max) - static_cast<U>(min);
             if (span == 0)
                 return min;
+
+            auto draw = [this] { return (static_cast<U>(_rng()) << 64) | _rng(); };
+            if (span == max_u)
+                return static_cast<T>(draw()); // every draw is in range, and min is the lowest value
+
+            // Rejection sampling: taking the remainder of a raw draw would favour the values below
+            // (2**128 mod count), so the draws that fall in that last partial block are discarded.
+            const U count = span + 1;
+            const U keep = (max_u / count) * count; // the largest multiple of count that fits
             U r;
-            const U limit = (span == std::numeric_limits<U>::max()) ? span : (span + 1);
-            do { // rejection sampling, so the result is uniform
-                r = (static_cast<U>(_rng()) << 64) | _rng();
-                if (limit != 0)
-                    r %= limit;
-            } while (false);
-            return static_cast<T>(static_cast<U>(min) + r);
+            do {
+                r = draw();
+            } while (r >= keep);
+            return static_cast<T>(static_cast<U>(min) + r % count);
         }
     }
 
