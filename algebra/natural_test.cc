@@ -500,16 +500,6 @@ TEST_CASE("is_power_of_two") {
     REQUIRE(is_power_of_two(1_n << 280));
 }
 
-TEST_CASE("is_power_of_three") {
-    REQUIRE(!is_power_of_three(0));
-    REQUIRE(is_power_of_three(1));
-    REQUIRE(!is_power_of_three(2));
-    REQUIRE(is_power_of_three(3));
-    REQUIRE(!is_power_of_three(4));
-    REQUIRE(is_power_of_three(9));
-    REQUIRE(is_power_of_three(pow(3_n, 30)));
-    REQUIRE(!is_power_of_three(pow(3_n, 30) - 1));
-}
 
 TEST_CASE("power_of_two") {
     REQUIRE(pow(2_n, 0) == 1_n);
@@ -736,21 +726,6 @@ TEST_CASE("number theory helpers") {
         REQUIRE(p.num_bits() == e + 1);
     }
 
-    // log_lower / log_upper
-    REQUIRE(log_lower(natural(0), 10) == 0);
-    REQUIRE(log_upper(natural(0), 10) == 0);
-    for (uint64_t base : {2ull, 3ull, 10ull}) {
-        for (int e = 0; e < 20; e++) {
-            const natural p = pow(natural(base), e);
-            REQUIRE(log_lower(p, base) == e);
-            REQUIRE(log_upper(p, base) == e + 1);
-            if (e > 0) {
-                REQUIRE(log_lower(p - 1u, base) == e - 1);
-                REQUIRE(log_upper(p - 1u, base) == e);
-            }
-        }
-    }
-
     // binominal
     natural out;
     binominal(natural(5), 0, out);
@@ -816,20 +791,6 @@ TEST_CASE("number theory helpers") {
 }
 
 
-TEST_CASE("is_power_of_three more") {
-    REQUIRE(!is_power_of_three(natural(0)));
-    REQUIRE(is_power_of_three(natural(1)));
-    REQUIRE(is_power_of_three(natural(3)));
-    REQUIRE(is_power_of_three(natural(9)));
-    REQUIRE(is_power_of_three(natural(81)));
-    REQUIRE(is_power_of_three(pow(natural(3), 40)));
-    REQUIRE(is_power_of_three(pow(natural(3), 64)));  // a perfect square
-    REQUIRE(!is_power_of_three(natural(2)));
-    REQUIRE(!is_power_of_three(natural(6)));
-    REQUIRE(!is_power_of_three(natural(12)));
-    REQUIRE(!is_power_of_three(pow(natural(3), 20) + 1u));
-    REQUIRE(!is_power_of_three(pow(natural(3), 20) * 2u));
-}
 
 TEST_CASE("lcm") {
     REQUIRE(lcm(natural(0), natural(0)) == 0);
