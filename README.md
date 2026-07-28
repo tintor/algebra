@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     integer i = 7_i + e;
     rational r = 5/6_q;
     rational a = r * i;
-    std::print("{} | {:.2f}\n", a, a); // prints 15/2 7.50
+    std::print("{} | {:.2f}\n", a, a); // prints 15/2 | 7.50
     std::print("{:.20}\n", sqrt(2_q,  8)); // prints 1.41421356237309504880
 
     decimal d = 1.1_d; // stored exactly (unlike float and double which can't represent this value)
@@ -24,122 +24,81 @@ int main(int argc, char* argv[]) {
 - header-only and no dependencies
 - full `constexpr` and `std::format()` support
 - arbitrary precision and compact algebraic data types
-- `natural` / `integer` / `rational` / `real<>` / `decimal` classes behave similarly to built-in `int` and `float` types (except for overflow)
+- `integer` / `rational` / `real<>` / `decimal` classes behave similarly to built-in `int` and `float` types (except for overflow)
 - no heap allocation for integer values in `[-UINT64, UINT64]` range
-- all types support casting to and from all built-in integer and floating point types
+- all types cast to any built-in integer and floating point type, and construct from any built-in
+  integer; `rational` and `real<>` also construct from `float` and `double` exactly, while an
+  `integer` is built from a floating point value with `round_to_zero()`
 - no silent overflow / failures (std::runtime_error is thrown)
 - output using `std::format()` / `std::print()` / `std::ostream` / `.str()`
 - `real` allows more compact and efficient representation than `rational`, but requires rounding
 - `real<2>` is similar to built-in `float` and `double`, but with arbitrary long mantissa, and 32-bit exponent
 - `decimal` alias for `real<10>`
-- `sizeof(natural)` is 16 bytes, `sizeof(integer)` is 32 bytes, `sizeof(rational)` is 64 bytes, while `std::vector<>` is 24 bytes
+- `sizeof(integer)` is 16 bytes and `sizeof(rational)` is 32 bytes, while `std::vector<>` is 24 bytes
 
 ### Limitations
 - multiplication and division currently use `O(N^2)` algorithms where N is number of 64-bit words used
   (`mul_karatsuba()` and `divide_bz()` are available, but are not used by the operators yet)
+- the boolean and buffer operations on 2d regions are quadratic in the number of edges
+- `real<Base>` division is not exact: it rounds to a fixed number of digits
 
 ### Headers
 
 | header | contents |
 | --- | --- |
 | `algebra/algebra.h` | includes everything below |
-| `algebra/natural.h` | `natural` and functions on it (also pulls in `natural_class.h`) |
 | `algebra/integer.h` | `integer` and functions on it (also pulls in `integer_class.h`) |
 | `algebra/rational.h` | `rational` and functions on it (also pulls in `rational_class.h`) |
 | `algebra/real.h` | `real<Base>`, `decimal` (also pulls in `real_class.h`) |
-| `algebra/xrational.h` | `xrational`: `rational * sqrt(natural)` |
+| `algebra/xrational.h` | `xrational`: `rational * sqrt(integer)` |
 | `algebra/expr.h` | symbolic expressions (`expr`, `expr_ptr`) |
 | `algebra/vector.h` | `Vec<D, T>` with `Vec2` / `Vec3` / `Vec4` aliases |
 | `algebra/rational_vector.h` | `qvec2/3/4` and `xvec2/3/4` aliases plus mixed-type vector operators |
 | `algebra/solve_linear.h` | small linear systems and determinants |
-| `algebra/geometry.h` | `Line3`, `Plane3` and their intersections |
+| `algebra/geometry.h` | `Line3`, `Plane3` and their intersections; pulls in the distance and intersection headers below |
+| `algebra/point_segment_squared_distance.h` | point to segment squared distance in 3d |
+| `algebra/segment_segment_squared_distance.h` | segment to segment squared distance in 3d |
+| `algebra/segment_segment_intersection.h` | segment intersection in 2d, as points or as parameters |
+| `algebra/polygon2.h` | `MultiPolygon2<T>`: a 2d region as rings plus a complement flag |
+| `algebra/polygon2_boolean.h` | union, intersection, difference and symmetric difference of regions |
+| `algebra/polygon2_buffer.h` | dilate, erode and buffer by a convex structuring element |
+| `algebra/polygon2_arc.h` | `ArcPolygon2<T>`: the same, with circular arc edges |
+| `algebra/polygon2_arc_boolean.h` | `ArcRegion<T>`: boolean combinations of arc regions, as a tree |
 | `algebra/dual.h` | `dual<T>` dual numbers for forward mode automatic differentiation |
-| `algebra/kernels.h`, `algebra/util.h` | low level word array kernels (names starting with `__` are internal) |
+| `algebra/kernels.h`, `algebra/util.h`, `algebra/types.h` | low level word array kernels and 128-bit helpers (names starting with `__` are internal) |
 
 ---
 
-## `class natural`
+## `class integer`
 
-Arbitrary precision non-negative integer.
+Arbitrary precision signed integer. The magnitude lives in `words` and the sign in the sign of its
+word count, so a value of one word or less needs no heap allocation at all.
 
 Overloaded operators:
 - arithmetic 	`+` `-` `*` `/` `%` `+=` `-=` `*=` `/=` `%=` `++` `--`
 - relational `<` `>` `<=` `>=` `==` `!=`
 - shift `<<` `>>` `<<=` `>>=`
-- bitwise `~` `|` `&` `^` `|=` `&=` `^=`
+- bitwise `~`
 
-Subtraction below zero, division by zero and assignment of a negative value all throw `std::runtime_error`.
+Division by zero throws `std::runtime_error`, and so does a conversion to a built-in type that would
+not fit.
 
-#### `integer_backend natural::words`
-- Allows low level access to vector of individual words of this number.
-#### `natural::natural()`
-- Initializes to `0` value.
-#### `natural::natural(std::integral auto a)`
-#### `natural::natural(natural&& o)`
-#### `natural::natural(const natural& o)`
-#### `natural::natural(std::string_view s, unsigned base = 10)`
-- Supported bases are 2, 8, 10 and 16. `'` is allowed as a digit separator.
-#### `natural::natural(const char* s, uint32_t base = 10)`
-#### `void natural::swap(natural& o)`
-#### `void natural::set_zero()`
-#### `uint64_t natural::low_word() const`
-- Least significant word, or 0 when the value is zero.
-#### `size_t natural::num_trailing_zeros() const`
-- Returns number of trailing zeros in binary representation.
-#### `bool natural::is_even() const`
-- Same as `(a & 1) == 0`, but avoids temporary allocation for result of `&`
-#### `bool natural::is_odd() const`
-- Same as `(a & 1) == 1`, but avoids temporary allocation for result of `&`
-#### `bool natural::is_one() const`
-#### `bool natural::is_uint8() const`
-#### `bool natural::is_uint16() const`
-#### `bool natural::is_uint32() const`
-#### `bool natural::is_uint64() const`
-#### `bool natural::is_uint128() const`
-#### `void natural::mul_add(uint64_t a, uint64_t carry)`
-- `*this = *this * a + carry`
-#### `std::string natural::str(uint32_t base = 10, bool upper = true) const`
-#### `std::string natural::hex() const`
-- Same as `natural::str(16)`
-#### `int natural::str_size_upper_bound(uint32_t base = 10) const`
-#### `int natural::str(char* buffer, int buffer_size, uint32_t base = 10, bool upper = true) const`
-- Writes into a caller provided buffer and returns the number of characters written.
-#### `int64_t natural::num_bits() const`
-#### `bool natural::bit(int64_t i) const`
-#### `int64_t natural::popcount() const`
-#### `int64_t natural::size_of() const`
-- Number of bytes used by the words of this number.
-#### `int mod2() const`
-#### `int mod3() const`
-#### `int mod4() const`
-#### `int mod5() const`
-#### `int mod6() const`
-#### `int mod7() const`
-#### `int mod8() const`
-#### `int mod9() const`
-#### `int mod10() const`
-- Remainder modulo a small constant, without a division.
-
-## `class integer`
-
-Arbitrary precision signed integer. The sign is stored in `abs.words`.
-
-#### `natural integer::abs`
+#### `integer_backend integer::words`
+- Allows low level access to the vector of individual words of this number.
 
 #### `integer::integer()`
-#### `integer::integer(std::integral auto a)`
+#### `integer::integer(std_int auto a)`
 #### `integer::integer(integer&& o)`
-#### `integer::integer(natural&& o)`
 #### `integer::integer(const integer& o)`
-#### `integer::integer(const natural& o)`
+#### `integer::integer(std::initializer_list<uint64_t> a)`
+- The words, least significant first.
 #### `integer::integer(std::string_view s, unsigned base = 10)`
+- Accepts a leading `-`, and `'` as a digit separator. Bases 2, 8, 10 and 16.
 #### `integer::integer(const char* s, unsigned base = 10)`
 
-#### `void integer::operator=(std::integral auto a)`
+#### `void integer::operator=(std_int auto a)`
 #### `void integer::operator=(integer&& o)`
-#### `void integer::operator=(natural&& o)`
 #### `void integer::operator=(const integer& o)`
-#### `void integer::operator=(const natural& o)`
 
 #### `int integer::sign() const`
 - Negative, zero or positive; the magnitude of the returned value is the word count.
@@ -148,7 +107,13 @@ Arbitrary precision signed integer. The sign is stored in `abs.words`.
 #### `bool integer::is_odd() const`
 #### `bool integer::is_one() const`
 #### `bool integer::is_zero() const`
-#### `natural integer::to_natural() const`
+#### `uint64_t integer::low_word() const`
+- The least significant word, which is only meaningful when the value is not zero.
+#### `void integer::set_zero()`
+#### `void integer::negate()`
+- Same as `a = -a`, but in place and without memory allocation.
+#### `void integer::swap(integer& o)`
+
 #### `bool integer::is_int8() const`
 #### `bool integer::is_int16() const`
 #### `bool integer::is_int32() const`
@@ -159,25 +124,33 @@ Arbitrary precision signed integer. The sign is stored in `abs.words`.
 #### `bool integer::is_uint32() const`
 #### `bool integer::is_uint64() const`
 #### `bool integer::is_uint128() const`
+- Whether the value fits into that built-in type, which is what the corresponding cast requires.
 
 #### `std::string integer::str(unsigned base = 10, bool upper = true) const`
 #### `std::string integer::hex() const`
 #### `int integer::str_size_upper_bound(unsigned base = 10) const`
 #### `int integer::str(char* buffer, int buffer_size, unsigned base = 10, bool upper = true) const`
+- Writes into a caller provided buffer and returns the number of characters written.
 
-#### `void integer::negate()`
 #### `size_t integer::popcount() const`
-- Number of set bits in two's complement representation.
+- Number of set bits in the two's complement representation.
 #### `int integer::size_of() const`
+- Number of bytes used by the words of this number.
 #### `auto integer::num_bits() const`
 #### `auto integer::num_trailing_zeros() const`
-#### `bool integer::bit(size_t i) const`
-#### `void integer::swap(integer& o)`
+#### `bool integer::bit(int64_t i) const`
+- Bit `i` of the magnitude. Note that this is not the two's complement bit that `popcount()` counts.
+
 #### `uint64_t integer::mod2() const`
 #### `uint64_t integer::mod3() const`
 #### `uint64_t integer::mod4() const`
 #### `uint64_t integer::mod5() const`
-- Non-negative remainder, also for negative values.
+#### `uint64_t integer::mod6() const`
+#### `uint64_t integer::mod7() const`
+#### `uint64_t integer::mod8() const`
+#### `uint64_t integer::mod9() const`
+#### `uint64_t integer::mod10() const`
+- Remainder modulo a small constant, without a division. Non-negative, also for a negative value.
 
 ## `class rational`
 
@@ -187,7 +160,6 @@ Always kept in lowest terms with a positive denominator.
 #### `integer rational::den`
 #### `rational::rational()`
 #### `rational::rational(integer a)`
-#### `rational::rational(natural a)`
 #### `rational::rational(integer a, integer b)`
 - Initializes rational as a/b, and simplifies by removing common divisor.
 #### `static rational rational::normalized(integer num, integer den)`
@@ -230,28 +202,28 @@ Always kept in lowest terms with a positive denominator.
 #### `int real::exp`
 #### `real::real(I a, int exp = 0)`
 #### `real::real(integer a, int exp = 0)`
-#### `real::real(natural a, int exp = 0)`
 #### `real::real(float a)`
 #### `real::real(double a)`
 #### `real::real(const rational& a)`
 - Exact conversion; throws if the denominator is not a power of `Base`.
 #### `static real real::round(const rational& a, int digits)`
-- Nearest value with `digits` digits after the point (truncated towards zero).
+- `digits` digits after the point, truncated towards zero (so the name is a misnomer: it does not
+  round to nearest).
 #### `void real::normalize()`
 - Moves trailing factors of `Base` from `num` into `exp`.
 #### `std::string real::str() const`
 
 ## `class xrational`
 
-`rational * sqrt(natural)`. Closed under multiplication and division; addition requires
+`rational * sqrt(integer)`. Closed under multiplication and division; addition requires
 compatible roots.
 
 #### `rational xrational::base`
-#### `natural xrational::root`
+#### `integer xrational::root`
 - Must be positive. Not fully simplified: it can still contain square factors.
 #### `xrational::xrational()`
 #### `xrational::xrational(rational_like auto base)`
-#### `xrational::xrational(rational base, natural root)`
+#### `xrational::xrational(rational base, integer root)`
 #### `void xrational::simplify()`
 #### `bool xrational::is_rational() const`
 #### `bool xrational::is_zero() const`
@@ -284,114 +256,113 @@ Overloaded operators:
 #### `uint64_t pow_mod(uint64_t a, uint64_t n, uint64_t m)`
 - All three assume the operands are already in `[0, m)`.
 
-### algebra/natural.h
-#### `natural power_of_two(size_t e)`
-#### `void mul(const natural&, const natural&, natural& out)`
-#### `void mul(natural& a, const natural& b)`
-#### `void square(natural& a)`
-- `a = a * a`, using half the multiplications of `mul(a, a, out)`.
-#### `void mul_karatsuba(const natural& a, const natural& b, natural& q)`
-#### `natural mul_karatsuba(const natural& a, const natural& b)`
-- Sub-quadratic multiplication. `q` must not alias `a` or `b`.
-#### `void add_product(natural& acc, const natural& a, const natural& b)`
-#### `void add_product(natural& acc, const natural& a, uint64_t b)`
-#### `void sub_product(natural& acc, const natural& a, const natural& b)`
-#### `void sub_product(natural& acc, const natural& a, uint64_t b)`
-- `acc += a * b` / `acc -= a * b` without memory allocation. Subtraction assumes `acc >= a * b`.
-#### `uint64_t div(const natural& dividend, uint64_t divisor, natural& quotient)`
-- Returns the remainder.
-#### `void div(const natural& dividend, const natural& divisor, natural& quotient, natural& remainder)`
-#### `void divide_bz(const natural& a, const natural& d, natural& q, natural& r)`
-- Recursive (Burnikel-Ziegler) division; same result as `div()`.
-#### `void mod(const natural& dividend, const natural& divisor, natural& remainder)`
-#### `void mod(natural& dividend, const natural& divisor)`
-#### `uint128_t extract_u128(cnatural a, int64_t e)`
-- returns `static_cast<unsigned __int128>(a >> e)` without memory allocation
-#### `uint64_t extract_u64(cnatural a, int64_t e)`
-- returns `static_cast<uint64_t>(a >> e)` without memory allocation
-#### `void uniform_sample_bits(const size_t n, auto& rng, natural& out)`
-#### `natural uniform_sample_bits(const size_t n, auto& rng)`
-- uniformly sample from `[0, (2**n)-1]`
-#### `void uniform_sample(const natural& count, auto& rng, natural& out)`
-- uniformly sample from [0, count-1]
-#### `natural uniform_sample(const natural& count, auto& rng)`
-#### `natural uniform_sample(const natural& min, const natural& max, auto& rng)`
-#### `natural pow(natural base, std::integral auto exp)`
-#### `natural pow(natural base, const natural& exp)`
-#### `auto num_trailing_zeros(std::unsigned_integral auto a)`
-#### `natural gcd(natural a, natural b)`
-#### `auto gcd(std::integral auto a, std::integral auto b)`
-#### `natural lcm(const natural& a, const natural& b)`
-#### `uint64_t isqrt(uint64_t x)`
-#### `natural isqrt(const natural& x)`
-- Largest `q` with `q * q <= x`.
-#### `natural isqrt2(const natural& x)`
-#### `natural isqrt3(const natural& x)`
-- Alternative `isqrt()` implementations, kept for benchmarking.
-#### `natural isqrt_hardware(const natural& a)`
-- Very fast, but only approximate for large values.
-#### `natural iroot(const natural& a, uint32_t n)`
-- Largest `q` with `q**n <= a`.
-#### `bool exact_sqrt(const natural& a, natural& b)`
-- Sets `b` to `sqrt(a)` and returns true when `a` is a perfect square.
-#### `void exact_sqrt(natural a, natural& whole, natural& root)`
-- Factors `sqrt(a)` into `whole * sqrt(root)`, accumulating into already initialized arguments.
-#### `bool is_possible_square(const natural& a)`
-- Cheap filter that rejects ~98% of non-squares.
-#### `bool is_power_of_two(const natural& a)`
-#### `bool is_power_of_three(natural a)`
-#### `bool is_prime(uint64_t a)`
-- Deterministic Miller-Rabin.
-#### `bool is_likely_prime(const natural& n, int rounds)`
-- Miller-Rabin with the first `rounds` primes as bases (at most 40).
-- It returns false if n is composite and returns true if n is probably prime.
-- Higher value of `rounds` indicates more accuracy.
-#### `std::vector<std::pair<uint64_t, int>> factorize(uint64_t a)`
-#### `std::vector<std::pair<natural, int>> factorize(natural a)`
-- Prime factorization as (factor, exponent) pairs.
-#### `uint64_t try_fermat_factorize(uint64_t n)`
-- Returns a divisor of `n`, or 0 when Fermat's method does not find one quickly.
-#### `void add_mod(natural& a, const natural& b, const natural& m)`
-#### `void sub_mod(natural& a, const natural& b, const natural& m)`
-#### `void mul_mod(const natural& a, const natural& b, const natural& m, natural& out)`
-- assume that the operands are in `[0, m-1]` range
-#### `void pow_mod(natural a, const natural& b, const natural& m, natural& out)`
-#### `natural pow_mod(natural a, const natural& b, const natural& m)`
-- returns `(a**b) % m`
-#### `void binominal(const natural& n, uint64_t k, natural& out)`
-- Binomial coefficient (n over k).
-#### `uint64_t log_lower(natural a, uint64_t base)`
-#### `uint64_t log_upper(natural a, uint64_t base)`
-#### `void invert_bits(natural& a)`
-#### `void complement(natural& a)`
-
 ### algebra/integer.h
-#### `integer abs(integer a)`
-#### `bool abs_greater(const integer& a, const integer& b)`
-- `abs(a) > abs(b)`, minimizing memory allocation.
-#### `int signum(const integer& a)`
+#### `integer power_of_two(size_t e)`
+#### `integer exp2(std_int auto exp)`
+- `2**e`. `exp2()` throws for a negative exponent.
+#### `void mul(const integer& a, const integer& b, integer& out)`
+#### `void mul(integer& a, const integer& b)`
+#### `void square(integer& a)`
+- `a = a * a`, using half the multiplications of `mul(a, a, out)`.
+#### `void mul_karatsuba(const integer& a, const integer& b, integer& q)`
+#### `integer mul_karatsuba(const integer& a, const integer& b)`
+- Sub-quadratic multiplication. `q` must not alias `a` or `b`.
 #### `void add_product(integer& acc, const integer& a, const integer& b)`
 #### `void sub_product(integer& acc, const integer& a, const integer& b)`
-#### `void add_product(integer& acc, const integer& a, std::integral auto c)`
-#### `void sub_product(integer& acc, const integer& a, std::integral auto c)`
+#### `void add_product(integer& acc, const integer& a, std_int auto c)`
+#### `void sub_product(integer& acc, const integer& a, std_int auto c)`
+- `acc += a * b` / `acc -= a * b` without memory allocation.
 #### `void div(const integer& a, const integer& b, integer& quot, integer& rem)`
-#### `int64_t div(const integer& a, int64_t b, integer& quot)`
+- `quot` and `rem` have to be different objects; either may alias `a` or `b`.
+#### `T div(const integer& a, T b, integer& quot)`
+- Returns the remainder, for a signed or unsigned built-in `b` of any width.
+#### `void divide_bz(const integer& a, const integer& d, integer& q, integer& r)`
+- Recursive (Burnikel-Ziegler) division; same result as `div()`.
 #### `integer mod(const integer& a, const integer& b)`
 #### `void mod(integer& a, const integer& b)`
 #### `uint64_t mod(const integer& a, uint64_t b)`
 #### `unsigned mod(const integer& a, uint32_t b)`
-- All `mod()` overloads return a value in `[0, abs(b))`, unlike `operator%` which truncates towards zero.
+- All `mod()` overloads return a value in `[0, abs(b))`, unlike `operator%` which truncates towards
+  zero. The `integer&` overload replaces its argument in place, so it is chosen for a non const
+  lvalue: spell the operand `const` (or use the return value) to get the value form.
+#### `integer abs(const integer& a)`
+#### `bool abs_greater(const integer& a, const integer& b)`
+- `abs(a) > abs(b)`, minimizing memory allocation.
+#### `int signum(const integer& a)`
+#### `void invert_bits(integer& a)`
+#### `void complement(integer& a)`
+- Bitwise complement of the magnitude, and its two's complement. Both reject a negative value.
+
+#### `void uniform_sample_bits(const size_t n, auto& rng, integer& out)`
+#### `integer uniform_sample_bits(const size_t n, auto& rng)`
+- uniformly sample from `[0, (2**n)-1]`
+#### `void uniform_sample(const integer& count, auto& rng, integer& out)`
+#### `integer uniform_sample(const integer& count, auto& rng)`
+- uniformly sample from `[0, count-1]`; `count` has to be positive
 #### `integer uniform_sample(const integer& min, const integer& max, auto& rng)`
-#### `integer exp2(std::integral auto exp)`
-#### `integer pow(integer base, std::integral auto exp)`
-#### `integer pow(integer base, const natural& exp)`
-#### `integer pow(integer base, std::integral auto exp, integer result)`
+- uniformly sample from `[min, max]`
+
+#### `integer pow(integer base, std_int auto exp)`
+#### `integer pow(integer base, const integer& exp)`
+#### `integer pow(integer base, std_int auto exp, integer result)`
 - returns `result * (base ** exp)`
+#### `integer gcd(integer a, integer b)`
+#### `auto gcd(std_int auto a, std_int auto b)`
+- Of the magnitudes, so the sign of either argument does not matter.
+#### `integer lcm(const integer& a, const integer& b)`
+- `abs(a * b) / gcd(a, b)`, with the sign of `a * b`.
+#### `uint64_t isqrt(std_unsigned_int auto x)`
+#### `integer isqrt(const integer& x)`
+- Largest `q` with `q * q <= x`.
+#### `integer isqrt2(const integer& x)`
+#### `integer isqrt3(const integer& x)`
+- Alternative `isqrt()` implementations, kept for benchmarking.
+#### `integer isqrt_hardware(const integer& a)`
+- Very fast, but only approximate for large values.
+#### `integer iroot(const integer& a, uint32_t n)`
+- Largest `q` with `q**n <= a`.
+#### `bool exact_sqrt(const integer& a, integer& b)`
+- Sets `b` to `sqrt(a)` and returns true when `a` is a perfect square.
+#### `void exact_sqrt(integer a, integer& whole, integer& root)`
+- Factors `sqrt(a)` into `whole * sqrt(root)`, accumulating into already initialized arguments.
+#### `bool is_possible_square(const integer& a)`
+- Cheap filter that rejects ~98% of non-squares.
 #### `bool is_power_of_two(const integer& a)`
-#### `integer gcd(const integer& a, const integer& b)`
-#### `bool inverse_mod(const natural& a, const natural& m, natural& out)`
+#### `bool is_power_of_three(const integer& n)`
+#### `std::pair<int, int> mod63_65(const integer& a)`
+- `a % 63` and `a % 65`, in one pass and without a division.
+#### `void round_to_zero(std::floating_point auto a, integer& b)`
+- The value truncated towards zero. Throws for nan and infinity.
+
+#### `bool is_prime(uint64_t a)`
+- Deterministic Miller-Rabin.
+#### `bool is_likely_prime(const integer& n, int rounds)`
+- Miller-Rabin with the first `rounds` primes as bases (at most 40).
+- It returns false if n is composite and returns true if n is probably prime.
+- Higher value of `rounds` indicates more accuracy.
+#### `std::vector<std::pair<uint64_t, int>> factorize(std_unsigned_int auto a)`
+#### `std::vector<std::pair<integer, int>> factorize(integer a)`
+- Prime factorization as (factor, exponent) pairs.
+#### `uint64_t try_fermat_factorize(uint64_t n)`
+- Returns a divisor of `n`, or 0 when Fermat's method does not find one quickly.
+
+#### `void add_mod(integer& a, const integer& b, const integer& m)`
+#### `void sub_mod(integer& a, const integer& b, const integer& m)`
+#### `void mul_mod(const integer& a, const integer& b, const integer& m, integer& out)`
+- assume that the operands are in `[0, m-1]` range
+#### `void pow_mod(integer a, const integer& b, const integer& m, integer& out)`
+#### `integer pow_mod(integer a, const integer& b, const integer& m)`
+- returns `(a**b) % m`
+#### `bool inverse_mod(const integer& a, const integer& m, integer& out)`
 - returns x such that `(a * x) mod m == 1`, or false if such number doesn't exist
-#### `void binominal_mod(const natural& n, uint64_t k, const natural& m, natural& out)`
+#### `void binominal(const integer& n, uint64_t k, integer& out)`
+- Binomial coefficient (n over k).
+#### `void binominal_mod(const integer& n, uint64_t k, const integer& m, integer& out)`
+- The same coefficient reduced modulo `m`.
+#### `uint64_t log_lower(const integer& n, uint64_t base)`
+#### `uint64_t log_upper(const integer& n, uint64_t base)`
+- The base has to be at least two.
+
 #### `void simplify(integer& x, integer& y)`
 #### `void simplify(integer& x, integer& y, integer& z)`
 - Divides all arguments by their common divisor.
@@ -401,6 +372,13 @@ Overloaded operators:
 - returns `a < b * c` (cheaper than naive multiplication)
 #### `bool less_ab_cd(const integer& a, const integer& b, const integer& c, const integer& d)`
 - returns `a * b < c * d` (cheaper than naive multiplication)
+
+### algebra/kernels.h
+#### `uint128_t extract_u128(cnatural a, int64_t e)`
+- returns `static_cast<unsigned __int128>(a >> e)` without memory allocation
+#### `uint64_t extract_u64(cnatural a, int64_t e)`
+- returns `static_cast<uint64_t>(a >> e)` without memory allocation
+- `integer` converts to `cnatural`, a read only view of its words.
 
 ### algebra/rational.h
 #### `int approx_log2(const rational& a)`
@@ -476,7 +454,7 @@ Overloaded operators:
 #### `T determinant(const Vec2<T>& a, const Vec2<T>& b)`
 #### `T determinant(const Vec3<T>& a, const Vec3<T>& b, const Vec3<T>& c)`
 #### `std::variant<None, T, Any> solve_linear(const Vec<D, T>& a, const Vec<D, T>& b)`
-- solves `A + B*x = 0`
+- solves `A + B*x = 0`, returning `None` when there is no solution and `Any` when every `x` is one
 #### `bool solve_linear(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, T* s, T* t)`
 - solves `A + sB + tC = 0`, false when there is no unique solution
 #### `bool solve_linear(const Vec3<T>& a, ..., T* s, T* t, T* r)`
@@ -506,7 +484,6 @@ Overloaded operators:
 
 | literal | type |
 | --- | --- |
-| `123_n` | `natural` |
 | `123_i` | `integer` |
 | `1/2_q` | `rational` |
 | `1.5_f` | `real<2>` |
