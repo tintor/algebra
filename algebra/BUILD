@@ -5,9 +5,9 @@ cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main"
 
 library("kernels",       hdrs = ["util.h", "types.h"])
 library("natural_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
-library("natural",       deps = [":natural_class"])
-library("integer_class", deps = [":natural"])
-library("integer",       deps = [":integer_class"])
+library("integer_class", deps = [":natural_class"])
+library("natural",       deps = [":integer_class"])
+library("integer",       deps = [":natural"])
 library("rational_class",deps = [":integer"])
 library("rational",      deps = [":rational_class"])
 library("xrational",     deps = [":rational"])

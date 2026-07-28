@@ -1,5 +1,5 @@
 #pragma once
-#include "algebra/natural_class.h"
+#include "algebra/integer_class.h"
 #include <array>
 #include <optional>
 #include <random>
