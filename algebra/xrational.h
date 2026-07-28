@@ -192,7 +192,7 @@ constexpr xrational operator*(const xrational& a, const xrational& b) {
         return {a.base * b.base * integer(a.root)};
 
     // TODO maybe use gcd(a.root, b.root) to avoid difficult factorization
-    natural whole = abs(a.base.num * b.base.num).to_natural();
+    natural whole = abs(a.base.num * b.base.num);
     natural root = 1;
     exact_sqrt(a.root, whole, root);
     exact_sqrt(b.root, whole, root);
@@ -272,10 +272,10 @@ constexpr bool operator==(const xrational& a, const xrational& b) {
     bs.words.reserve_bits(rb.max);
 
     // a == b  <=>  a.num * as * b.den == b.num * bs * a.den
-    as *= b.base.den.to_natural();
-    as *= a.base.num.to_natural();
-    bs *= a.base.den.to_natural();
-    bs *= b.base.num.to_natural();
+    as *= abs(b.base.den);
+    as *= abs(a.base.num);
+    bs *= abs(a.base.den);
+    bs *= abs(b.base.num);
     return as == bs;
 }
 
@@ -299,8 +299,8 @@ constexpr bool __less_abs(const rational& a_base, const natural& a_root, const r
     aa.words.reserve_bits((a_base.num.num_bits() + b_base.den.num_bits()) * 2 + a_root.num_bits());
     bb.words.reserve_bits((b_base.num.num_bits() + a_base.den.num_bits()) * 2 + b_root.num_bits());
 
-    mul(a_base.num.to_natural(), b_base.den.to_natural(), aa);
-    mul(b_base.num.to_natural(), a_base.den.to_natural(), bb);
+    mul(abs(a_base.num), abs(b_base.den), aa);
+    mul(abs(b_base.num), abs(a_base.den), bb);
 
     aa *= aa;
     aa *= a_root;
@@ -336,8 +336,8 @@ constexpr xrational sqrt(const xrational& a) {
     if (a.base.is_zero())
         return xrational{rational{0}};
     natural whole = 1, root = 1;
-    exact_sqrt(a.base.num.to_natural(), whole, root);
-    exact_sqrt(a.base.den.to_natural(), whole, root);
+    exact_sqrt(abs(a.base.num), whole, root);
+    exact_sqrt(abs(a.base.den), whole, root);
     return {rational{whole, a.base.den}, root};
 }
 

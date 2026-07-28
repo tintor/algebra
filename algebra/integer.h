@@ -6,12 +6,6 @@ namespace algebra {
 
 constexpr bool is_power_of_two(const integer& a) { return !a.is_negative() && is_power_of_two(static_cast<cnatural>(a)); }
 
-constexpr integer abs(integer a) {
-    if (a.is_negative())
-        a.negate();
-    return a;
-}
-
 // returns abs(a) > abs(b), minimizing memory allocation
 constexpr bool abs_greater(const integer& a, const integer& b) {
     return __less(static_cast<cnatural>(b), static_cast<cnatural>(a)); // no allocation: views only
@@ -22,7 +16,7 @@ constexpr integer uniform_sample(const integer& min, const integer& max, auto& r
     if (max_min.sign() < 0)
         throw std::runtime_error("max smaller than min in uniform_sample()");
     ++max_min;
-    return integer(uniform_sample(max_min.to_natural(), rng)) + min;
+    return integer(uniform_sample(abs(max_min), rng)) + min;
 }
 
 constexpr integer exp2(std_int auto exp) {
@@ -131,7 +125,7 @@ constexpr bool inverse_mod(const natural& a, const natural& m, natural& out) {
         return false;
     if (t.is_negative())
         t += m;
-    out = t.to_natural();
+    out = abs(t);
     return true;
 }
 
@@ -173,14 +167,14 @@ constexpr void mod(integer& a, const integer& b) {
     const bool negative = a.is_negative();
     a.words.set_negative(false);
     {
-        const natural bn = b.to_natural(); // b may be a itself, see mul() on aliasing
+        const natural bn = abs(b); // b may be a itself, see mul() on aliasing
         auto m = a.magnitude();
         mod(*m, bn);
     }
     if (negative && !a.words.empty()) {
         // result is in [0, abs(b)) range
-        natural e = b.to_natural();
-        e -= a.to_natural();
+        natural e = abs(b);
+        e -= abs(a);
         a = std::move(e);
     }
 }
@@ -191,7 +185,7 @@ constexpr int signum(const integer& a) {
     return a.is_negative() ? -1 : 1;
 }
 
-constexpr integer gcd(const integer& a, const integer& b) { return gcd(a.to_natural(), b.to_natural()); }
+constexpr integer gcd(const integer& a, const integer& b) { return gcd(abs(a), abs(b)); }
 
 // reduce vector's length, without changing vector's direction
 constexpr void simplify(integer& x, integer& y) {

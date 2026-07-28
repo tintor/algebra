@@ -129,7 +129,7 @@ TEST_CASE("simplify") {
     const xrational big(1, natural(1) << 101); // sqrt(2**101) == 2**50 * sqrt(2)
     REQUIRE(big == xrational(rational(natural(1) << 50), natural(2)));
     REQUIRE(sqr(big) == rational(natural(1) << 101));
-    const xrational big3(1, pow(integer(3), 100).to_natural());
+    const xrational big3(1, abs(pow(integer(3), 100)));
     REQUIRE(big3 == rational(pow(integer(3), 50)));
     REQUIRE(big3.is_rational());
 

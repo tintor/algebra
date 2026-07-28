@@ -46,10 +46,10 @@ constexpr rational sqrt_bits(const rational& x, int bits) {
     if (x.num.is_zero())
         return 0;
     // floor(sqrt(num * 2**(2*bits) / den)) / 2**bits
-    natural n = x.num.to_natural();
+    natural n = abs(x.num);
     n.words.set_negative(false);
     n <<= 2 * bits;
-    n /= x.den.to_natural();
+    n /= abs(x.den);
     return {integer(isqrt(n)), integer(power_of_two(bits))};
 }
 
@@ -178,7 +178,7 @@ constexpr rational pow(const rational& base, const rational& exp, unsigned itera
 }
 
 constexpr rational fract(const rational& a) {
-    return {abs(a.num) % a.den, a.den};
+    return {abs(a.num) % abs(a.den), a.den}; // a rational keeps its denominator positive
 }
 
 constexpr rational abs(rational a) {

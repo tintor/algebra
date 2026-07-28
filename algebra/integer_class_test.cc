@@ -31,7 +31,7 @@ TEST_CASE("add_product") {
 
 TEST_CASE("ctor") {
     integer a = -1;
-    integer b(a.to_natural());
+    integer b(abs(a));
     REQUIRE(b == 1);
     REQUIRE(b.sign() == 1);
     integer c(a);
