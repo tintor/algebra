@@ -722,6 +722,10 @@ constexpr void add_product(integer& a, const integer& b, const std_int auto c) {
 constexpr void sub_product(integer& a, const integer& b, const std_int auto c) { __add_product<false>(a, b, abs_unsigned(c), c < 0); static_assert(sizeof(c) <= 8); }
 
 constexpr void div(const integer& a, const integer& b, integer& quot, integer& rem) {
+    // Each output borrows the magnitude of its target below, and magnitude_ref restores on scope
+    // exit; two borrows over one backend would restore in turn, so the second would put the
+    // pre-operation value back and the result would be lost without a word of warning.
+    Check(&quot != &rem, "div() needs separate quotient and remainder");
     if (b == 1) {
         quot = a;
         rem = 0;
