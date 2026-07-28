@@ -60,6 +60,32 @@ TEST_CASE("structuring elements") {
     REQUIRE_THROWS(polygon_element<rational>(2, 2));
 }
 
+TEST_CASE("reflect") {
+    // negating every vertex is a rotation by half a turn, which keeps the orientation
+    const R a{V(0, 0), V(3, 0), V(0, 4)};
+    REQUIRE(is_ccw(a));
+    const R r = reflect(a);
+    REQUIRE(is_ccw(r));
+    REQUIRE(signed_area(r) == signed_area(a));
+
+    // and it is the same ring, negated, starting from the same vertex
+    REQUIRE(r.size() == a.size());
+    for (size_t i = 0; i < a.size(); i++) {
+        REQUIRE(r[i].x == -a[i].x);
+        REQUIRE(r[i].y == -a[i].y);
+    }
+
+    // an involution
+    const R rr = reflect(r);
+    REQUIRE(rr == a);
+
+    // a clockwise ring stays clockwise
+    R cw = a;
+    reverse(cw);
+    REQUIRE(!is_ccw(cw));
+    REQUIRE(!is_ccw(reflect(cw)));
+}
+
 TEST_CASE("dilate a square by a square") {
     const P a(box(0, 0, 10, 10));
     const P g = dilate(a, square_element<rational>(2));
