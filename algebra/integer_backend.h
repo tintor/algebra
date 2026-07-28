@@ -21,7 +21,7 @@ private:
 public:
     constexpr integer_backend(std::initializer_list<uint64_t> a) : _words(0), _size(0), _capacity(0) {
         resize(a.size());
-        for (int i = 0; i < a.size(); i++)
+        for (size_t i = 0; i < a.size(); i++)
             operator[](i) = a.begin()[i];
     }
     constexpr integer_backend() : _single_word(0), _size(0), _capacity(0) { }

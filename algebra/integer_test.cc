@@ -227,11 +227,11 @@ TEST_CASE("log_lower / log_upper") {
     for (uint64_t base : {2ull, 3ull, 10ull}) {
         for (int e = 0; e < 20; e++) {
             const integer p = pow(integer(base), e);
-            REQUIRE(log_lower(p, base) == e);
-            REQUIRE(log_upper(p, base) == e + 1);
+            REQUIRE(log_lower(p, base) == static_cast<uint64_t>(e));
+            REQUIRE(log_upper(p, base) == static_cast<uint64_t>(e + 1));
             if (e > 0) {
-                REQUIRE(log_lower(p - 1u, base) == e - 1);
-                REQUIRE(log_upper(p - 1u, base) == e);
+                REQUIRE(log_lower(p - 1u, base) == static_cast<uint64_t>(e - 1));
+                REQUIRE(log_upper(p - 1u, base) == static_cast<uint64_t>(e));
             }
         }
     }

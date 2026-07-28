@@ -316,8 +316,8 @@ constexpr std::optional<int> safe_sign(expr_ptr a);
 constexpr expr_ptr make_sum(std::vector<expr_ptr> v) {
     // move all rationals to the front of sum and combine them
     rational a;
-    int r = 0;
-    int w = 0;
+    size_t r = 0;
+    size_t w = 0;
     while (r < v.size()) {
         if (is_rational(v[r]))
             a += rational_value(v[r]);
@@ -427,8 +427,8 @@ constexpr expr_ptr operator-(expr_ptr a) {
 constexpr expr_ptr make_product(std::vector<expr_ptr> v) {
     // a * 2 * b * 3 -> 6 * a * b
     rational a = 1;
-    int r = 0;
-    int w = 0;
+    size_t r = 0;
+    size_t w = 0;
     while (r < v.size()) {
         if (is_rational(v[r]))
             a *= rational_value(v[r]);
@@ -627,7 +627,7 @@ struct std::formatter<const algebra::expr*, char> {
                 std::format_to(ctx.out(), ")");
             }
         } else if (auto sum = dcast<expr_sum>(a)) {
-            for (int i = 0; i < sum->values.size(); i++) {
+            for (size_t i = 0; i < sum->values.size(); i++) {
                 auto b = sum->values[i];
                 if (is_negation(b)) {
                     if (i > 0)
@@ -647,7 +647,7 @@ struct std::formatter<const algebra::expr*, char> {
                 }
             }
         } else if (auto product = dcast<expr_product>(a)) {
-            for (int i = 0; i < product->values.size(); i++) {
+            for (size_t i = 0; i < product->values.size(); i++) {
                 if (i > 0)
                     std::format_to(ctx.out(), "*");
                 auto b = product->values[i];
@@ -849,7 +849,7 @@ constexpr int expr_sum::sign() const {
             throw unknown_sign_error(std::format("unknown sign and bounds of {}", values[0]));
 
         interval<rational> b = *bo;
-        for (int i = 1; i < values.size(); i++) {
+        for (size_t i = 1; i < values.size(); i++) {
             bo = bounds(values[i]);
             if (bo == std::nullopt)
                 throw unknown_sign_error(std::format("unknown sign and bounds of {}", values[i]));

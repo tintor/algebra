@@ -124,7 +124,8 @@ constexpr void pow(const rational& base, const integer& exp, rational& out) {
     rational _base = base;
     if (exp.is_odd())
         out *= _base;
-    for (size_t i = 1; i < exp.num_bits(); i++) {
+    const int64_t bits = exp.num_bits();
+    for (int64_t i = 1; i < bits; i++) {
         _base *= _base;
         if (exp.bit(i))
             out *= _base;

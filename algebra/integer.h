@@ -837,10 +837,11 @@ constexpr void pow_mod(integer a, const integer& b, const integer& m, integer& o
     out = 1;
     if (a >= m)
         a %= m;
-    for (size_t i = 0; i < b.num_bits(); i++) {
+    const int64_t bits = b.num_bits();
+    for (int64_t i = 0; i < bits; i++) {
         if (b.bit(i))
             __mul_mod(out, a, m);
-        if (i == b.num_bits() - 1)
+        if (i == bits - 1)
             break;
         __mul_mod(a, a, m);
     }
@@ -863,8 +864,8 @@ constexpr bool is_likely_prime(const integer& n, int rounds) {
 
     std::array<int, 40> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
         71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173};
-    if (rounds > primes.size())
-        throw std::runtime_error("rounds arg is too high");
+    if (rounds < 0 || static_cast<size_t>(rounds) > primes.size())
+        throw std::runtime_error("rounds arg is out of range");
     if (n.mod2() == 0 || n.mod3() == 0 || n.mod5() == 0)
         return false;
 

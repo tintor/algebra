@@ -24,7 +24,7 @@ struct real {
 
     constexpr real(std_int auto a, int exp = 0) : num(a), exp(exp) { normalize(); }
     constexpr real(integer a, int exp = 0) : num(std::move(a)), exp(exp) { normalize(); }
-    constexpr real(integer a, int exp, int dummy) : num(std::move(a)), exp(exp) { }
+    constexpr real(integer a, int exp, int /*dummy, skips normalize()*/) : num(std::move(a)), exp(exp) { }
 
     constexpr real(float a) : real(rational(a)) { }
     constexpr real(double a) : real(rational(a)) { }
@@ -262,17 +262,18 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
             } else {
                 if (a.num.sign() < 0)
                     *it++ = '-';
-                auto s = abs(a.num).str();
-                if (s.size() <= -a.exp) {
+                const std::string s = abs(a.num).str();
+                const size_t digits = static_cast<size_t>(-a.exp); // a.exp < 0 in this branch
+                if (s.size() <= digits) {
                     *it++ = '0';
                     *it++ = '.';
-                    for (int i = s.size(); i < -a.exp; i++)
+                    for (size_t i = s.size(); i < digits; i++)
                         *it++ = '0';
                     for (char c: s)
                         *it++ = c;
                 } else {
-                    for (int i = 0; i < s.size(); i++) {
-                        if (i == s.size() + a.exp)
+                    for (size_t i = 0; i < s.size(); i++) {
+                        if (i == s.size() - digits)
                             *it++ = '.';
                         *it++ = s[i];
                     }
