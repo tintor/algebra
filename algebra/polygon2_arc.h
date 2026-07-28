@@ -171,6 +171,47 @@ constexpr bool __on_any_chord(const ArcPolygon2<T>& a, const Vec2<T>& p) {
     return false;
 }
 
+// True when dir runs along a chord that p lies on. Stepping that way would keep p on the chord.
+template<typename T>
+constexpr bool __along_a_chord_through(const ArcPolygon2<T>& a, const Vec2<T>& p, const Vec2<T>& dir) {
+    for (const ArcRing2<T>& ring : a.rings) {
+        if (ring.size() < 2)
+            continue;
+        for (size_t i = 0, j = ring.size() - 1; i < ring.size(); j = i++) {
+            if (ring[j].bulge == 0)
+                continue;
+            const Vec2<T>& u = ring[j].p;
+            const Vec2<T>& v = ring[i].p;
+            if (cross(v - u, p - u) != 0 || !loose_order(u, p, v))
+                continue; // p is not on this chord
+            if (cross(v - u, dir) == 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+// A direction to step off a chord along. Every chord through p rules out one direction, and the
+// candidates below are pairwise non parallel, so one of the first (number of arcs + 1) is free.
+template<typename T>
+constexpr Vec2<T> __off_chord_direction(const ArcPolygon2<T>& a, const Vec2<T>& p) {
+    size_t arcs = 0;
+    for (const ArcRing2<T>& ring : a.rings)
+        arcs += ring.size();
+
+    for (size_t k = 0; k <= arcs + 1; k++) {
+        // (1,0), (0,1), (1,1), (1,-1), (1,2), (1,-2), ...
+        Vec2<T> dir{T(1), T(0)};
+        if (k == 1)
+            dir = Vec2<T>{T(0), T(1)};
+        else if (k > 1)
+            dir = Vec2<T>{T(1), T(static_cast<int64_t>(k / 2)) * ((k % 2) ? T(1) : T(-1))};
+        if (!__along_a_chord_through(a, p, dir))
+            return dir;
+    }
+    Fail("no direction free of the chords through this point");
+}
+
 // Undefined when p is on the boundary or on a chord of an arc, in the same way that the straight
 // edged winding_number is undefined on the boundary.
 template<typename T>
@@ -275,13 +316,12 @@ constexpr bool contains(const ArcPolygon2<T>& a, const Vec2<T>& p) {
     Vec2<T> q = p;
     if (__on_any_chord(a, p)) {
         // A chord is not part of the boundary, but the winding formula is undefined on one, so step
-        // off it. The step provably crosses nothing, so it stays in the same face. Trying two
-        // directions is enough, since a point cannot lie on chords running both ways at once.
-        for (const Vec2<T>& dir : {Vec2<T>{T(1), T(0)}, Vec2<T>{T(0), T(1)}}) {
-            q = p + dir * __arc_safe_step(a, p, dir);
-            if (!__on_any_chord(a, q) && !on_boundary(a, q))
-                break;
-        }
+        // off it. The step provably crosses nothing, so it stays in the same face, and the direction
+        // is parallel to no chord through p, so it does leave every chord p was on. A point can lie
+        // on chords running several ways at once, which is why the direction has to be chosen.
+        const Vec2<T> dir = __off_chord_direction(a, p);
+        q = p + dir * __arc_safe_step(a, p, dir);
+        Check(!__on_any_chord(a, q) && !on_boundary(a, q), "contains() failed to step off a chord");
     }
     return (winding_number(a, q) != 0) != a.complement;
 }
