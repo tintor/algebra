@@ -11,6 +11,11 @@ static R square(int lo = 0, int hi = 10) {
     return R{V(lo, lo), V(hi, lo), V(hi, hi), V(lo, hi)};
 }
 
+// the boolean and buffer operations halve a midpoint and a step, so a truncating coordinate type
+// would put every sample point back on the boundary; the type is rejected at compile time
+static_assert(__exact_halving<rational>());
+static_assert(!__exact_halving<integer>());
+
 TEST_CASE("signed_area2 and orientation") {
     const R ccw = square();
     REQUIRE(signed_area2(ccw) == 200);
