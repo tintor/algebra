@@ -69,6 +69,19 @@ TEST_CASE("solve_linear 3d") {
     }
 }
 
+TEST_CASE("solve_linear takes its arguments by reference") {
+    // A Vec of rationals is several heap allocations, so a by-value parameter copies them on every
+    // call. Top level const is not part of a function type, so this catches `const Vec<D, T> a`.
+    using F1 = std::variant<None, rational, Any> (*)(const V2&, const V2&);
+    static_assert(std::same_as<decltype(&solve_linear<2, rational>), F1>);
+
+    // the results are unchanged
+    const V2 a{1, 0}, b{-1, 0};
+    const auto r = solve_linear(a, b);
+    REQUIRE(std::holds_alternative<rational>(r));
+    REQUIRE(std::get<rational>(r) == 1);
+}
+
 TEST_CASE("solve_linear 1 unknown") {
     // A + B*x == 0
     Vec2<rational> a{6, 9}, b{-2, -3};
