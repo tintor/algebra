@@ -84,6 +84,11 @@ TEST_CASE("__add_and_return_carry - add negative") {
     REQUIRE(a[1] == 21);
 }
 
+// a constant expression, not a runtime initialized copy per translation unit
+static_assert(UINT128_MAX == static_cast<uint128_t>(-1));
+static_assert(UINT128_MAX >> 127 == 1);
+static_assert(UINT128_MAX == ((static_cast<uint128_t>(UINT64_MAX) << 64) | UINT64_MAX));
+
 constexpr uint128_t operator""_u128(const char* str) {
     uint128_t result = 0;
     for ( ; *str; ++str)
