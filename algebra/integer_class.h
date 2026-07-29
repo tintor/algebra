@@ -844,7 +844,9 @@ constexpr integer operator%(const integer& a, const integer& divisor) {
     return c;
 }
 
-// TODO generalize for any std_int
+// The remainder truncates towards zero, so it carries the sign of the dividend, and the result type
+// is the widest one that can hold it: signed for a signed divisor, and `integer` for an unsigned one,
+// where a negative remainder fits neither the divisor's type nor its signed counterpart.
 constexpr int64_t operator%(const integer& a, int64_t b) {
     Check(b != 0, "division of integer by zero");
     uint64_t m = __mod(static_cast<cwords>(a), abs_unsigned(b));
@@ -854,10 +856,27 @@ constexpr int64_t operator%(const integer& a, int64_t b) {
 constexpr int operator%(const integer& a, int b) { return a % (int64_t)b; }
 constexpr int64_t operator%(const integer& a, unsigned b) { return a % (int64_t)b; }
 
+// A 128-bit divisor needs its own overloads: every one above takes it only by a narrowing
+// conversion, so the call was ambiguous rather than wrong.
+constexpr int128_t operator%(const integer& a, int128_t b) {
+    Check(b != 0, "division of integer by zero");
+    const uint128_t m = a.__abs_mod_word(abs_unsigned(b));
+    return (a.sign() >= 0) ? static_cast<int128_t>(m) : -static_cast<int128_t>(m);
+}
+
 // Note: return type is integer instead of uint64_t, as it can be negative (can't fit into int64_t either)
 constexpr integer operator%(const integer& a, uint64_t b) {
     Check(b > 0, "division of integer by zero");
     integer c = __mod(static_cast<cwords>(a), b);
+    if (a.is_negative())
+        c.negate();
+    return c;
+}
+
+// likewise for a 128-bit unsigned divisor
+constexpr integer operator%(const integer& a, uint128_t b) {
+    Check(b > 0, "division of integer by zero");
+    integer c = a.__abs_mod_word(b);
     if (a.is_negative())
         c.negate();
     return c;
