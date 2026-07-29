@@ -375,6 +375,23 @@ TEST_CASE("round") {
     REQUIRE(to_rational(decimal::round(rational(-1, 4), 4)) == rational(-1, 4));
     REQUIRE(to_rational(decimal::round(rational(123), 0)) == rational(123));
 
+    // to nearest, with halves away from zero
+    REQUIRE(to_rational(decimal::round(rational(19, 100), 1)) == rational(2, 10));
+    REQUIRE(to_rational(decimal::round(rational(15, 100), 1)) == rational(2, 10));
+    REQUIRE(to_rational(decimal::round(rational(14, 100), 1)) == rational(1, 10));
+    REQUIRE(to_rational(decimal::round(rational(-15, 100), 1)) == rational(-2, 10));
+    REQUIRE(to_rational(real<2>::round(rational(3, 8), 2)) == rational(1, 2)); // 0.011 -> 0.10
+    REQUIRE(to_rational(real<2>::round(rational(1, 8), 2)) == rational(1, 4)); // 0.001 -> 0.01
+
+    // never further from the value than half a step
+    for (int digits : {0, 1, 4}) {
+        const rational ulp = to_rational(decimal(1, -digits));
+        for (int num = -30; num <= 30; num++) {
+            const rational a(num, 7);
+            REQUIRE(abs(to_rational(decimal::round(a, digits)) - a) <= ulp / 2);
+        }
+    }
+
     // otherwise a multiple of B**-digits within one unit of the last place
     for (int digits : {1, 5, 20}) {
         const rational ulp2 = to_rational(real<2>(1, -digits));

@@ -280,3 +280,41 @@ TEST_CASE("pow(rational, rational)") {
     // 4^(3/2) == 8
     REQUIRE(close(pow(rational(4), rational(3, 2), 6), rational(8), rational(1, 1000)));
 }
+
+TEST_CASE("round is to nearest") {
+    // halves go away from zero, the same way the {:.N} formatter rounds
+    REQUIRE(round(rational(19, 100), 1) == rational(2, 10));
+    REQUIRE(round(rational(14, 100), 1) == rational(1, 10));
+    REQUIRE(round(rational(15, 100), 1) == rational(2, 10));
+    REQUIRE(round(rational(-19, 100), 1) == rational(-2, 10));
+    REQUIRE(round(rational(-15, 100), 1) == rational(-2, 10));
+    REQUIRE(round(rational(-14, 100), 1) == rational(-1, 10));
+
+    // exact values are untouched, at any number of digits
+    REQUIRE(round(rational(1, 4), 2) == rational(1, 4));
+    REQUIRE(round(rational(-1, 4), 5) == rational(-1, 4));
+    REQUIRE(round(rational(7), 0) == 7);
+    REQUIRE(round(rational(0), 3) == 0);
+
+    // zero digits rounds to an integer, and so does round_to_nearest
+    REQUIRE(round(rational(3, 2), 0) == 2);
+    REQUIRE(round(rational(-3, 2), 0) == -2);
+    REQUIRE(round(rational(4, 3), 0) == 1);
+    REQUIRE(round_to_nearest(rational(4, 3)) == 1);
+    REQUIRE(round_to_nearest(rational(5, 3)) == 2);
+    REQUIRE(round_to_nearest(rational(-5, 3)) == -2);
+    REQUIRE(round_to_nearest(rational(7)) == 7);
+
+    // the result is never further from a than half a step
+    for (int num = -40; num <= 40; num++) {
+        const rational a(num, 7);
+        for (unsigned digits : {0u, 1u, 3u}) {
+            const rational step(1, static_cast<long>(std::pow(10, digits)));
+            REQUIRE(abs(round(a, digits) - a) <= step / 2);
+        }
+    }
+
+    // a base other than ten
+    REQUIRE(round(rational(3, 8), 3, 2) == rational(3, 8));
+    REQUIRE(round(rational(1, 3), 2, 2) == rational(1, 4)); // 0.0101... rounds to 0.01
+}
