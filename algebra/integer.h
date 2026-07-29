@@ -965,89 +965,57 @@ constexpr std::vector<std::pair<integer, int>> factorize(integer a) {
             return out;
     }
 
+    // Every exponent found from here on is multiplied by f, which counts how many times the whole
+    // remaining value has been replaced by its square root.
     int f = 1;
-    while (is_possible_square(a)) {
-        integer s = isqrt(a);
-        if (s * s != a)
-            break;
-        a = s;
-        f *= 2;
-    }
-    if (is_likely_prime(a, 40)) {
-        out.emplace_back(a, f);
-        return out;
-    }
-    if (a.is_uint64()) {
-        for (auto e : factorize(static_cast<uint64_t>(a)))
-            out.push_back({e.first, e.second * f});
-        return out;
-    }
-
-    uint64_t p = 5;
-    while (true) {
-        if (a % p == 0) {
-            int count = f;
-            a /= p;
-            while (a % p == 0) {
-                a /= p;
-                count += f;
-            }
-            out.emplace_back(p, count);
-            if (a == 1)
+    // Takes the square root of what is left while that is exact, then finishes if what remains is
+    // prime or small enough for the builtin factorization. Returns true when nothing is left to do.
+    auto reduce = [&out, &a, &f] {
+        while (is_possible_square(a)) {
+            const integer s = isqrt(a);
+            if (s * s != a)
                 break;
-
-            while (is_possible_square(a)) {
-                integer s = isqrt(a);
-                if (s * s != a)
-                    break;
-                a = s;
-                f *= 2;
-            }
-            if (is_likely_prime(a, 40)) {
-                out.emplace_back(a, f);
-                break;
-            }
-            if (a.is_uint64()) {
-                for (auto e : factorize(static_cast<uint64_t>(a)))
-                    out.push_back({e.first, e.second * f});
-                return out;
-            }
+            a = s;
+            f *= 2;
         }
+        if (is_likely_prime(a, 40)) {
+            out.emplace_back(a, f);
+            return true;
+        }
+        if (a.is_uint64()) {
+            for (auto e : factorize(static_cast<uint64_t>(a)))
+                out.emplace_back(e.first, e.second * f);
+            return true;
+        }
+        return false;
+    };
+    // Divides out every power of p, and reports what is left. Returns true when nothing is left.
+    auto divide_out = [&out, &a, &f, &reduce](uint64_t p) {
+        if (a % p != 0)
+            return false;
+        int count = f;
+        a /= p;
+        while (a % p == 0) {
+            a /= p;
+            count += f;
+        }
+        out.emplace_back(p, count);
+        return a == 1 || reduce();
+    };
+
+    if (reduce())
+        return out;
+
+    // trial division by the 6k +- 1 wheel
+    for (uint64_t p = 5; ; p += 4) {
+        if (divide_out(p))
+            return out;
         p += 2;
-
-        if (a % p == 0) {
-            int count = f;
-            a /= p;
-            while (a % p == 0) {
-                a /= p;
-                count += f;
-            }
-            out.emplace_back(p, count);
-            if (a == 1)
-                break;
-
-            while (is_possible_square(a)) {
-                integer s = isqrt(a);
-                if (s * s != a)
-                    break;
-                a = s;
-                f *= 2;
-            }
-            if (is_likely_prime(a, 40)) {
-                out.emplace_back(a, f);
-                break;
-            }
-            if (a.is_uint64()) {
-                for (auto e : factorize(static_cast<uint64_t>(a)))
-                    out.push_back({e.first, e.second * f});
-                return out;
-            }
-        }
-        p += 4;
-        if (p < 5)
+        if (divide_out(p))
+            return out;
+        if (p + 4 < p)
             throw std::runtime_error("overflow");
     }
-    return out;
 }
 
 // returns (n k)
