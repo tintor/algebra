@@ -1944,7 +1944,7 @@ struct std::formatter<algebra::neg_integer, char> {
 };
 #endif
 
-constexpr std::ostream& operator<<(std::ostream& os, const algebra::integer& a) { return os << a.str(); }
+inline std::ostream& operator<<(std::ostream& os, const algebra::integer& a) { return os << a.str(); }
 
 template<>
 struct std::hash<algebra::integer> {

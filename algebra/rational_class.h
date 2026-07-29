@@ -505,7 +505,7 @@ struct std::formatter<algebra::rational, char> {
     }
 };
 
-constexpr std::ostream& operator<<(std::ostream& os, const algebra::rational& a) { return os << a.str(); }
+inline std::ostream& operator<<(std::ostream& os, const algebra::rational& a) { return os << a.str(); }
 
 template<>
 struct std::hash<algebra::rational> {

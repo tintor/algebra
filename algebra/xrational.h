@@ -379,7 +379,7 @@ struct std::formatter<algebra::xrational, char> {
     }
 };
 
-constexpr std::ostream& operator<<(std::ostream& os, const algebra::xrational& a) { return os << std::format("{}", a); }
+inline std::ostream& operator<<(std::ostream& os, const algebra::xrational& a) { return os << std::format("{}", a); }
 
 template<>
 struct std::hash<algebra::xrational> {
