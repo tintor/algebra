@@ -91,77 +91,6 @@ TEST_CASE("mul_karatsuba stress with random bit lengths") {
     }
 }
 
-#if 0
-TEST_CASE("mul benchmark") {
-    Random rng(1);
-    integer a, b;
-
-    a = rand_integer(4, rng);
-    b = rand_integer(4, rng);
-    BENCHMARK("a * b 4") { return a * b; };
-    BENCHMARK("karatsuba 4") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(8, rng);
-    b = rand_integer(8, rng);
-    BENCHMARK("a * b 8") { return a * b; };
-    BENCHMARK("karatsuba 8") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(16, rng);
-    b = rand_integer(16, rng);
-    BENCHMARK("a * b 16") { return a * b; };
-    BENCHMARK("karatsuba 16") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(32, rng);
-    b = rand_integer(32, rng);
-    BENCHMARK("a * b 32") { return a * b; };
-    BENCHMARK("karatsuba 32") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(64, rng);
-    b = rand_integer(64, rng);
-    BENCHMARK("a * b 64") { return a * b; };
-    BENCHMARK("karatsuba 64") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(128, rng);
-    b = rand_integer(128, rng);
-    BENCHMARK("a * b 128") { return a * b; };
-    BENCHMARK("karatsuba 128") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(256, rng);
-    b = rand_integer(256, rng);
-    BENCHMARK("a * b 256") { return a * b; };
-    BENCHMARK("karatsuba 256") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(512, rng);
-    b = rand_integer(512, rng);
-    BENCHMARK("a * b 512") { return a * b; };
-    BENCHMARK("karatsuba 512") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(1024, rng);
-    b = rand_integer(1024, rng);
-    BENCHMARK("a * b 1024") { return a * b; };
-    BENCHMARK("karatsuba 1024") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(2048, rng);
-    b = rand_integer(2048, rng);
-    BENCHMARK("a * b 2048") { return a * b; };
-    BENCHMARK("karatsuba 2048") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(4096, rng);
-    b = rand_integer(4096, rng);
-    BENCHMARK("a * b 4096") { return a * b; };
-    BENCHMARK("karatsuba 4096") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(8192, rng);
-    b = rand_integer(8192, rng);
-    BENCHMARK("a * b 8192") { return a * b; };
-    BENCHMARK("karatsuba 8192") { return mul_karatsuba(a, b); };
-
-    a = rand_integer(16384, rng);
-    b = rand_integer(16384, rng);
-    BENCHMARK("a * b 16384") { return a * b; };
-    BENCHMARK("karatsuba 16384") { return mul_karatsuba(a, b); };
-}
-#endif
 
 TEST_CASE("mul_karatsuba easy") {
     integer a;
@@ -196,79 +125,6 @@ TEST_CASE("mul_karatsuba ones") {
     }
 }
 
-#if 0
-TEST_CASE("mul_karatsuba 4") {
-    Random rng(0);
-    for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_integer(4, rng);
-        integer b = rand_integer(4, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 8") {
-    Random rng(0);
-    for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_integer(8, rng);
-        integer b = rand_integer(8, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 16") {
-    Random rng(0);
-    for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_integer(16, rng);
-        integer b = rand_integer(16, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 32") {
-    Random rng(0);
-    for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_integer(32, rng);
-        integer b = rand_integer(32, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 64") {
-    Random rng(0);
-    for (int i = 0; i < 10'000'000; i++) {
-        integer a = rand_integer(64, rng);
-        integer b = rand_integer(64, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 128") {
-    Random rng(0);
-    for (int i = 0; i < 5'000'000; i++) {
-        integer a = rand_integer(128, rng);
-        integer b = rand_integer(128, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba 256") {
-    Random rng(0);
-    for (int i = 0; i < 2'500'000; i++) {
-        integer a = rand_integer(256, rng);
-        integer b = rand_integer(256, rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-
-TEST_CASE("mul_karatsuba general") {
-    Random rng(0);
-    for (int i = 0; i < 1'000'000; i++) {
-        integer a = rand_integer(rng.Uniform<int>(0, 512), rng);
-        integer b = rand_integer(rng.Uniform<int>(0, 512), rng);
-        REQUIRE(a * b == mul_karatsuba(a, b));
-    }
-}
-#endif
 
 TEST_CASE("__less_a_bc_scalar") {
     Random rng(555);
@@ -873,7 +729,16 @@ TEST_CASE("popcount") {
 }
 
 TEST_CASE("<<") {
-    integer(1) << 64; // regression test
+    // a shift by a whole word once produced garbage, hence the regression test; it now checks the
+    // value rather than only that the shift returns
+    const integer a = integer(1) << 64;
+    REQUIRE(a.words.size() == 2);
+    REQUIRE(a.words[0] == 0);
+    REQUIRE(a.words[1] == 1);
+    REQUIRE(a.str() == "18446744073709551616");
+    REQUIRE((a >> 64) == 1);
+    REQUIRE((integer(1) << 63).str() == "9223372036854775808");
+    REQUIRE((integer(3) << 64).words.size() == 2);
 }
 
 TEST_CASE("literal") {
@@ -1417,7 +1282,6 @@ TEST_CASE("multiplication propagates a long carry") {
         REQUIRE(a * b == e);
     }
 }
-
 
 
 TEST_CASE("square matches multiplication") {

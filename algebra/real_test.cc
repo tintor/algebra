@@ -1,10 +1,6 @@
 #include "algebra/real.h"
 #include "algebra/__test.h"
 
-TEST_CASE("empty") {
-
-}
-
 TEST_CASE("pow with accumulator") {
     using R = real<2>;
     // pow(base, exp, result) == result * base**exp
