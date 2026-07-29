@@ -46,7 +46,18 @@ TEST_CASE("decimal literal") {
 
 TEST_CASE("hash") {
     std::unordered_map<real<2>, int> m;
-    m[1.5_f] = 0;
+    m[1.5_f] = 7;
+    REQUIRE(m.at(1.5_f) == 7);
+    REQUIRE(m.size() == 1);
+
+    // the same value reached another way hashes the same, so it finds the same entry
+    m[real<2>(3, -1)] = 9; // 3 * 2**-1
+    REQUIRE(m.size() == 1);
+    REQUIRE(m.at(1.5_f) == 9);
+
+    m[2.5_f] = 1;
+    REQUIRE(m.size() == 2);
+    REQUIRE(std::hash<real<2>>()(1.5_f) == std::hash<real<2>>()(real<2>(3, -1)));
 }
 
 TEST_CASE("+") {

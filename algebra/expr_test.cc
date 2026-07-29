@@ -41,24 +41,24 @@ TEST_CASE("str") {
     REQUIRE(format("{}", 1 + E_EXPR + sqrt(2_e) - E_EXPR) == "1 + sqrt(2)");
 }
 
-#if 0
-TEST_CASE("sqrt") {
-    auto a = 2_q;
-    rational lower = 1;
-    rational upper = (1 + a) / 2;
-    for (int i = 0; i < 10; i++) {
+TEST_CASE("bisecting towards a square root stays exact") {
+    // rationals bracket sqrt(2) as tightly as asked, with every comparison exact
+    const rational a = 2_q;
+    rational lower = 1, upper = (1 + a) / 2;
+    for (int i = 0; i < 20; i++) {
         REQUIRE(lower * lower < a);
         REQUIRE(a < upper * upper);
-        info("{:.30} - {:.30}", lower, upper);
-        while (true) {
-            auto e = (lower + upper) / 2;
-            if (e * e >= a)
-                break;
-            lower = e;
-        }
+        const rational mid = (lower + upper) / 2;
+        if (mid * mid < a)
+            lower = mid;
+        else
+            upper = mid;
     }
+    // 20 bisections of an interval that starts at 1/2 wide
+    REQUIRE(upper - lower <= rational(1, 1 << 20));
+    REQUIRE(lower < sqrt_bits(a, 40));
+    REQUIRE(sqrt_bits(a, 40) < upper);
 }
-#endif
 
 constexpr std::string os() {
     std::ostringstream s;
