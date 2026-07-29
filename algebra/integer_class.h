@@ -451,7 +451,6 @@ constexpr int __abs_str_size_upper_bound(const integer& a, unsigned base) { retu
 constexpr int __abs_str(const integer& a, char* buffer, int buffer_size, unsigned base, bool upper) {
     return a.__abs_str_buffer(buffer, buffer_size, base, upper);
 }
-constexpr std::string __abs_str(const integer& a) { return str(static_cast<cwords>(a)); }
 
 
 constexpr integer& integer::operator++() {
@@ -592,10 +591,8 @@ constexpr integer& operator*=(integer& a, std_int auto b) {
     return a;
 }
 
-constexpr std::string str(const integer& a) {
-    const std::string m = __abs_str(abs(a));
-    return a.is_negative() ? "-" + m : m;
-}
+// the member does the same in one pass, chunking by 10**19, so this is just a spelling of it
+constexpr std::string str(const integer& a) { return a.str(); }
 
 constexpr std::string stre(const integer& a) {
     const std::string m = __abs_stre(abs(a));
