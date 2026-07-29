@@ -717,9 +717,36 @@ TEST_CASE("try_fermat_factorize") {
         const uint64_t f = try_fermat_factorize(n);
         if (f) {
             REQUIRE(f > 1);
+            REQUIRE(f < n);
             REQUIRE(n % f == 0);
         }
     }
+
+    // A prime makes the difference of squares come out as n = ((n+1)/2)**2 - ((n-1)/2)**2, whose
+    // a - b is 1. That is not a factor, so it reports nothing found.
+    for (uint64_t p : {5ull, 7ull, 11ull, 97ull, 1000003ull, 4294967291ull})
+        REQUIRE(try_fermat_factorize(p) == 0);
+
+    // and the values with nothing strictly inside the range
+    REQUIRE(try_fermat_factorize(0) == 0);
+    REQUIRE(try_fermat_factorize(1) == 0);
+    REQUIRE(try_fermat_factorize(2) == 0);
+    REQUIRE(try_fermat_factorize(3) == 0);
+}
+
+TEST_CASE("iroot rejects a zero exponent") {
+    // it used to answer 1 for a > 1 and a for a <= 1, because the small argument exit came first
+    REQUIRE_THROWS(iroot(integer(5), 0));
+    REQUIRE_THROWS(iroot(integer(1), 0));
+    REQUIRE_THROWS(iroot(integer(0), 0));
+
+    // the exponents that do mean something
+    REQUIRE(iroot(integer(5), 1) == 5);
+    REQUIRE(iroot(integer(0), 3) == 0);
+    REQUIRE(iroot(integer(1), 7) == 1);
+    REQUIRE(iroot(integer(1000), 3) == 10);
+    REQUIRE(iroot(integer(999), 3) == 9);
+    REQUIRE_THROWS(iroot(integer(-8), 3));
 }
 
 TEST_CASE("gcd 128 bit") {

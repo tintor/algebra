@@ -304,7 +304,12 @@ constexpr bool is_one_of(int a, std::initializer_list<int> b) {
     return false;
 }
 
+// A divisor of n strictly between 1 and n, or 0 when Fermat's method does not find one quickly.
+// Nothing but 0 means "no factor": a prime n makes the difference of squares n = a*a - b*b come out
+// with a - b == 1, which is a divisor of everything and so was a useless answer to return.
 inline uint64_t try_fermat_factorize(uint64_t n) {
+    if (n < 4)
+        return 0; // 0, 1, 2 and 3 have no divisor strictly inside the range
     if (n % 2 == 0)
         return 2;
 
@@ -318,8 +323,10 @@ inline uint64_t try_fermat_factorize(uint64_t n) {
         const uint128_t a_sq = static_cast<uint128_t>(a) * a;
         const uint128_t b_sq = a_sq - n;
         const uint64_t b = __isqrt_u128(b_sq);
-        if (static_cast<uint128_t>(b) * b == b_sq)
-            return a - b;
+        if (static_cast<uint128_t>(b) * b == b_sq) {
+            const uint64_t d = a - b;
+            return (d > 1 && d < n) ? d : 0; // a - b == 1 says n is prime, not that 1 divides it
+        }
         if (a == UINT64_MAX)
             return 0;
         a++;
@@ -607,6 +614,9 @@ constexpr integer isqrt(const integer& a) {
     return x;
 }
 
+// isqrt2 and isqrt3 are alternative implementations of isqrt, kept because isqrt_benchmark.cc
+// compares the three. They stay in the header for that reason: a benchmark cannot reach a definition
+// that is not in one.
 constexpr integer isqrt2(const integer& a) {
     Check(!a.is_negative(), "isqrt2() of a negative number");
     integer small;
@@ -685,10 +695,11 @@ constexpr integer isqrt3(const integer& a) {
 
 constexpr integer iroot(const integer& a, uint32_t n) {
     Check(!a.is_negative(), "iroot() of a negative number");
+    // The zeroth root is not a value. It used to answer 1 for a > 1 and a for a <= 1, because the
+    // exit for a small argument came first, so the two disagreed with each other.
+    Check(n != 0, "iroot() with a zero exponent");
     if (a <= 1 || n == 1)
         return a;
-    if (n == 0)
-        return 1;
     if (n == 2)
         return isqrt(a);
 
