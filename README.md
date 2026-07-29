@@ -456,7 +456,8 @@ to both sides.
 #### `rational pow(const rational& base, const integer& exp)`
 #### `rational pow(const rational& base, const rational& exp, unsigned iterations)`
 #### `rational fract(const rational& a)`
-- Fractional part, always non-negative.
+- The part beyond the integer part, so `trunc(a) + fract(a) == a`. The sign follows `a`, the same way
+  `std::modf` splits a floating point value.
 #### `rational abs(rational a)`
 #### `bool abs_greater(const rational& a, const rational& b)`
 #### `rational round(const rational& a, unsigned digits, unsigned base = 10)`
