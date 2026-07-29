@@ -98,71 +98,17 @@ std::variant<None, PointParams<T>, SegmentParams<T>> segment_segment_intersectio
     return None();
 }
 
+// The same intersection as points rather than parameters. Every branch of the parameter version
+// already identifies the answer exactly, so this evaluates its result instead of repeating it: for an
+// exact T the two agree by construction.
 template<typename T>
 std::variant<None, Vec2<T>, std::pair<Vec2<T>, Vec2<T>>> segment_segment_intersection(
         const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c, const Vec2<T>& d) {
-    T s, t, det;
-    // if not parallel AND not degenerate
-    if (__solve_linear(a - c, b - a, c - d, s, t, det)) {
-        if (det < 0) {
-            negate(s);
-            negate(t);
-            negate(det);
-        }
-        if (s >= 0 && s <= det && t >= 0 && t <= det)
-            return a - (a - b) * (s / det);
-        return None();
-    }
-
-    // both degenerate
-    if (a == b && c == d) {
-        if (a == c)
-            return a;
-        return None();
-    }
-
-    // AB degenerate
-    if (a == b) {
-        if (ccw(a, c, d) == 0 && loose_order(c, a, d))
-            return a;
-        return None();
-    }
-
-    // CD degenerate
-    if (c == d) {
-        if (ccw(c, a, b) == 0 && loose_order(a, c, b))
-            return c;
-        return None();
-    }
-
-    // if collinear
-    if (ccw(a, b, c) == 0) {
-        const int i = argmax_abs(a - b);
-        T A = a[i];
-        T B = b[i];
-        T C = c[i];
-        T D = d[i];
-
-        const bool swap_ab = A > B;
-        const bool swap_cd = C > D;
-        if (swap_ab)
-            std::swap(A, B);
-        if (swap_cd)
-            std::swap(C, D);
-
-        if (B < C || D < A)
-            return None();
-        if (B == C)
-            return swap_ab ? a : b;
-        if (D == A)
-            return swap_ab ? b : a;
-        // overlap
-        return std::pair{
-            (A > C) ? (swap_ab ? b : a) : (swap_cd ? d : c),
-            (B < D) ? (swap_ab ? a : b) : (swap_cd ? c : d)};
-    }
-
-    // parallel (non-colinear)
+    const auto r = segment_segment_intersection_param(a, b, c, d);
+    if (const PointParams<T>* p = std::get_if<PointParams<T>>(&r))
+        return lerp(a, b, p->s);
+    if (const SegmentParams<T>* s = std::get_if<SegmentParams<T>>(&r))
+        return std::pair{lerp(a, b, s->s), lerp(c, d, s->t)};
     return None();
 }
 
