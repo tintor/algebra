@@ -1495,6 +1495,18 @@ constexpr uint64_t __abs_div(const integer& a, uint64_t b, integer& q) {
     return r;
 }
 
+// One step of long division: brings the next word of the dividend down into the remainder and takes
+// out the largest multiple of the divisor that fits, returning that multiple as the quotient word.
+constexpr uint64_t __divide_step(integer& r, cwords b, uint64_t next) {
+    if (r.words.size() || next)
+        r.words.insert_first_word(next);
+    const uint64_t w = __saturated_div(r, b);
+    iwords ir = r;
+    Check(__sub_product(ir, b, w), "__saturated_div() overestimated the quotient");
+    r.words.downsize(ir.size);
+    return w;
+}
+
 constexpr void __abs_div(cwords a, cwords b, integer& q, integer& r) {
     Check(b.size != 0, "division by zero");
     if (b.size <= 1) {
@@ -1517,34 +1529,12 @@ constexpr void __abs_div(cwords a, cwords b, integer& q, integer& r) {
     if (a.words != q.words.data())
         q.words.reset(Q, /*initialize*/false);
 
-#if 0
-    if (Q == 1) {
-        q.words.reset(1);
-        const uint64_t w = __saturated_div(a, b);
-        r.words.reset(a.size - 1, /*initialize*/false);
-        std::copy(a.words + 1, a.words + a.size, r.words.data());
-        vwords vr = r;
-        sub_product(vr, b, w);
-        r.words.downsize(vr.size);
-        q.words[0] = w;
-        return;
-    }
-#endif
-
     r.set_zero();
     r.words.reset(a.size - Q, /*initialize*/false);
     std::copy(a.words + Q, a.words + a.size, r.words.data());
 
-    for (int i = Q; i-- > 0;) {
-        if (r.words.size() || a[i])
-            r.words.insert_first_word(a[i]);
-
-        const uint64_t w = __saturated_div(r, b);
-        vwords vr = r;
-        Check(__sub_product(vr, b, w), "__saturated_div() overestimated the quotient");
-        r.words.downsize(vr.size);
-        q.words[i] = w;
-    }
+    for (int i = Q; i-- > 0;)
+        q.words[i] = __divide_step(r, b, a[i]);
     q.words.downsize(Q);
     q.words.normalize();
 }
@@ -1557,14 +1547,9 @@ constexpr void __abs_mod(cwords a, cwords b, integer& r) {
     }
     r.words.set_zero();
     r.words.reserve(b.size + 1); // the remainder never exceeds this, so the loop below never grows it
-    for (auto i = a.size; i-- > 0;) {
-        if (r.words.size() || a[i])
-            r.words.insert_first_word(a[i]);
-        const uint64_t q = __saturated_div(r, b);
-        iwords ir = r;
-        Check(__sub_product(ir, b, q), "mod() remainder went negative");
-        r.words.downsize(ir.size);
-    }
+    // the same long division, with the quotient words thrown away instead of stored
+    for (auto i = a.size; i-- > 0;)
+        __divide_step(r, b, a[i]);
 }
 
 constexpr integer& __abs_shl(integer& a, int64_t b) {
