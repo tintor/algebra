@@ -876,6 +876,14 @@ TEST_CASE("lcm") {
     REQUIRE(lcm(integer(7), integer(7)) == 7);
     REQUIRE(lcm(integer(1), integer(13)) == 13);
 
+    // of the magnitudes, the same as gcd: the sign of either operand does not matter
+    REQUIRE(lcm(integer(-4), integer(6)) == 12);
+    REQUIRE(lcm(integer(4), integer(-6)) == 12);
+    REQUIRE(lcm(integer(-4), integer(-6)) == 12);
+    REQUIRE(lcm(integer(-7), integer(7)) == 7);
+    REQUIRE(lcm(integer(-1), integer(13)) == 13);
+    REQUIRE(lcm(integer(-5), integer(0)) == 0);
+
     std::mt19937_64 rng(0);
     for (int i = 0; i < 30; i++) {
         const integer a = uniform_sample_bits(std::uniform_int_distribution<int>(1, 300)(rng), rng);
@@ -886,6 +894,9 @@ TEST_CASE("lcm") {
         REQUIRE(l % a == 0);
         REQUIRE(l % b == 0);
         REQUIRE(l * gcd(a, b) == a * b);
+        REQUIRE(lcm(-a, b) == l);
+        REQUIRE(lcm(a, -b) == l);
+        REQUIRE(lcm(-a, -b) == l);
     }
 }
 

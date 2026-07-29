@@ -164,7 +164,7 @@ constexpr integer gcd(integer a, std_int auto b) { return gcd(std::move(a), inte
 constexpr integer gcd(std_int auto a, integer b) { return gcd(integer(abs_unsigned(a)), std::move(b)); }
 
 // least common multiple
-// likewise of the magnitudes
+// likewise of the magnitudes, so the sign of either argument does not matter
 constexpr integer lcm(const integer& a, const integer& b) {
     if (a.words.empty() || b.words.empty())
         return 0;
@@ -172,6 +172,7 @@ constexpr integer lcm(const integer& a, const integer& b) {
     integer m = a;
     m /= gcd(a, b);
     m *= b;
+    m.words.set_negative(false);
     return m;
 }
 
