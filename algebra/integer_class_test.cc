@@ -1083,3 +1083,27 @@ TEST_CASE("modulo by a 128 bit divisor") {
         REQUIRE(x % m == x % integer(m));
     }
 }
+
+TEST_CASE("format alignment without a fill character") {
+    // {:>10} and friends: the standard makes the fill optional, and it was required here
+    REQUIRE(format("{:>6}", 42_i) == "    42");
+    REQUIRE(format("{:<6}", 42_i) == "42    ");
+    REQUIRE(format("{:^6}", 42_i) == "  42  ");
+    REQUIRE(format("{:>6}", -42_i) == "   -42");
+    REQUIRE(format("{:^7}", -42_i) == "  -42  ");
+
+    // with a fill, as before
+    REQUIRE(format("{:*>6}", 42_i) == "****42");
+    REQUIRE(format("{:*<6}", 42_i) == "42****");
+    REQUIRE(format("{:*^6}", 42_i) == "**42**");
+
+    // alignment together with a base
+    REQUIRE(format("{:>6x}", 255_i) == "    ff");
+    REQUIRE(format("{:<6X}", 255_i) == "FF    ");
+    REQUIRE(format("{:0>8b}", 5_i) == "00000101");
+
+    // and the forms that already worked
+    REQUIRE(format("{}", 42_i) == "42");
+    REQUIRE(format("{:6}", 42_i) == "    42"); // width alone is right aligned
+    REQUIRE(format("{:x}", 255_i) == "ff");
+}
