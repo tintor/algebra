@@ -194,6 +194,9 @@ Always kept in lowest terms with a positive denominator.
 
 `std::format()` supports `{:.N}` and `{:.Nf}`, which round to N digits after the decimal point.
 
+For `integer`, `std::format()` supports a fill and alignment (`{:*>10}`, `{:>10}`, `{:^10}`), a width,
+and a base: `b`/`B` for binary, `o` for octal, `d` for decimal, `x`/`X` for hexadecimal.
+
 ## `class real<int Base>`
 
 `num * Base**exp`, with `decimal` as an alias for `real<10>`.

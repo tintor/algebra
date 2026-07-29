@@ -1877,8 +1877,12 @@ struct std::formatter<algebra::integer, char> {
 
     constexpr auto parse(auto& ctx) {
         auto it = ctx.begin();
-        if (it != ctx.end() && it + 1 != ctx.end() && (it[1] == '>' || it[1] == '<' || it[1] == '^')) {
+        const auto is_align = [](char c) { return c == '<' || c == '>' || c == '^'; };
+        // a fill character is optional, so both {:*>10} and {:>10} are alignments
+        if (it != ctx.end() && it + 1 != ctx.end() && is_align(it[1])) {
             fill = *it++;
+            align = *it++;
+        } else if (it != ctx.end() && is_align(*it)) {
             align = *it++;
         }
         while (it != ctx.end() && '0' <= *it && *it <= '9')
