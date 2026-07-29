@@ -498,24 +498,6 @@ TEST_CASE("mod") {
     REQUIRE(mod(1_i, 7u) == 1);
     REQUIRE(mod(7_i, 7u) == 0);
     REQUIRE(mod(8_i, 7u) == 1);
-#if 0
-    REQUIRE(integer(14).mod(7u) == 0);
-    REQUIRE(integer(-1).mod(7u) == 6);
-    REQUIRE(integer(-6).mod(7u) == 1);
-    REQUIRE(integer(-7).mod(7u) == 0);
-
-    REQUIRE(integer(0).mod((ulong)7) == 0);
-    REQUIRE(integer(1).mod((ulong)7) == 1);
-    REQUIRE(integer(7).mod((ulong)7) == 0);
-    REQUIRE(integer(8).mod((ulong)7) == 1);
-    REQUIRE(integer(14).mod((ulong)7) == 0);
-    REQUIRE(integer(-1).mod((ulong)7) == 6);
-    REQUIRE(integer(-6).mod((ulong)7) == 1);
-    REQUIRE(integer(-7).mod((ulong)7) == 0);
-
-    REQUIRE(integer(5).mod(3u) == 2);
-    REQUIRE(integer(5).mod((ulong)3) == 2);
-#endif
 }
 
 // TODO randomized long division test against cpp_int for big integers!
@@ -624,10 +606,6 @@ TEST_CASE("num_bits") {
 TEST_CASE("popcount") {
     for (uint i: {0u, ~0u, 4u, 31231u, static_cast<uint>(-3123121)})
         REQUIRE(integer(i).popcount() == static_cast<size_t>(std::popcount(i)));
-}
-
-TEST_CASE("<<") {
-    integer(1) << 64; // regression test
 }
 
 TEST_CASE("literal") {

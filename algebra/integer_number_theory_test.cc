@@ -70,31 +70,6 @@ void test_isqrt(const auto& fn) {
     print("small\n");
     for (int i = 0; i < 1'000'000; i++) verify_isqrt(integer(i), fn(i));
 
-#if 0
-    print("64 bit\n");
-    for (int i = 0; i < 100'000'000; i++) {
-        int bits = std::uniform_int_distribution<int>(30, 64)(rng);
-        integer x = uniform_sample_bits(bits, rng);
-        verify_isqrt(x, fn(x));
-        if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
-    }
-
-    print("96 bit\n");
-    for (int i = 0; i < 100'000'000; i++) {
-        int bits = std::uniform_int_distribution<int>(65, 96)(rng);
-        integer x = uniform_sample_bits(bits, rng);
-        verify_isqrt(x, fn(x));
-        if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
-    }
-
-    print("128 bit\n");
-    for (int i = 0; i < 100'000'000; i++) {
-        int bits = std::uniform_int_distribution<int>(97, 128)(rng);
-        integer x = uniform_sample_bits(bits, rng);
-        verify_isqrt(x, fn(x));
-        if (i % 10'000'000 == 0) print("{}\n", i / 10'000'000);
-    }
-#endif
     integer e("4723193678752028155961467022770253813739277744022718882812203718746");
     verify_isqrt(e, fn(e));
 
@@ -320,47 +295,11 @@ TEST_CASE("iroot 7") {
     }
 }
 
-#if 0
-TEST_CASE("factorize") {
-    integer a = pow(2_i, 128);
-    int ms_max = 0;
-    while (a > 1) {
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        auto factors = factorize(a);
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        int ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
 
-        if (ms >= 0) {
-            ms_max = std::max(ms, ms_max);
-            std::print("{} = ", a);
-            for (int i = 0; i < factors.size(); i++) {
-                if (i > 0)
-                    std::print(" * ");
-                std::print("{}", factors[i].first);
-                if (factors[i].second > 1)
-                    std::print("^{}", factors[i].second);
-            }
-            std::print(" in {} ms (max {} ms)\n", ms, ms_max);
-        }
-
-        integer m = 1;
-        for (const auto& [factor, count] : factors) {
-            if (!is_likely_prime(factor, 40)) {
-                std::print("returned factor {} is not prime!\n", factor);
-                REQUIRE(false);
-            }
-            for (int i = 0; i < count; i++)
-                m *= factor;
-        }
-        REQUIRE(m == a);
-
-        a -= 1;
-    }
-}
-#endif
-
+// An alternative isqrt, kept for later: it seeds from a double and corrects, which is the shape the
+// article this follows recommends. Not wired into the isqrt tests yet, hence UNTESTED.
 ulong doubleToLongBits(double a) {
-    return *reinterpret_cast<const ulong*>(&a);
+    return std::bit_cast<ulong>(a); // not a pointer cast: reading a double as a ulong that way is UB
 }
 
 // UNTESTED
@@ -461,16 +400,6 @@ integer fast_isqrt(const integer& x) {
         val -= 1;
     return val;
 }
-
-#if 0
-TEST_CASE("fast_isqrt stress") {
-    integer a = 1;
-    while (true) {
-        std::print("{} -> {}\n", a.num_bits(), fast_isqrt(a).num_bits());
-        a <<= 1;
-    }
-}
-#endif
 
 TEST_CASE("uniform_sample") {
     integer a = (1_i << 128) - 1;
@@ -880,7 +809,6 @@ TEST_CASE("number theory helpers") {
     complement(c2);
     REQUIRE(c2 == integer(UINT64_MAX) - 4u);
 }
-
 
 
 TEST_CASE("lcm") {
