@@ -6,6 +6,9 @@ namespace algebra {
 
 constexpr void negate(std::floating_point auto& a) { a = -a; }
 
+// Twice the signed area of the triangle, with the opposite sign to the usual convention and to
+// signed_area2() in polygon2.h: this is negative for a counter clockwise triple. Only its zero is
+// used here, which is the same either way.
 template<typename T>
 constexpr T ccw(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
     return (a.x + b.x) * (a.y - b.y) + (b.x + c.x) * (b.y - c.y) + (c.x + a.x) * (c.y - a.y);

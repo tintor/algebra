@@ -248,8 +248,12 @@ constexpr bool __ray_meets_segment(const Vec2<T>& p, const Vec2<T>& dir, const T
 }
 
 // Does p + dir*t meet the circle for some t in (0, tmax]? Solved by sign analysis of the quadratic
-// rather than by taking a square root, so it stays in T. Conservative on purpose: it answers for the
-// whole circle, not just the arc, which is all that the step below needs.
+// rather than by taking a square root, so it stays in T.
+//
+// It errs towards yes in two ways, which only ever costs the caller another halving. It answers for
+// the whole circle rather than for the arc, which is all the step below needs. And when both ends of
+// the interval are strictly inside the circle it still says yes: an upward parabola negative at both
+// ends cannot cross zero between them, but the discriminant test at the bottom does not know that.
 template<typename T>
 constexpr bool __ray_meets_circle(const Vec2<T>& p, const Vec2<T>& dir, const T& tmax,
                                   const Vec2<T>& c, const T& r2) {
@@ -354,7 +358,8 @@ template<typename T>
 constexpr ArcRing2<T> circle_ring(const Vec2<T>& center, const T& radius) {
     const Vec2<T> l{center.x - radius, center.y};
     const Vec2<T> r{center.x + radius, center.y};
-    // counter clockwise: right vertex bulging below, left vertex bulging above
+    // counter clockwise: a negative bulge puts each arc on the right of its edge, so the edge
+    // running left carries the upper half and the edge running right carries the lower one
     return ArcRing2<T>{ArcVertex<T>{r, T(-1)}, ArcVertex<T>{l, T(-1)}};
 }
 
