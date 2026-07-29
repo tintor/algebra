@@ -130,15 +130,22 @@ constexpr MultiPolygon2<T> erode(const MultiPolygon2<T>& a, const Ring2<T>& b) {
 }
 
 // Positive size grows, negative shrinks, zero is the identity. `element` maps a size to a convex
-// structuring element; the default buffers in the Chebyshev metric.
-template<typename T>
-constexpr MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size,
-                                  Ring2<T> (*element)(const T&) = square_element<T>) {
+// structuring element, and is any callable: a plain function pointer for square_element and
+// diamond_element, or a lambda for one that takes more than a size, such as
+//
+//     buffer(a, r, [](const T& s) { return polygon_element(s, 16); });
+template<typename T, typename Element>
+constexpr MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size, Element element) {
     if (size == 0)
         return a;
     if (size > 0)
         return dilate(a, element(size));
     return erode(a, element(-size));
+}
+
+template<typename T>
+constexpr MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size) {
+    return buffer(a, size, square_element<T>);
 }
 
 }
