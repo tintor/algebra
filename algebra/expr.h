@@ -753,7 +753,8 @@ constexpr interval<T>& operator*=(interval<T>& a, const interval<T>& b) {
 template<typename T>
 constexpr interval<T> pow(const interval<T>& a, const integer& b) {
     interval<T> e{1, 1};
-    for (int i = 0; i < abs(b); i++)
+    const integer n = abs(b); // not in the condition: it would be rebuilt every iteration
+    for (integer i = 0; i < n; ++i)
         e *= a;
     if (b < 0) {
         if (e.max >= 0 && e.min <= 0)
