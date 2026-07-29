@@ -1043,3 +1043,43 @@ TEST_CASE("view based accessors on negative values") {
     REQUIRE(!((integer(1) << 64) == UINT64_MAX));
     REQUIRE(!(integer(-1) < 0u) == false); // a negative value is less than any unsigned
 }
+
+TEST_CASE("modulo by a 128 bit divisor") {
+    // every narrower overload took a 128 bit divisor only by a narrowing conversion, so the call was
+    // ambiguous rather than wrong
+    const integer a("123456789012345678901234567890");
+    const cent d = (cent(1) << 70) + 1;
+    const integer id = d;
+
+    REQUIRE(a % d == static_cast<cent>(a % id));
+    REQUIRE(-a % d == -static_cast<cent>(a % id));
+    REQUIRE(a % -d == static_cast<cent>(a % id));   // the sign follows the dividend
+    REQUIRE(-a % -d == -static_cast<cent>(a % id));
+
+    const ucent u = (ucent(1) << 70) + 1;
+    REQUIRE(a % u == a % id);
+    REQUIRE(-a % u == -(a % id));
+
+    // the divisor itself, and a dividend below it
+    REQUIRE(id % d == 0);
+    REQUIRE(integer(7) % d == 7);
+    REQUIRE(integer(7) % u == 7);
+
+    // the whole 128 bit range
+    const ucent big = std::numeric_limits<ucent>::max();
+    REQUIRE(integer(big) % big == 0);
+    REQUIRE((integer(big) + 1u) % big == 1);
+
+    REQUIRE_THROWS(a % static_cast<cent>(0));
+    REQUIRE_THROWS(a % static_cast<ucent>(0));
+
+    // against the integer overload, over random values
+    Random rng;
+    for (int i = 0; i < 20'000; i++) {
+        const ucent m = rng.Uniform<ucent>(1, std::numeric_limits<ucent>::max());
+        integer x = integer(rng.Uniform<ucent>(0, std::numeric_limits<ucent>::max())) * integer(3);
+        if (rng.Uniform<int>(0, 1))
+            x.negate();
+        REQUIRE(x % m == x % integer(m));
+    }
+}

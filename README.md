@@ -342,6 +342,11 @@ to both sides.
 - Returns the remainder, for a signed or unsigned built-in `b` of any width.
 #### `void divide_bz(const integer& a, const integer& d, integer& q, integer& r)`
 - Recursive (Burnikel-Ziegler) division; same result as `div()`.
+#### `T operator%(const integer& a, T b)`
+- Truncates towards zero, so the remainder carries the sign of the dividend. The result type is the
+  widest one that holds it: signed for a signed divisor, and `integer` for an unsigned one, where a
+  negative remainder fits neither the divisor's type nor its signed counterpart. Divisors of every
+  width up to 128 bits have an overload.
 #### `integer mod(const integer& a, const integer& b)`
 #### `void mod(integer& a, const integer& b)`
 #### `uint64_t mod(const integer& a, uint64_t b)`
