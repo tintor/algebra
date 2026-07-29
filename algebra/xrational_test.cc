@@ -698,3 +698,13 @@ TEST_CASE("hash") {
     REQUIRE(m[sqrt(2_x)] == 2);
     REQUIRE(m[2_x] == 4);
 }
+
+TEST_CASE("formatting into a counted buffer") {
+    // the xrational formatter has four branches, each writing through ctx.out()
+    for (const xrational& x : {xrational(rational(3, 4)), sqrt(5_x), 2 * sqrt(3_x),
+                               xrational(rational(1, 2), integer(5)), -sqrt(7_x)}) {
+        char buf[96] = {};
+        const auto r = std::format_to_n(buf, sizeof(buf) - 1, "{}", x);
+        REQUIRE(std::string(buf, r.out) == std::format("{}", x));
+    }
+}
