@@ -8,6 +8,9 @@ constexpr int approx_log2(const rational& a) {
 }
 
 constexpr rational sqrt(const integer& x, unsigned iterations) {
+    Check(!x.is_negative(), "sqrt() of a negative number");
+    if (x.is_zero())
+        return 0; // Newton only halves towards zero, so it would stop short of the exact answer
     rational s = x;
     s.num += 1;
     s /= 2;
@@ -26,6 +29,7 @@ constexpr rational sqrt(const integer& x, unsigned iterations) {
 }
 
 constexpr rational sqrt(const rational& x, unsigned iterations) {
+    Check(!x.is_negative(), "sqrt() of a negative number");
     if (x.is_integer())
         return sqrt(x.num, iterations);
     rational s = x;
@@ -103,6 +107,8 @@ constexpr void pow(const rational& base, const integer& exp, rational& out) {
         out.den *= base.den;
         return;
     }
+    if (exp.is_negative())
+        Check(!base.is_zero(), "rational with zero denominator"); // a negative power inverts
     if (exp == -1) {
         out.num = base.den;
         out.den = base.num;

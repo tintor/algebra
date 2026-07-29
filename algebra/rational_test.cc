@@ -318,3 +318,85 @@ TEST_CASE("round is to nearest") {
     REQUIRE(round(rational(3, 8), 3, 2) == rational(3, 8));
     REQUIRE(round(rational(1, 3), 2, 2) == rational(1, 4)); // 0.0101... rounds to 0.01
 }
+
+TEST_CASE("sqrt rejects a negative argument") {
+    // sqrt_bits() checked; the Newton versions did not, and iterated on nonsense instead
+    REQUIRE_THROWS(sqrt(integer(-4), 5));
+    REQUIRE_THROWS(sqrt(rational(-1, 4), 5));
+    REQUIRE_THROWS(sqrt(rational(-7), 5));
+    REQUIRE_THROWS(sqrt_bits(rational(-4), 10));
+
+    // zero and the exact squares still work
+    REQUIRE(sqrt(integer(0), 5) == 0);
+    REQUIRE(sqrt(rational(0), 5) == 0);
+    REQUIRE(sqrt_bits(rational(0), 10) == 0);
+
+    // Newton approaches from above and does not land on the root, even for a perfect square: it is
+    // an approximation with a doubling number of correct digits, which is what the header says
+    const rational four = sqrt(integer(4), 8);
+    REQUIRE(four > 2);
+    REQUIRE(four - 2 < rational(1, 1000000));
+    const rational quarter = sqrt(rational(1, 4), 8);
+    REQUIRE(quarter > rational(1, 2));
+    REQUIRE(quarter - rational(1, 2) < rational(1, 1000000));
+    const rational two = sqrt(integer(2), 8);
+    REQUIRE(two * two > 2);
+    REQUIRE(two * two - 2 < rational(1, 1000000));
+
+    // sqrt_bits() is the one that is exact when it can be
+    REQUIRE(sqrt_bits(rational(4), 20) == 2);
+    REQUIRE(sqrt_bits(rational(1, 4), 20) == rational(1, 2));
+}
+
+TEST_CASE("error paths of the rational operations") {
+    REQUIRE_THROWS(rational(integer(1), integer(0)));
+    REQUIRE_THROWS(rational(1, 0));
+    REQUIRE_THROWS(rational("1/0"));
+    REQUIRE_THROWS(rational("x"));
+    REQUIRE_THROWS(rational("1."));
+    REQUIRE_THROWS(rational("1e"));
+    REQUIRE_THROWS(rational("1.5.5"));
+
+    rational a(1, 2);
+    REQUIRE_THROWS(a /= 0);
+    REQUIRE_THROWS(rational(1, 2) / rational(0));
+    REQUIRE_THROWS(rational(1, 2) % rational(0));
+    REQUIRE_THROWS(rational(0).invert());
+
+    // an exponent that would need more digits than any machine has
+    REQUIRE_THROWS(rational("1e999999999"));
+
+    // pow of zero to a negative power
+    REQUIRE_THROWS(pow(rational(0), -1l));
+    REQUIRE_THROWS(pow(rational(0), integer(-2)));
+    REQUIRE_THROWS(nth_root(rational(8), integer(0), 4));
+
+    // trunc and round of a value that is already an integer are fine, division by zero is not
+    REQUIRE(trunc(rational(4)) == 4);
+    REQUIRE_THROWS(round(rational(1, 3), 2, 0)); // base zero
+}
+
+TEST_CASE("abs_greater on integers and rationals") {
+    // the rational overload had coverage; the integer one and the generic template did not
+    REQUIRE(abs_greater(integer(-5), integer(3)));
+    REQUIRE(!abs_greater(integer(3), integer(-5)));
+    REQUIRE(!abs_greater(integer(-3), integer(3)));
+    REQUIRE(abs_greater(integer(1) << 100, integer(-1) << 99));
+    REQUIRE(!abs_greater(integer(0), integer(0)));
+    REQUIRE(abs_greater(integer(-1), integer(0)));
+
+    REQUIRE(abs_greater(rational(-5, 2), rational(2)));
+    REQUIRE(!abs_greater(rational(1, 3), rational(-1, 2)));
+    REQUIRE(abs_greater(rational(-1, 2), rational(1, 3)));
+    REQUIRE(!abs_greater(rational(0), rational(-1, 7)));
+
+    // it agrees with comparing the magnitudes the slow way
+    std::mt19937_64 rng(21);
+    std::uniform_int_distribution<int> d(-40, 40), q(1, 12);
+    for (int i = 0; i < 4'000; i++) {
+        const rational x(d(rng), q(rng)), y(d(rng), q(rng));
+        REQUIRE(abs_greater(x, y) == (abs(x) > abs(y)));
+        const integer m(d(rng)), n(d(rng));
+        REQUIRE(abs_greater(m, n) == (abs(m) > abs(n)));
+    }
+}
