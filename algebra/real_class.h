@@ -293,7 +293,7 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
 };
 
 template <int B>
-constexpr std::ostream& operator<<(std::ostream& os, const algebra::real<B>& a) { return os << a.str(); }
+std::ostream& operator<<(std::ostream& os, const algebra::real<B>& a) { return os << a.str(); }
 
 template <int B>
 struct std::hash<algebra::real<B>> {

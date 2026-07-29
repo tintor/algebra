@@ -2,6 +2,7 @@
 #include "algebra/rational.h"
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -156,7 +157,6 @@ constexpr bool is_cbrt(expr_ptr a) { using namespace algebra::literals; return i
 
 struct expr_sum : public expr {
     std::vector<expr_ptr> values;
-    mutable std::optional<int> _sign;
     constexpr expr_sum(std::vector<expr_ptr> v) : values(std::move(v)) {}
     virtual constexpr int sign() const;
 };
@@ -207,10 +207,11 @@ namespace literals {
 constexpr auto operator""_e(const char* s) { return make_rational(rational(s)); }
 }
 
-const expr_ptr ZERO_EXPR = make_integer(0);
-const expr_ptr ONE_EXPR = make_integer(1);
-const expr_ptr E_EXPR = std::make_shared<expr_e>();
-const expr_ptr PI_EXPR = std::make_shared<expr_pi>();
+// inline, so every translation unit shares one object rather than making its own
+inline const expr_ptr ZERO_EXPR = make_integer(0);
+inline const expr_ptr ONE_EXPR = make_integer(1);
+inline const expr_ptr E_EXPR = std::make_shared<expr_e>();
+inline const expr_ptr PI_EXPR = std::make_shared<expr_pi>();
 
 constexpr expr_ptr operator+(expr_ptr a, expr_ptr b);
 constexpr expr_ptr operator-(expr_ptr a, expr_ptr b);
@@ -684,7 +685,7 @@ struct std::formatter<const algebra::expr*, char> {
     }
 };
 
-constexpr std::ostream& operator<<(std::ostream& os, const algebra::expr* a) { return os << std::format("{}", a); }
+inline std::ostream& operator<<(std::ostream& os, const algebra::expr* a) { return os << std::format("{}", a); }
 
 template <>
 struct std::formatter<algebra::expr_ptr, char> {
@@ -694,7 +695,7 @@ struct std::formatter<algebra::expr_ptr, char> {
     }
 };
 
-constexpr std::ostream& operator<<(std::ostream& os, algebra::expr_ptr a) { return os << std::format("{}", a); }
+inline std::ostream& operator<<(std::ostream& os, algebra::expr_ptr a) { return os << std::format("{}", a); }
 
 namespace algebra {
 
