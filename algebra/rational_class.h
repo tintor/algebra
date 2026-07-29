@@ -241,34 +241,22 @@ constexpr void rational::simplify() {
             // note that num can be negative here, but we only need its absolute value
             if (is_power_of_two(num.words[0]))
                 return;
-            uint64_t a = num.words[0] >> (az - z);
-            uint64_t b = den.words[0];
-            do {
-                b >>= std::countr_zero(b);
-                if (a > b)
-                    std::swap(a, b);
-                b -= a;
-            } while (b);
-            if (a != 1) {
-                num /= a;
-                den /= a;
+            // both fit in a word, and the numerator is odd after the shift, which is what
+            // __gcd_inner() wants. Any factor of two left in the denominator cannot be common.
+            const uint64_t g = __gcd_inner<uint64_t>(num.words[0] >> (az - z), den.words[0]);
+            if (g != 1) {
+                num /= g;
+                den /= g;
             }
             return;
         }
     }
 
-    // TODO allocate a and b on stack if they are small enough
-    integer a = abs(num) >> (az - z);
-    integer b = abs(den);
-    do {
-        b >>= b.num_trailing_zeros();
-        if (a > b)
-            std::swap(a, b);
-        b -= a;
-    } while (b);
-    if (!a.is_one()) {
-        num /= a;
-        den /= a;
+    // TODO allocate the operands on stack if they are small enough
+    const integer g = gcd(abs(num) >> (az - z), abs(den));
+    if (!g.is_one()) {
+        num /= g;
+        den /= g;
     }
 }
 
