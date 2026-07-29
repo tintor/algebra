@@ -316,3 +316,21 @@ TEST_CASE("sign of a matrix") {
     row.data.push_back(make_integer(2));
     REQUIRE_THROWS_AS(row.sign(), unknown_sign_error);
 }
+
+TEST_CASE("formatting into a counted buffer") {
+    using namespace algebra::literals;
+    // These formatters write with std::format_to(ctx.out(), ...) and drop the iterator it returns,
+    // which looks like it should lose the position. It does not: the iterator a format context hands
+    // out is a proxy for a sink that holds the position, and every copy shares it. This pins that,
+    // so formatting into a counted buffer keeps working if the formatters are ever rewritten.
+    char buf[64] = {};
+    const auto r = std::format_to_n(buf, sizeof(buf) - 1, "{}", sqrt(5_e) + 2);
+    REQUIRE(std::string(buf, r.out) == std::format("{}", sqrt(5_e) + 2));
+    REQUIRE(r.size == static_cast<std::ptrdiff_t>(std::format("{}", sqrt(5_e) + 2).size()));
+
+    // a nested expression, so format_expression recurses
+    const expr_ptr deep = pow(sqrt(2_e) + sqrt(3_e), 2) * cos(PI_EXPR) - 4;
+    char buf2[128] = {};
+    const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
+    REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
+}

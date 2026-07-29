@@ -213,3 +213,17 @@ TEST_CASE("format Vec has no format spec") {
     REQUIRE(std::vformat("{:}", std::make_format_args(v)) == "1 2");
     REQUIRE_THROWS_AS(std::vformat("{:d}", std::make_format_args(v)), std::format_error);
 }
+
+TEST_CASE("formatting a vector into a counted buffer") {
+    // the Vec formatter writes each component through ctx.out() and drops what format_to() returns
+    const V2 v(rational(1, 2), rational(3));
+    char buf[64] = {};
+    const auto r = std::format_to_n(buf, sizeof(buf) - 1, "{}", v);
+    REQUIRE(std::string(buf, r.out) == std::format("{}", v));
+    REQUIRE(std::string(buf, r.out) == "1/2 3");
+
+    const V3 w(rational(-1), rational(0), rational(7, 2));
+    char buf3[64] = {};
+    const auto r3 = std::format_to_n(buf3, sizeof(buf3) - 1, "{}", w);
+    REQUIRE(std::string(buf3, r3.out) == std::format("{}", w));
+}
