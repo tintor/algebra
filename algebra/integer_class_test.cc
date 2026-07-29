@@ -1107,3 +1107,95 @@ TEST_CASE("format alignment without a fill character") {
     REQUIRE(format("{:6}", 42_i) == "    42"); // width alone is right aligned
     REQUIRE(format("{:x}", 255_i) == "ff");
 }
+
+TEST_CASE("conversion to the narrow builtin types") {
+    // char, short, uint8_t and uint16_t had no test at all, and each carries its own overflow check
+    REQUIRE(static_cast<char>(integer(65)) == 'A');
+    REQUIRE(static_cast<char>(integer(127)) == 127);
+    REQUIRE(static_cast<char>(integer(-128)) == -128); // the negation happens in unsigned
+    REQUIRE(static_cast<char>(integer(-1)) == -1);
+    REQUIRE(static_cast<char>(integer(0)) == 0);
+    REQUIRE_THROWS(static_cast<char>(integer(128)));
+    REQUIRE_THROWS(static_cast<char>(integer(-129)));
+
+    REQUIRE(static_cast<uint8_t>(integer(255)) == 255);
+    REQUIRE(static_cast<uint8_t>(integer(0)) == 0);
+    REQUIRE_THROWS(static_cast<uint8_t>(integer(256)));
+    REQUIRE_THROWS(static_cast<uint8_t>(integer(-1)));
+
+    REQUIRE(static_cast<short>(integer(32767)) == 32767);
+    REQUIRE(static_cast<short>(integer(-32768)) == -32768);
+    REQUIRE_THROWS(static_cast<short>(integer(32768)));
+    REQUIRE_THROWS(static_cast<short>(integer(-32769)));
+
+    REQUIRE(static_cast<uint16_t>(integer(65535)) == 65535);
+    REQUIRE_THROWS(static_cast<uint16_t>(integer(65536)));
+    REQUIRE_THROWS(static_cast<uint16_t>(integer(-1)));
+
+    // the predicates the conversions are built on
+    REQUIRE(integer(65535).is_uint16());
+    REQUIRE(!integer(65536).is_uint16());
+    REQUIRE(!integer(-1).is_uint16());
+    REQUIRE(integer(255).is_uint8());
+    REQUIRE(integer(-128).is_int8());
+    REQUIRE(!integer(-129).is_int8());
+}
+
+TEST_CASE("conversion to and from 128 bit builtins") {
+    const ucent big = std::numeric_limits<ucent>::max();
+    const cent smin = -(static_cast<cent>(1) << 126) * 2; // the most negative cent
+
+    REQUIRE(static_cast<ucent>(integer(big)) == big);
+    REQUIRE(static_cast<ucent>(integer(0)) == 0);
+    REQUIRE(static_cast<ucent>(integer(1)) == 1);
+    REQUIRE_THROWS(static_cast<ucent>(integer(-1)));
+    REQUIRE_THROWS(static_cast<ucent>(integer(big) + 1u));
+
+    REQUIRE(static_cast<cent>(integer(smin)) == smin);
+    REQUIRE(static_cast<cent>(-integer(smin) - 1u) == -(smin + 1));
+    REQUIRE(static_cast<cent>(integer(0)) == 0);
+    REQUIRE(static_cast<cent>(integer(-1)) == -1);
+    REQUIRE_THROWS(static_cast<cent>(integer(big)));      // fits ucent, not cent
+    REQUIRE_THROWS(static_cast<cent>(integer(smin) - 1u));
+
+    REQUIRE(integer(big).is_uint128());
+    REQUIRE(!integer(-1).is_uint128());
+    REQUIRE(integer(smin).is_int128());
+    REQUIRE(!integer(big).is_int128());
+
+    // round trip through both, for random values
+    Random rng;
+    for (int i = 0; i < 20'000; i++) {
+        const ucent u = rng.Uniform<ucent>(0, big);
+        REQUIRE(static_cast<ucent>(integer(u)) == u);
+        const cent c = rng.Uniform<cent>(smin, -(smin + 1));
+        REQUIRE(static_cast<cent>(integer(c)) == c);
+    }
+}
+
+TEST_CASE("low_word, size_of and the unsigned long long conversion") {
+    REQUIRE(integer(0).low_word() == 0);
+    REQUIRE(integer(7).low_word() == 7);
+    REQUIRE(integer(-7).low_word() == 7); // the magnitude's low word
+    REQUIRE((integer(1) << 64).low_word() == 0);
+    REQUIRE(((integer(1) << 64) + 5u).low_word() == 5);
+
+    REQUIRE(integer(0).size_of() == 0);
+    REQUIRE(integer(1).size_of() == 8);
+    REQUIRE((integer(1) << 64).size_of() == 16);
+
+    REQUIRE(static_cast<unsigned long long>(integer(12345)) == 12345ull);
+    REQUIRE(static_cast<unsigned long long>(integer(std::numeric_limits<uint64_t>::max()))
+            == std::numeric_limits<uint64_t>::max());
+    REQUIRE_THROWS(static_cast<unsigned long long>(integer(-1)));
+
+    // str_size_upper_bound is an upper bound, and a tight enough one to allocate against
+    for (unsigned base : {2u, 8u, 10u, 16u, 36u}) {
+        for (const integer& a : {integer(0), integer(1), integer(-1), integer(12345),
+                                 (integer(1) << 200) - 1u, -((integer(1) << 200) - 1u)}) {
+            const int bound = a.str_size_upper_bound(base);
+            const std::string s = a.str(base);
+            REQUIRE(static_cast<int>(s.size()) <= bound);
+        }
+    }
+}
