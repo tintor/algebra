@@ -98,7 +98,12 @@ constexpr Ring2<T> reflect(Ring2<T> a) {
 template<typename T>
 constexpr MultiPolygon2<T> dilate(const MultiPolygon2<T>& a, const Ring2<T>& b) {
     Check(contains(MultiPolygon2<T>(b), Vec2<T>{T(0), T(0)}), "the structuring element must contain the origin");
-    MultiPolygon2<T> out = a;
+
+    // One boolean operation, not one per edge. Every hull below comes out of convex_hull() counter
+    // clockwise, so their winding numbers only add: a point is inside at least one of them exactly
+    // when the winding number of the whole set is non-zero, which is what the nonzero rule already
+    // says. So the hulls can be handed over as one region and unioned with `a` in a single pass.
+    std::vector<Ring2<T>> hulls;
     for (const Ring2<T>& ring : a.rings) {
         if (ring.size() < 2)
             continue;
@@ -110,10 +115,28 @@ constexpr MultiPolygon2<T> dilate(const MultiPolygon2<T>& a, const Ring2<T>& b) 
                 pts.push_back(ring[j] + q);
                 pts.push_back(ring[i] + q);
             }
-            out = out | MultiPolygon2<T>(convex_hull(pts));
+            hulls.push_back(convex_hull(pts));
         }
     }
-    return out;
+    if (hulls.empty())
+        return a;
+    // Union the hulls in a balanced tree rather than one at a time into an accumulator: each
+    // boolean_op is quadratic in the edges it is given, so pairing small operands first keeps the
+    // large operands to the last few rounds.
+    std::vector<MultiPolygon2<T>> level;
+    level.reserve(hulls.size());
+    for (Ring2<T>& h : hulls)
+        level.push_back(MultiPolygon2<T>(std::move(h)));
+    while (level.size() > 1) {
+        std::vector<MultiPolygon2<T>> next;
+        next.reserve((level.size() + 1) / 2);
+        for (size_t i = 0; i + 1 < level.size(); i += 2)
+            next.push_back(level[i] | level[i + 1]);
+        if (level.size() % 2)
+            next.push_back(std::move(level.back()));
+        level = std::move(next);
+    }
+    return a | level.front();
 }
 
 // Shrinks `a` by the convex element `b`, the dual of dilate through the complement.
