@@ -878,21 +878,6 @@ constexpr bool __sub_product(iwords& a, cwords b, cwords c) {
     return true;
 }
 
-constexpr std::string str(cwords a) {
-    if (a.size == 0)
-        return "0";
-    std::vector<uint64_t> aa;
-    aa.resize(a.size);
-    std::copy(a.words, a.words + a.size, aa.data());
-    vwords b {{aa.data(), a.size}, a.size};
-
-    std::string s;
-    while (b.size)
-        s += '0' + __div(b, 10, b);
-    std::reverse(s.begin(), s.end());
-    return s;
-}
-
 // returns static_cast<ucent>((a >> e) & UINT128_MAX) - without memory allocation
 constexpr uint128_t extract_u128(cwords a, int64_t e) {
     Check(e >= 0);
