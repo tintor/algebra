@@ -135,6 +135,15 @@ constexpr Vec<D, T> abs(const Vec<D, T>& a) {
     return c;
 }
 
+// The fallback for an element type that has no abs_greater of its own. integer and rational do have
+// one, in their own headers, and a non template overload wins over this whatever the include order:
+// argument dependent lookup finds them at the point of instantiation.
+template<typename T>
+constexpr bool abs_greater(const T& a, const T& b) {
+    using std::abs;
+    return abs(a) > abs(b);
+}
+
 template<int D, typename T>
 constexpr int argmax_abs(const Vec<D, T>& a) {
     int m = 0;

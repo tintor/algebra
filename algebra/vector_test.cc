@@ -227,3 +227,22 @@ TEST_CASE("formatting a vector into a counted buffer") {
     const auto r3 = std::format_to_n(buf3, sizeof(buf3) - 1, "{}", w);
     REQUIRE(std::string(buf3, r3.out) == std::format("{}", w));
 }
+
+TEST_CASE("abs_greater picks the specific overload") {
+    // the generic fallback lives next to argmax_abs, its only user, and the number classes have their
+    // own non-template overloads that win over it
+    REQUIRE(abs_greater(integer(-5), integer(3)));
+    REQUIRE(abs_greater(rational(-5, 2), rational(2)));
+
+    // types with no overload of their own go through the fallback
+    REQUIRE(abs_greater(-2.5, 1.5));
+    REQUIRE(!abs_greater(1.5, -2.5));
+    REQUIRE(abs_greater(-2.5f, 1.5f));
+    REQUIRE(!abs_greater(3, -4));
+
+    // argmax_abs finds the component of largest magnitude, whatever the element type
+    REQUIRE(argmax_abs(V2(rational(1), rational(-3))) == 1);
+    REQUIRE(argmax_abs(V3(rational(-7), rational(3), rational(5))) == 0);
+    REQUIRE(argmax_abs(Vec3<double>(1.0, -8.5, 2.0)) == 1);
+    REQUIRE(argmax_abs(Vec2<double>(-1.0, 1.0)) == 0); // ties keep the first
+}

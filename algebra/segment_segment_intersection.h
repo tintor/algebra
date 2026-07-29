@@ -15,11 +15,6 @@ constexpr T ccw(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
 }
 
 template<typename T>
-constexpr bool abs_greater(const T& a, const T& b) {
-    return abs(a) > abs(b);
-}
-
-template<typename T>
 struct PointParams {
     T s, t;
 };
