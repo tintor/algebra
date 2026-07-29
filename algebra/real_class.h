@@ -154,22 +154,27 @@ template<int B, typename T> constexpr real<B>& operator+=(real<B>& a, const T& b
 template<int B, typename T> constexpr real<B>& operator-=(real<B>& a, const T& b) { a = a - b; return a; }
 template<int B, typename T> constexpr real<B>& operator*=(real<B>& a, const T& b) { a = a * b; return a; }
 
-template<int B>
-constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
-    int scale = 100;
-    return {shift<B>(a.num, scale) / b.num, a.exp - b.exp - scale};
-}
+// Division is not exact, so it rounds: the result keeps this many digits of B, whatever the operands
+// look like. That is a fixed precision rather than a choice the caller makes, which is why real<B> is
+// not a field -- see the note in the header comment of operator/=.
+constexpr int __real_division_digits = 100;
 
 template<int B>
+constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
+    return {shift<B>(a.num, __real_division_digits) / b.num,
+            a.exp - b.exp - __real_division_digits};
+}
+
+// Keeps __real_division_digits digits of B, the same as operator/ above.
+template<int B>
 constexpr real<B>& operator/=(real<B>& a, const integral auto& b) {
-    int scale = 100;
     if constexpr (B == 2) {
-        a.num <<= scale;
+        a.num <<= __real_division_digits;
     } else {
-        a.num = pow(integer(B), scale, a.num);
+        a.num = pow(integer(B), __real_division_digits, a.num);
     }
     a.num /= b;
-    a.exp -= scale;
+    a.exp -= __real_division_digits;
     a.normalize();
     return a;
 }
