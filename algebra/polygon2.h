@@ -202,18 +202,32 @@ constexpr void simplify(MultiPolygon2<T>& a) {
         while (r.size() > 1 && r.front() == r.back())
             r.pop_back();
 
-        // remove collinear vertices until none are left, since removing one can expose another
-        bool again = true;
-        while (again && r.size() >= 3) {
+        // Remove the vertices that lie on the segment between their neighbours. Removing one can
+        // expose another, so the scan carries a stack: after dropping the middle of the last three,
+        // the new last three are checked again before moving on. That is one pass instead of a
+        // restart from the beginning per removal.
+        auto on_segment = [](const Vec2<T>& x, const Vec2<T>& y, const Vec2<T>& z) {
+            return cross(z - x, y - x) == 0 && loose_order(x, y, z);
+        };
+        Ring2<T> s;
+        for (const Vec2<T>& p : r) {
+            s.push_back(p);
+            while (s.size() >= 3 && on_segment(s[s.size() - 3], s[s.size() - 2], s.back()))
+                s.erase(s.end() - 2);
+        }
+        r = std::move(s);
+
+        // The closing edge, which the pass above cannot see: the last vertex has the first as its
+        // neighbour and the other way round, and each removal can expose the other end again.
+        for (bool again = true; again && r.size() >= 3;) {
             again = false;
-            for (size_t i = 0; i < r.size(); i++) {
-                const Vec2<T>& prev = r[(i + r.size() - 1) % r.size()];
-                const Vec2<T>& next = r[(i + 1) % r.size()];
-                if (cross(next - prev, r[i] - prev) == 0 && loose_order(prev, r[i], next)) {
-                    r.erase(r.begin() + i);
-                    again = true;
-                    break;
-                }
+            while (r.size() >= 3 && on_segment(r[r.size() - 2], r.back(), r.front())) {
+                r.pop_back();
+                again = true;
+            }
+            while (r.size() >= 3 && on_segment(r.back(), r.front(), r[1])) {
+                r.erase(r.begin());
+                again = true;
             }
         }
         if (r.size() >= 3 && !__all_collinear(r))
