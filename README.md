@@ -575,8 +575,10 @@ to both sides.
 - The result is not `simplify()`ed: cutting leaves collinear vertices where the inputs met.
 
 ### algebra/polygon2_buffer.h
-#### `MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size, Ring2<T> (*element)(const T&) = square_element<T>)`
+#### `MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size, Element element = square_element<T>)`
 - Positive size grows, negative shrinks, zero is the identity.
+- `element` maps a size to a convex structuring element and is any callable, so one that takes more
+  than a size goes in as a lambda: `buffer(a, r, [](const T& s) { return polygon_element(s, 16); })`.
 - Note what is *not* offered: buffering by a Euclidean distance. Moving an edge out by `r` needs the
   unit normal, i.e. `sqrt(dx*dx + dy*dy)`, and a round join needs a circular arc whose intersections
   with its neighbours are irrational as well. Neither is representable in `rational`, so the shape to

@@ -211,3 +211,25 @@ TEST_CASE("the element has to contain the origin") {
     // one that only touches the origin is allowed, since the region is closed
     REQUIRE_NOTHROW(dilate(a, box(0, 0, 2, 2)));
 }
+
+TEST_CASE("buffer takes any callable as the element") {
+    const P a(box(0, 0, 4, 4));
+
+    // the two elements that are plain functions, as before
+    REQUIRE(buffer(a, rational(1)) == dilate(a, square_element(rational(1))));
+    REQUIRE(buffer(a, rational(1), diamond_element<rational>) == dilate(a, diamond_element(rational(1))));
+    REQUIRE(buffer(a, rational(-1), diamond_element<rational>) == erode(a, diamond_element(rational(1))));
+
+    // and one that needs more than a size, which a function pointer parameter could not express
+    auto disk = [](const rational& r) { return polygon_element(r, 4); };
+    const P grown = buffer(a, rational(1), disk);
+    REQUIRE(grown == dilate(a, polygon_element(rational(1), 4)));
+    REQUIRE(signed_area(grown) > signed_area(a));
+
+    // a capturing lambda works as well
+    int sides = 6;
+    auto captured = [sides](const rational& r) { return polygon_element(r, sides); };
+    REQUIRE(buffer(a, rational(1), captured) == dilate(a, polygon_element(rational(1), 6)));
+
+    REQUIRE(buffer(a, rational(0), disk) == a); // zero is still the identity
+}
