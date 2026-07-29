@@ -866,8 +866,9 @@ constexpr bool is_likely_prime(const integer& n, int rounds) {
     if (n.is_uint64())
         return is_prime(static_cast<uint64_t>(n));
 
-    std::array<int, 40> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
-        71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173};
+    static constexpr std::array<int, 40> primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43,
+        47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149,
+        151, 157, 163, 167, 173};
     if (rounds < 0 || static_cast<size_t>(rounds) > primes.size())
         throw std::runtime_error("rounds arg is out of range");
     if (n.mod2() == 0 || n.mod3() == 0 || n.mod5() == 0)
@@ -898,6 +899,9 @@ constexpr bool is_likely_prime(const integer& n, int rounds) {
     return true;
 }
 
+// 2**6 == 1 (mod 63) and 2**6 == -1 (mod 65), so the value is summed in six bit groups, with the
+// signs alternating for 65. Two groups per extract_u64() measures faster than batching more of them:
+// the extraction is a couple of word reads, and a per group bound check costs more than it saves.
 constexpr std::pair<int, int> mod63_65(const integer& a) {
     Check(!a.is_negative(), "mod63_65() of a negative number");
     int m63 = 0;
