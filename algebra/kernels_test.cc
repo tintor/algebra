@@ -820,3 +820,44 @@ TEST_CASE("min and max of two builtin integers") {
     static_assert(!has_min<uint32_t, int32_t> && !has_max<uint32_t, int32_t>);
     static_assert(!has_min<int64_t, uint64_t> && !has_max<int64_t, uint64_t>);
 }
+
+TEST_CASE("Random::Uniform over 128 bit types") {
+    Random rng(9);
+    using U = ucent;
+    const U max_u = UINT128_MAX;
+
+    // an empty span returns the value itself, at either end of the range
+    REQUIRE(rng.Uniform<U>(0, 0) == 0);
+    REQUIRE(rng.Uniform<U>(max_u, max_u) == max_u);
+    REQUIRE(rng.Uniform<cent>(-5, -5) == -5);
+
+    // every value of a small span shows up, and nothing outside it
+    for (U span : {U(1), U(2), U(3), U(7)}) {
+        const U base = max_u / 2;
+        std::vector<bool> seen(static_cast<size_t>(span) + 1, false);
+        for (int i = 0; i < 2000; i++) {
+            const U v = rng.Uniform<U>(base, base + span);
+            REQUIRE(v >= base);
+            REQUIRE(v <= base + span);
+            seen[static_cast<size_t>(v - base)] = true;
+        }
+        for (bool b : seen)
+            REQUIRE(b);
+    }
+
+    // the whole range, where every draw is in range and no reduction is wanted
+    bool low = false, high = false;
+    for (int i = 0; i < 200; i++) {
+        const U v = rng.Uniform<U>(0, max_u);
+        (v < max_u / 2 ? low : high) = true;
+    }
+    REQUIRE(low);
+    REQUIRE(high);
+
+    // signed, spanning zero
+    for (int i = 0; i < 200; i++) {
+        const cent v = rng.Uniform<cent>(-100, 100);
+        REQUIRE(v >= -100);
+        REQUIRE(v <= 100);
+    }
+}
