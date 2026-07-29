@@ -207,8 +207,7 @@ Always kept in lowest terms with a positive denominator.
 #### `real::real(const rational& a)`
 - Exact conversion; throws if the denominator is not a power of `Base`.
 #### `static real real::round(const rational& a, int digits)`
-- `digits` digits after the point, truncated towards zero (so the name is a misnomer: it does not
-  round to nearest).
+- The nearest value with `digits` digits after the point, with halves going away from zero.
 #### `void real::normalize()`
 - Moves trailing factors of `Base` from `num` into `exp`.
 #### `std::string real::str() const`
@@ -459,8 +458,10 @@ to both sides.
 - Fractional part, always non-negative.
 #### `rational abs(rational a)`
 #### `bool abs_greater(const rational& a, const rational& b)`
+#### `integer round_to_nearest(const rational& a)`
+- The nearest integer, with halves going away from zero.
 #### `rational round(const rational& a, unsigned digits, unsigned base = 10)`
-- Truncates towards zero to `digits` digits.
+- The nearest multiple of `base**-digits`, with halves going away from zero.
 #### `integer trunc(const rational& a)`
 - round towards 0 to integer
 #### `rational PI(unsigned n)`

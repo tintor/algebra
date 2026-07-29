@@ -196,9 +196,26 @@ constexpr bool abs_greater(const rational& a, const rational& b) {
                        (a.den == 1u) ? b.num : (b.num * a.den));
 }
 
+// The nearest integer, with halves going away from zero, which is how the {:.N} formatter rounds.
+constexpr integer round_to_nearest(const rational& a) {
+    if (a.is_integer())
+        return a.num;
+    // floor((2*|num| + den) / (2*den)) == |num|/den + 1/2, floored
+    integer n = abs(a.num);
+    n <<= 1;
+    n += a.den;
+    integer d = a.den;
+    d <<= 1;
+    n /= d;
+    if (a.num.is_negative())
+        n.negate();
+    return n;
+}
+
+// The nearest multiple of base**-digits, with halves going away from zero.
 constexpr rational round(const rational& a, unsigned digits, unsigned base = 10) {
     const integer b = pow(integer(base), digits);
-    return {(a.num * b) / a.den, b};
+    return {round_to_nearest(a * b), b};
 }
 
 // round towards 0 to integer

@@ -100,9 +100,10 @@ constexpr real<Base>::real(const rational& s) {
     normalize();
 }
 
+// The nearest value with `digits` digits after the point, with halves going away from zero.
 template<int B>
 constexpr real<B> real<B>::round(const rational& a, int digits) {
-    return {shift<B>(a.num, digits) / a.den, -digits};
+    return {round_to_nearest(rational::normalized(shift<B>(a.num, digits), a.den)), -digits};
 }
 
 template<int B>
