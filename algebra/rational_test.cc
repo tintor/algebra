@@ -5,8 +5,22 @@ TEST_CASE("fract") {
     REQUIRE(fract(1/7_q) == 1/7_q);
     REQUIRE(fract(rational(16, 7)) == rational(2, 7));
     REQUIRE(fract(rational(0)) == rational(0));
-    REQUIRE(fract(rational(-1, 7)) == rational(1, 7));
-    REQUIRE(fract(rational(-16, 7)) == rational(2, 7));
+    // the sign follows the value, so that trunc(a) + fract(a) == a
+    REQUIRE(fract(rational(-1, 7)) == rational(-1, 7));
+    REQUIRE(fract(rational(-16, 7)) == rational(-2, 7));
+    REQUIRE(fract(rational(7)) == 0);
+    REQUIRE(fract(rational(-7)) == 0);
+
+    for (int num = -40; num <= 40; num++)
+        for (int den : {1, 2, 3, 7, 12}) {
+            const rational a(num, den);
+            REQUIRE(rational(trunc(a)) + fract(a) == a);
+            REQUIRE(abs(fract(a)) < 1);
+            if (a.sign() > 0)
+                REQUIRE(fract(a) >= 0);
+            if (a.sign() < 0)
+                REQUIRE(fract(a) <= 0);
+        }
 }
 
 TEST_CASE("sqrt") {
@@ -190,8 +204,9 @@ TEST_CASE("trunc") {
     REQUIRE(trunc(rational(-4)) == -4);
     REQUIRE(trunc(rational(0)) == 0);
     REQUIRE(trunc(rational(-1)) == -1);
-    // trunc and fract are not complements for negatives: fract is always non-negative
-    REQUIRE(fract(rational(-7, 2)) == rational(1, 2));
+    // trunc and fract are complements, for either sign
+    REQUIRE(fract(rational(-7, 2)) == rational(-1, 2));
+    REQUIRE(rational(trunc(rational(-7, 2))) + fract(rational(-7, 2)) == rational(-7, 2));
 }
 
 TEST_CASE("abs_greater(rational)") {

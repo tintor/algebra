@@ -178,8 +178,14 @@ constexpr rational pow(const rational& base, const rational& exp, unsigned itera
     return pow(base, quot) * pow(root, rem);
 }
 
+// The part of a beyond its integer part, so that trunc(a) + fract(a) == a. The sign follows a, the
+// same way std::modf splits a floating point value.
 constexpr rational fract(const rational& a) {
-    return {abs(a.num) % abs(a.den), a.den}; // a rational keeps its denominator positive
+    if (a.is_integer())
+        return 0;
+    // operator% truncates towards zero, so the remainder already carries the sign of the numerator,
+    // and a remainder of a coprime pair stays coprime with the denominator
+    return rational::normalized(a.num % a.den, a.den);
 }
 
 constexpr rational abs(rational a) {
