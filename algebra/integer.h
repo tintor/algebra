@@ -592,21 +592,18 @@ constexpr integer isqrt(const integer& a) {
     if (__isqrt_small(a, small))
         return small;
 
+    // Newton, from a start that is at or above the root. Each step lands at or above the root as
+    // well, by the arithmetic mean being at least the geometric one, and strictly below the previous
+    // x while x is above the root -- so the first step that does not decrease has reached exactly
+    // floor(sqrt(a)), and no correction is needed afterwards.
     integer y = power_of_two((a.num_bits() + 1) / 2);
     integer x, r;
     do {
         x = y;
         div(a, x, y, r);
         y += x;
-        // TODO if (y.is_even() && r >= x/2) y += 1    | Would this 1) speed up iteration? 2) avoid mul() at the end?
         y >>= 1;
     } while (y < x);
-
-    x += 1;
-    mul(x, x, r);
-    if (r <= a)
-        return x;
-    x -= 1;
     return x;
 }
 

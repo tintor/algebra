@@ -155,6 +155,22 @@ TEST_CASE("isqrt of an unsigned builtin") {
     }
 }
 
+TEST_CASE("isqrt at the boundaries") {
+    // the values the removed final correction was about: a perfect square, and one either side
+    std::mt19937_64 rng(11);
+    for (int i = 0; i < 300; i++) {
+        const integer k = uniform_sample_bits(std::uniform_int_distribution<int>(65, 600)(rng), rng);
+        if (k < 2)
+            continue;
+        const integer sq = k * k;
+        REQUIRE(isqrt(sq) == k);
+        REQUIRE(isqrt(sq - 1u) == k - 1u);
+        REQUIRE(isqrt(sq + 1u) == k);
+        REQUIRE(isqrt(sq + 2u * k) == k); // (k+1)**2 - 1
+        REQUIRE(isqrt(sq + 2u * k + 1u) == k + 1u);
+    }
+}
+
 constexpr integer isqrt_integer(const integer& x) { return isqrt(x); }
 TEST_CASE("isqrt stress") { test_isqrt(isqrt_integer); }
 TEST_CASE("isqrt2") { test_isqrt(isqrt2); }
