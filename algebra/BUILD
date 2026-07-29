@@ -3,9 +3,10 @@ load(":library.bzl", "library")
 
 cc_library(name = "__test", hdrs = ["__test.h"], deps = ["@catch2//:catch2_main", ":kernels"])
 
-library("kernels",       hdrs = ["util.h", "types.h"])
-library("integer_class", hdrs = ["integer_backend.h"], deps = [":kernels"])
-library("integer",       deps = [":integer_class"])
+library("kernels",       hdrs = ["util.h", "types.h"], tests = ["portable_divq_test"])
+library("integer_class", hdrs = ["integer_backend.h"], deps = [":kernels"],
+        tests = ["integer_backend_test", "integer_magnitude_test"])
+library("integer",       deps = [":integer_class"], tests = ["integer_number_theory_test"])
 library("rational_class",deps = [":integer"])
 library("rational",      deps = [":rational_class"])
 library("xrational",     deps = [":rational"])
@@ -55,40 +56,13 @@ library("geometry",
 
 library("dual")
 
-cc_test(
-    name = "integer_magnitude_test",
-    srcs = ["integer_magnitude_test.cc"],
-    deps = [":integer_class", ":__test"],
-    args = ["-d=yes"],
-)
-
-cc_test(
-    name = "integer_number_theory_test",
-    srcs = ["integer_number_theory_test.cc"],
-    deps = [":integer", ":__test"],
-    args = ["-d=yes"],
-)
-
 cc_library(
     name = "algebra",
     hdrs = ["algebra.h"],
     deps = [":rational", ":real", ":expr", ":geometry", ":polygon2", ":polygon2_arc", ":polygon2_arc_boolean", ":polygon2_boolean", ":polygon2_buffer", ":rational_vector", ":xrational", ":dual"],
 )
 
-cc_test(
-    name = "integer_backend_test",
-    srcs = ["integer_backend_test.cc"],
-    deps = [":integer_class", ":__test"],
-    args = ["-d=yes"],
-)
-
-cc_test(
-    name = "portable_divq_test",
-    srcs = ["portable_divq_test.cc"],
-    deps = [":kernels", ":__test"],
-    args = ["-d=yes"],
-)
-
+# two translation units on purpose, to catch a header defining something non-inline
 cc_test(
     name = "link_test",
     srcs = ["link_test.cc", "link_test2.cc"],
