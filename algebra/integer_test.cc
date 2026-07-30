@@ -98,8 +98,18 @@ TEST_CASE("inverse_mod") {
     REQUIRE((integer(3) * out) % big == 1);
 }
 
+TEST_CASE("mod of a non const lvalue returns a value") {
+    // the in place one has its own name, so overload resolution cannot pick it here by constness
+    integer a = -10;
+    const integer b = 3;
+    REQUIRE(mod(a, b) == 2);
+    REQUIRE(a == -10);
+    mod_in_place(a, b);
+    REQUIRE(a == 2);
+}
+
 TEST_CASE("in place mod is euclidean") {
-    auto m = [](long a, long b) { integer x = a; mod(x, integer(b)); return x; };
+    auto m = [](long a, long b) { integer x = a; mod_in_place(x, integer(b)); return x; };
     REQUIRE(m(-10, 5) == 0);
     REQUIRE(m(-10, 3) == 2);
     REQUIRE(m(10, 3) == 1);
@@ -123,24 +133,24 @@ TEST_CASE("in place mod with a multi word divisor") {
             continue;
 
         integer x = a;
-        mod(x, b);
+        mod_in_place(x, b);
         REQUIRE(x == mod(a, b));
         REQUIRE(x == a % b);
         REQUIRE(x >= 0);
         REQUIRE(x < b);
 
         integer y = -a;
-        mod(y, b);
+        mod_in_place(y, b);
         REQUIRE(y == mod(-a, b));
         REQUIRE(y >= 0);
         REQUIRE(y < b);
 
         // the divisor itself, and a dividend below it
         integer z = b;
-        mod(z, b);
+        mod_in_place(z, b);
         REQUIRE(z == 0);
         integer w = b - 1u;
-        mod(w, b);
+        mod_in_place(w, b);
         REQUIRE(w == b - 1u);
     }
 }
