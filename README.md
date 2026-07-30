@@ -584,7 +584,8 @@ to both sides.
   fragment is classified by sampling a point a provably safe step off its midpoint, and the
   surviving fragments are stitched into rings oriented with the interior on their left.
 - Cost is quadratic in the number of edges, for the cutting and for the classification.
-- The result is not `simplify()`ed: cutting leaves collinear vertices where the inputs met.
+- The result is `simplify()`ed: cutting leaves collinear vertices where the inputs met, and carrying
+  them into the next operation is what makes a chain of them expensive.
 
 ### algebra/polygon2_buffer.h
 #### `MultiPolygon2<T> buffer(const MultiPolygon2<T>& a, const T& size, Element element = square_element<T>)`
