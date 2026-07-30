@@ -392,7 +392,7 @@ to both sides.
 #### `integer isqrt_hardware(const integer& a)`
 - Very fast, but only approximate for large values.
 #### `integer iroot(const integer& a, uint32_t n)`
-- Largest `q` with `q**n <= a`.
+- Largest `q` with `q**n <= a`. Throws for `n == 0`, which is not a root.
 #### `bool exact_sqrt(const integer& a, integer& b)`
 - Sets `b` to `sqrt(a)` and returns true when `a` is a perfect square.
 #### `void exact_sqrt(integer a, integer& whole, integer& root)`
@@ -416,7 +416,9 @@ to both sides.
 #### `std::vector<std::pair<integer, int>> factorize(integer a)`
 - Prime factorization as (factor, exponent) pairs.
 #### `uint64_t try_fermat_factorize(uint64_t n)`
-- Returns a divisor of `n`, or 0 when Fermat's method does not find one quickly.
+- A divisor of `n` strictly between 1 and `n`, or 0 when Fermat's method does not find one quickly.
+  A prime `n` reports 0, since the difference of squares it factors into is `n = a*a - b*b` with
+  `a - b == 1`.
 
 #### `void add_mod(integer& a, const integer& b, const integer& m)`
 #### `void sub_mod(integer& a, const integer& b, const integer& m)`
