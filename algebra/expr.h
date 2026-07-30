@@ -314,6 +314,19 @@ constexpr bool identical(expr_ptr a, expr_ptr b) {
 
 constexpr std::optional<int> safe_sign(expr_ptr a);
 
+// true only when the sign is known and not negative; a variable answers false
+constexpr bool is_nonneg(expr_ptr a) {
+    auto s = safe_sign(a);
+    return s != std::nullopt && *s >= 0;
+}
+
+constexpr bool all_nonneg(const std::vector<expr_ptr>& v) {
+    for (const auto& e: v)
+        if (!is_nonneg(e))
+            return false;
+    return true;
+}
+
 constexpr expr_ptr make_sum(std::vector<expr_ptr> v) {
     // move all rationals to the front of sum and combine them
     rational a;
@@ -537,9 +550,12 @@ constexpr expr_ptr pow(expr_ptr a, const rational& b) {
     }
     if (is_rational(a) && b.is_integer())
         return make_rational(pow(rational_value(a), b.num));
-    if (is_power(a))
+    // Both rules below are only valid for a non-negative operand: sqrt(x^2) is abs(x) and not x,
+    // and sqrt(-2 * -3) is sqrt(6) and not sqrt(-2) * sqrt(-3). Integer exponents are the
+    // exception, they are sound for either sign.
+    if (is_power(a) && (is_nonneg(power_base(a)) || (b.is_integer() && power_exp(a).is_integer())))
         return pow(power_base(a), power_exp(a) * b);
-    if (is_product(a)) {
+    if (is_product(a) && (b.is_integer() || all_nonneg(product_values(a)))) {
         std::vector<expr_ptr> v = product_values(a);
         for (auto& e: v)
             e = pow(e, b);
