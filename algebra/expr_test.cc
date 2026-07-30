@@ -334,3 +334,16 @@ TEST_CASE("formatting into a counted buffer") {
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
 }
+
+TEST_CASE("make_sum collects terms that are equal without being the same node") {
+    using namespace algebra::literals;
+    // structurally equal terms fold, and so do terms that are only equal by value
+    REQUIRE(format("{}", make_sum({sqrt(2_e) * PI_EXPR, sqrt(2_e) * PI_EXPR})) == "2*sqrt(2)*π");
+    REQUIRE(make_sum({sqrt(8_e), 2 * sqrt(2_e)}) == 4 * sqrt(2_e));
+    REQUIRE(make_sum({sqrt(2_e) * sqrt(3_e), sqrt(6_e)}) == 2 * sqrt(6_e));
+
+    // and so do opposite terms, whether or not one is a negation node
+    REQUIRE(make_sum({sqrt(2_e) * PI_EXPR, -(sqrt(2_e) * PI_EXPR)}) == 0);
+    REQUIRE(make_sum({sqrt(8_e), -2 * sqrt(2_e)}) == 0);
+    REQUIRE(make_sum({sqrt(2_e), 3_e, -sqrt(2_e)}) == 3);
+}
