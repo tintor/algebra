@@ -154,25 +154,30 @@ template<int B, typename T> constexpr real<B>& operator+=(real<B>& a, const T& b
 template<int B, typename T> constexpr real<B>& operator-=(real<B>& a, const T& b) { a = a - b; return a; }
 template<int B, typename T> constexpr real<B>& operator*=(real<B>& a, const T& b) { a = a * b; return a; }
 
+// Division is the one inexact operation on real<B>: an exact quotient generally needs infinitely
+// many digits. The quotient is truncated towards zero after `digits` digits below the point; the
+// operators keep REAL_DIV_DIGITS of them, and divide() is there to ask for a different count.
+constexpr int REAL_DIV_DIGITS = 100;
+
 template<int B>
-constexpr real<B> operator/(const real<B>& a, const real<B>& b) {
-    int scale = 100;
-    return {shift<B>(a.num, scale) / b.num, a.exp - b.exp - scale};
+constexpr real<B> divide(const real<B>& a, const real<B>& b, int digits) {
+    return {shift<B>(a.num, digits) / b.num, a.exp - b.exp - digits};
 }
 
 template<int B>
-constexpr real<B>& operator/=(real<B>& a, const integral auto& b) {
-    int scale = 100;
-    if constexpr (B == 2) {
-        a.num <<= scale;
-    } else {
-        a.num = pow(integer(B), scale, a.num);
-    }
+constexpr real<B>& divide_in_place(real<B>& a, const integral auto& b, int digits) {
+    a.num = shift<B>(a.num, digits);
     a.num /= b;
-    a.exp -= scale;
+    a.exp -= digits;
     a.normalize();
     return a;
 }
+
+template<int B>
+constexpr real<B> operator/(const real<B>& a, const real<B>& b) { return divide(a, b, REAL_DIV_DIGITS); }
+
+template<int B>
+constexpr real<B>& operator/=(real<B>& a, const integral auto& b) { return divide_in_place(a, b, REAL_DIV_DIGITS); }
 
 template<int B> constexpr real<B> operator/(real<B> a, const integral auto& b) { a /= b; return a; }
 template<int B> constexpr real<B> operator/(const integral auto& a, real<B> b) { return real<B>(a) / b; }

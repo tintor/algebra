@@ -586,3 +586,24 @@ TEST_CASE("real with integral operand") {
     q *= 3;
     REQUIRE(q == real<2>(-6));
 }
+
+TEST_CASE("division keeps a chosen number of digits") {
+    // division is the one inexact operation on real<B>: 1/3 has no finite representation in base 10
+    const decimal a(1), b(3);
+    REQUIRE(to_rational(divide(a, b, 3)) == rational(333, 1000));
+    REQUIRE(to_rational(divide(a, b, 5)) == rational(33333, 100000));
+    // the operator keeps REAL_DIV_DIGITS of them
+    REQUIRE(to_rational(a / b) == to_rational(divide(a, b, REAL_DIV_DIGITS)));
+    REQUIRE(to_rational(a / 3) == to_rational(divide(a, b, REAL_DIV_DIGITS)));
+
+    // an exact quotient comes out exact whatever the count, in either base
+    REQUIRE(to_rational(divide(decimal(1), decimal(4), 2)) == rational(1, 4));
+    REQUIRE(to_rational(divide(decimal(1), decimal(4), 40)) == rational(1, 4));
+    REQUIRE(to_rational(divide(real<2>(1), real<2>(4), 2)) == rational(1, 4));
+
+    // truncation is towards zero, and zero digits leaves an integer
+    REQUIRE(to_rational(divide(decimal(7), decimal(2), 0)) == 3);
+    REQUIRE(to_rational(divide(decimal(-7), decimal(2), 0)) == -3);
+    REQUIRE(to_rational(divide(decimal(2), decimal(3), 1)) == rational(6, 10));
+    REQUIRE(to_rational(divide(decimal(-2), decimal(3), 1)) == rational(-6, 10));
+}
