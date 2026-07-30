@@ -480,6 +480,9 @@ constexpr expr_ptr operator*(expr_ptr a, expr_ptr b) {
     if (is_negation(b))
         return -(a * negation_value(b));
 
+    // a is the rational operand here if there is one, since the case above swapped it into place
+    if (is_rational(a) && rational_value(a) == 1)
+        return b;
     if (is_rational(a) && rational_value(a) == -1)
         return -b;
     if (safe_sign(a) == 0 || safe_sign(b) == 0)
