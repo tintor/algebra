@@ -133,13 +133,13 @@ not fit.
 - Writes into a caller provided buffer and returns the number of characters written.
 
 #### `size_t integer::popcount() const`
-- Number of set bits in the two's complement representation.
+- Number of set bits in the magnitude, so the sign does not affect the result.
 #### `int integer::size_of() const`
 - Number of bytes used by the words of this number.
 #### `auto integer::num_bits() const`
 #### `auto integer::num_trailing_zeros() const`
 #### `bool integer::bit(int64_t i) const`
-- Bit `i` of the magnitude. Note that this is not the two's complement bit that `popcount()` counts.
+- Bit `i` of the magnitude, like `popcount()` and `num_bits()` read it. There is no two's complement view of a negative value here.
 
 #### `uint64_t integer::mod2() const`
 #### `uint64_t integer::mod3() const`

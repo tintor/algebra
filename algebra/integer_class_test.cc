@@ -624,6 +624,19 @@ TEST_CASE("num_bits") {
 TEST_CASE("popcount") {
     for (uint i: {0u, ~0u, 4u, 31231u, static_cast<uint>(-3123121)})
         REQUIRE(integer(i).popcount() == static_cast<size_t>(std::popcount(i)));
+
+    // the magnitude is counted, like bit() and num_bits() read it, so the sign changes nothing
+    for (uint i: {0u, ~0u, 4u, 31231u})
+        REQUIRE(integer(i).popcount() == (-integer(i)).popcount());
+    REQUIRE(integer(-1).popcount() == 1);
+    REQUIRE(integer(-2).popcount() == 1);
+    REQUIRE(integer(-3).popcount() == 2);
+    REQUIRE(integer(-255).popcount() == 8);
+    // and the answer does not depend on how many words the value happens to occupy
+    const integer big = integer(1) << 64;
+    REQUIRE(big.popcount() == 1);
+    REQUIRE((-big).popcount() == 1);
+    REQUIRE((-(big + 1)).popcount() == 2);
 }
 
 TEST_CASE("<<") {

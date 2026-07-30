@@ -278,19 +278,9 @@ struct integer {
     constexpr void set_zero() { words.set_zero(); }
     constexpr void negate() { words.negate(); }
 
-    constexpr size_t popcount() const {
-        if (!is_negative())
-            return __abs_popcount_member();
-
-        size_t c = 0;
-        uint64_t carry = 1;
-        for (int i = 0; i < words.size(); i++) {
-            uint128_t w = (uint128_t)words[i] + carry;
-            carry = w >> 64;
-            c += std::popcount(~static_cast<uint64_t>(w));
-        }
-        return c;
-    }
+    // set bits of the magnitude, matching bit() and num_bits(); a two's complement count would
+    // depend on the width of the value rather than on the value
+    constexpr size_t popcount() const { return __abs_popcount_member(); }
 
     constexpr int size_of() const { return words.size() * 8; }
 
