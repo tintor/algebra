@@ -1,6 +1,7 @@
 #include "algebra/real_class.h"
 #include "algebra/__test.h"
 #include <sstream>
+#include <thread>
 #include <unordered_map>
 
 TEST_CASE("format") {
@@ -345,6 +346,19 @@ TEST_CASE("str and ostream") {
     std::ostringstream os;
     os << decimal(5, -1) << ' ' << real<2>(3, -2) << ' ' << real<2>(-6);
     REQUIRE(os.str() == "0.5 3/4 -6");
+}
+
+TEST_CASE("REAL_FRACT_DIGITS is per thread") {
+    struct Guard {
+        ~Guard() { REAL_FRACT_DIGITS = std::nullopt; }
+    } guard;
+
+    REAL_FRACT_DIGITS = 3;
+    std::string other = "unset";
+    std::thread t([&] { other = format("{}", real<2>(3, -2)); });
+    t.join();
+    REQUIRE(other == "3/4"); // the other thread has its own, still unset
+    REQUIRE(format("{}", real<2>(3, -2)) == "0.750");
 }
 
 TEST_CASE("REAL_FRACT_DIGITS") {
