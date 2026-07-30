@@ -623,3 +623,61 @@ spelled out by hand in `BUILD`, which is why `integer_class_test.cc` and
    tests; expect them to find more of section 2 on their own.
 5. `4.1`-`4.4` — the README describes a library that no longer exists.
 6. Sections 3, 5, 6 as ordinary cleanup.
+
+---
+
+## Disposition
+
+Every finding above, with the pull request that settled it. Six turned out not to be defects; they
+are marked and say what the measurement or the reading was, so they do not get "fixed" later.
+
+**1. Wrong results, undefined behaviour, crashes**
+1.1 #67 · 1.2 #68 · 1.3 #66 · 1.4 #69 · 1.5 #70 · 1.6 #71 · 1.7 #72 · 1.8 #73 · 1.9 #74 ·
+1.10 #78 · 1.11 #75 · 1.12 #76 · 1.13 #77
+
+**2. Fragile**
+2.1 #86 · 2.2 #94 · 2.3 #89 · 2.4 #88 · 2.5 #87 · 2.6 #85 · 2.7 #89 ·
+**2.8 not a defect** — the skipped edge cannot change the answer; #93 says why ·
+2.9 #92 · 2.10 #87 · 2.11 #90
+
+**3. Duplicated code**
+3.1 #100 · 3.2 #117 · 3.3 #101 · 3.4 #105 · 3.5 #118 · 3.6 #119 · 3.7 #136 · 3.8 #130
+
+**4. Comments and documentation**
+4.1 #82 · 4.2 #82 · 4.3 #83 · 4.4 #82 · 4.5 #96 · 4.6 #95 · 4.7 #95 · 4.8 #98 · 4.9 #97 ·
+4.10 #95 · 4.11 #95 · 4.12 #95 · 4.13 #95 · 4.14 #95 · 4.15 #99 · 4.16 #95
+
+**5. Interface and architecture**
+5.1 #134 · 5.2 #128 · 5.3 #129 · 5.4 #102, and #120 for the comment that says why isqrt2 and isqrt3
+stay · 5.5 #130 · 5.6 #131 · 5.7 #108 · 5.8 #104 · 5.9 #104 · 5.10 #127 · 5.11 #125 · 5.12 #136 ·
+5.13 #133 · 5.14 #132 · 5.15 #120 · 5.16 #120 · 5.17 #126 · 5.18 #113 · 5.19 #112 ·
+**5.20 not a defect** — the formatters work through `format_to_n`'s counting iterator as written;
+#111 covers it with a test rather than changing them ·
+**5.21 not a defect** — the `constexpr` on the `operator<<`s is gone with #104, and `dynamic_cast`
+has been allowed in a constant expression since C++20, so `dcast` keeps its · 5.22 #104
+
+**6. Performance**
+6.1 #102 · 6.2 #103 · 6.3 #101 ·
+6.4 #95 for the comment and #121 for the reduction itself; routing `pow_mod` through the old
+`mul_mod` was the slower direction, which is why the comment came first ·
+**6.5 not a defect** — batching the extraction measured 21% slower, recorded in #103 ·
+6.6 #122 · 6.7 #106 · 6.8 #107 · 6.9 #135 ·
+**6.10 not a defect** — a node copy is one node deep, so building a tree is linear; measured and
+pinned by a test in #137 · 6.11 #103
+
+**7. Test gaps and weak tests**
+7.1 #79 · 7.2 #67 · 7.3 #66 and #113 · 7.4 #115 · 7.5 #123 · 7.6 #114 · 7.7 #114 ·
+**7.8 no longer weak** — #98 made `round()` round, so the assertion holds from either side ·
+7.9 #116 · 7.10 #116 · 7.11 #119 · 7.12 the two stale `bazel-testlogs` directories are deleted;
+nothing tracked in git referred to them
+
+**8. Build and tooling**
+8.1 #80 · 8.2 #81 · 8.3 #110
+
+### Defects the new tests found, which this review did not
+
+- `pow(rational(0), integer(-2))` returned `1/0` instead of throwing (#116).
+- `sqrt(integer(0), 5)` returned `1/64` instead of 0 (#116).
+- `1 * x` stayed a two element product, so a value built through `operator*` was not `identical` to
+  the same value built through `make_product` (#124).
+
