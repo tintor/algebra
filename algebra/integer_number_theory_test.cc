@@ -1029,3 +1029,33 @@ TEST_CASE("is_possible_square - every square passes the filter") {
     REQUIRE(!is_possible_square(5_i));
     REQUIRE(!is_possible_square(6_i));
 }
+
+TEST_CASE("mul_mod matches __mul_mod over wide operands") {
+    // The two are meant to compute the same thing. mul_mod keeps the fast paths for operands that do
+    // not need a reduction at all, and both now form the product and reduce once, rather than one of
+    // them doubling and adding over every bit of an operand.
+    std::mt19937_64 rng(43);
+    for (int bits : {2, 3, 17, 64, 65, 128, 129, 300, 1000}) {
+        integer m = uniform_sample_bits(bits, rng) + 2u;
+        for (int i = 0; i < 60; i++) {
+            const integer a = integer(uniform_sample_bits(bits, rng)) % m;
+            const integer b = integer(uniform_sample_bits(bits, rng)) % m;
+            integer viaFast;
+            mul_mod(a, b, m, viaFast);
+            integer viaSlow = a;
+            __mul_mod(viaSlow, b, m);
+            REQUIRE(viaFast == viaSlow);
+            REQUIRE(viaFast == (a * b) % m);
+            REQUIRE(viaFast >= 0);
+            REQUIRE(viaFast < m);
+        }
+        // the shortcut paths: a or b equal to zero or one, and a product too small to reduce
+        integer out;
+        mul_mod(integer(0), integer(5) % m, m, out);
+        REQUIRE(out == 0);
+        mul_mod(integer(1) % m, integer(3) % m, m, out);
+        REQUIRE(out == integer(3) % m);
+        mul_mod(integer(3) % m, integer(1) % m, m, out);
+        REQUIRE(out == integer(3) % m);
+    }
+}
