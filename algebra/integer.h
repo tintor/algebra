@@ -817,20 +817,14 @@ constexpr void mul_mod(const integer& a, const integer& b, const integer& m, int
         return;
     }
 
-    out = 0;
-    integer aa = a, bb = b;
-    while (aa && bb) {
-        if (aa < bb)
-            std::swap(aa, bb);
-        if (bb == 1) {
-            add_mod(out, aa, m); // result = (result + aa) % m
-            return;
-        }
-        if (bb.is_odd())
-            add_mod(out, aa, m); // result = (result + aa) % m
-        add_mod(aa, aa, m); // aa = (aa + aa) % m
-        bb >>= 1;
-    }
+    // The whole product, then one reduction. A double and add loop over the bits of b would avoid the
+    // double width intermediate, which is what it is for in fixed width arithmetic, but here that
+    // intermediate costs one multiplication while the loop costs one addition and one reduction per
+    // bit: at a 4096 bit modulus the loop measured 276 ms against 4 ms for 200 products.
+    out = a;
+    out *= b;
+    if (out >= m)
+        out %= m;
 }
 
 // returns (a**b) mod m
