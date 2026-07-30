@@ -334,3 +334,15 @@ TEST_CASE("formatting into a counted buffer") {
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
 }
+
+TEST_CASE("multiplying by one") {
+    using namespace algebra::literals;
+    // a coefficient of one is the identity, and must not survive as a product factor
+    REQUIRE(format("{}", 1_e * sqrt(2_e)) == "sqrt(2)");
+    REQUIRE(format("{}", sqrt(2_e) * 1_e) == "sqrt(2)");
+    REQUIRE(format("{}", 1_e / sqrt(2_e)) == "2^(-1/2)");
+    REQUIRE(format("{}", 1_e * PI_EXPR) == "π");
+    REQUIRE(identical(1_e * sqrt(2_e), sqrt(2_e)));
+    REQUIRE(!is_product(1_e * (sqrt(2_e) + sqrt(3_e))));
+    REQUIRE(format("{}", -1_e * sqrt(2_e)) == "-sqrt(2)");
+}
