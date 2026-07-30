@@ -141,6 +141,10 @@ constexpr MultiPolygon2<T> operator~(MultiPolygon2<T> a) {
     return a;
 }
 
+// Equality of the representation, not of the region: the same set of points has many
+// representations, and rotating a ring's vertex list or reordering the rings gives an unequal one.
+// Two regions are the same region when their symmetric difference is empty, which costs a boolean
+// operation -- (a ^ b).is_empty() spells that out at the call site.
 template<typename T>
 constexpr bool operator==(const MultiPolygon2<T>& a, const MultiPolygon2<T>& b) {
     return a.complement == b.complement && a.rings == b.rings;

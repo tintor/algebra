@@ -274,3 +274,24 @@ TEST_CASE("randomized boolean operations against pointwise membership") {
             }
     }
 }
+
+TEST_CASE("equality is structural, not geometric") {
+    const P a(box(0, 0, 1, 1));
+    REQUIRE(a == P(box(0, 0, 1, 1)));
+
+    // the same ring with its vertex list rotated bounds the same region and compares unequal
+    const P b(R{V(1, 0), V(1, 1), V(0, 1), V(0, 0)});
+    REQUIRE(!(a == b));
+    REQUIRE((a ^ b).is_empty()); // which is how to ask whether two regions are the same
+
+    // so does the same ring with a redundant vertex in the middle of an edge
+    const P c(R{V(0, 0), V(1, 0), V(1, 1), V(rational(1, 2), 1), V(0, 1)});
+    REQUIRE(!(a == c));
+    REQUIRE((a ^ c).is_empty());
+
+    // and the ring order matters for a region with more than one
+    const P d({box(0, 0, 1, 1), box(3, 0, 4, 1)});
+    const P e({box(3, 0, 4, 1), box(0, 0, 1, 1)});
+    REQUIRE(!(d == e));
+    REQUIRE((d ^ e).is_empty());
+}
