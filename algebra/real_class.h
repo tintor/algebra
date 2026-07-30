@@ -246,9 +246,13 @@ constexpr real<2> operator""_f(const char* s) { return real<2>::round(rational(s
 constexpr decimal operator""_d(const char* s) { return rational(s); }
 }
 
-}
+// The number of fraction digits that formatting a real<B> uses when the format string says
+// nothing, with std::nullopt meaning the exact rational form. Per thread, so that setting it in
+// one thread cannot change what another thread prints; an explicit precision in the format string
+// wins over it either way.
+inline thread_local std::optional<int> REAL_FRACT_DIGITS;
 
-inline std::optional<int> REAL_FRACT_DIGITS;
+}
 
 template <int B>
 struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational, char> {
@@ -283,11 +287,11 @@ struct std::formatter<algebra::real<B>, char> : std::formatter<algebra::rational
             return it;
         }
 
-        if (frac_digits != std::nullopt || REAL_FRACT_DIGITS == std::nullopt)
+        if (frac_digits != std::nullopt || algebra::REAL_FRACT_DIGITS == std::nullopt)
             return std::formatter<algebra::rational, char>::format(to_rational(a), ctx);
 
         std::formatter<algebra::rational, char> f;
-        f.frac_digits = REAL_FRACT_DIGITS.value();
+        f.frac_digits = algebra::REAL_FRACT_DIGITS.value();
         f.format(to_rational(a), ctx);
         return ctx.out();
     }

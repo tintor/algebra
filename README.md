@@ -214,6 +214,10 @@ and a base: `b`/`B` for binary, `o` for octal, `d` for decimal, `x`/`X` for hexa
 #### `void real::normalize()`
 - Moves trailing factors of `Base` from `num` into `exp`.
 #### `std::string real::str() const`
+#### `thread_local std::optional<int> REAL_FRACT_DIGITS`
+- Fraction digits used when formatting a `real<B>` with no precision in the format string;
+  `std::nullopt` (the default) prints the exact rational form instead. Per thread, and an explicit
+  precision such as `{:.3}` wins over it.
 
 ## `class xrational`
 
