@@ -148,7 +148,7 @@ void integer_test(uint64_t seed) {
     const integer b = sample_integer(rng);
     duo_identities(a, b);
 
-    //if (b != 0 && a >= 0) { integer e = a; mod(e, b); TEST(e == a % b); } TODO
+    //if (b != 0 && a >= 0) { integer e = a; mod_in_place(e, b); TEST(e == a % b); } TODO
 
     { integer e = a; add_product(e, b, one); TEST(e == a + b); }
     { integer e = a; add_product(e, one, b); TEST(e == a + b); }

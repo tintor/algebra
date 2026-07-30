@@ -1225,8 +1225,10 @@ constexpr bool inverse_mod(const integer& a, const integer& m, integer& out) {
     return true;
 }
 
-// a = a mod b, in place, with the result in [0, abs(b)) as the other mod() overloads give
-constexpr void mod(integer& a, const integer& b) {
+// a = a mod b, in place, with the result in [0, abs(b)) as the mod() overloads give. Named apart
+// from mod() on purpose: an overload pair that differed only by the constness of the first
+// argument would silently mutate a non-const lvalue where a value was expected.
+constexpr void mod_in_place(integer& a, const integer& b) {
     const bool negative = a.is_negative();
     a.words.set_negative(false);
     {
@@ -1264,7 +1266,7 @@ constexpr void binominal_mod(const integer& n, uint64_t k, const integer& m, int
                 e += 1;
                 out /= e;
             }
-            mod(out, m);
+            mod_in_place(out, m);
             return;
         }
 
@@ -1273,7 +1275,7 @@ constexpr void binominal_mod(const integer& n, uint64_t k, const integer& m, int
         out *= e;
         __mul_mod(out, inv, m);
     }
-    mod(out, m); // k == 0 leaves out == 1, which still has to be reduced
+    mod_in_place(out, m); // k == 0 leaves out == 1, which still has to be reduced
 }
 
 

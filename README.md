@@ -351,12 +351,11 @@ to both sides.
   negative remainder fits neither the divisor's type nor its signed counterpart. Divisors of every
   width up to 128 bits have an overload.
 #### `integer mod(const integer& a, const integer& b)`
-#### `void mod(integer& a, const integer& b)`
+#### `void mod_in_place(integer& a, const integer& b)`
 #### `uint64_t mod(const integer& a, uint64_t b)`
 #### `unsigned mod(const integer& a, uint32_t b)`
-- All `mod()` overloads return a value in `[0, abs(b))`, unlike `operator%` which truncates towards
-  zero. The `integer&` overload replaces its argument in place, so it is chosen for a non const
-  lvalue: spell the operand `const` (or use the return value) to get the value form.
+- `mod_in_place()` reduces its first argument in place, the others return the remainder. All of
+  them give a value in `[0, abs(b))`, unlike `operator%` which truncates towards zero.
 #### `integer abs(const integer& a)`
 #### `bool abs_greater(const integer& a, const integer& b)`
 - `abs(a) > abs(b)`, minimizing memory allocation.
