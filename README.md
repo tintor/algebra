@@ -437,9 +437,10 @@ to both sides.
 #### `uint64_t log_upper(const integer& n, uint64_t base)`
 - The base has to be at least two.
 
-#### `void simplify(integer& x, integer& y)`
-#### `void simplify(integer& x, integer& y, integer& z)`
-- Divides all arguments by their common divisor.
+#### `void divide_by_gcd(integer& x, integer& y)`
+#### `void divide_by_gcd(integer& x, integer& y, integer& z)`
+- Divides all arguments by their common divisor, which reduces the length of a direction vector
+  without changing its direction.
 #### `bool less_ab_c(const integer& a, const integer& b, const integer& c)`
 - returns `a * b < c` (cheaper than naive multiplication)
 #### `bool less_a_bc(const integer& a, const integer& b, const integer& c)`
@@ -482,8 +483,8 @@ to both sides.
 #### `rational cos(rational x, unsigned n)`
 #### `rational exp(rational x, unsigned n)`
 - Taylor series with `n` terms.
-#### `void simplify(rational& x, rational& y)`
-#### `void simplify(rational& x, rational& y, rational& z)`
+#### `void divide_by_gcd(rational& x, rational& y)`
+#### `void divide_by_gcd(rational& x, rational& y, rational& z)`
 - Scales all arguments by the same factor, preserving their ratios.
 
 ### algebra/real.h

@@ -1337,8 +1337,10 @@ constexpr int signum(const integer& a) {
     return a.is_negative() ? -1 : 1;
 }
 
-// reduce vector's length, without changing vector's direction
-constexpr void simplify(integer& x, integer& y) {
+// divide out the common factor, which for a direction vector reduces its length without changing
+// its direction. Named apart from rational::simplify() and simplify(MultiPolygon2&), which mean
+// two other things.
+constexpr void divide_by_gcd(integer& x, integer& y) {
     integer a = gcd(x, y);
     if (a != 1) {
         x /= a;
@@ -1346,7 +1348,7 @@ constexpr void simplify(integer& x, integer& y) {
     }
 }
 
-constexpr void simplify(integer& x, integer& y, integer& z) {
+constexpr void divide_by_gcd(integer& x, integer& y, integer& z) {
     integer a = gcd(gcd(x, y), z);
     if (a != 1) {
         x /= a;

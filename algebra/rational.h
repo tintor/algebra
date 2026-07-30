@@ -326,14 +326,15 @@ constexpr rational exp(rational x, unsigned n) {
     return out;
 }
 
-constexpr void simplify(rational& x, rational& y) {
-    simplify(x.num, y.num);
-    simplify(x.den, y.den);
+// scales all arguments by the same factor, so their ratios are preserved
+constexpr void divide_by_gcd(rational& x, rational& y) {
+    divide_by_gcd(x.num, y.num);
+    divide_by_gcd(x.den, y.den);
 }
 
-constexpr void simplify(rational& x, rational& y, rational& z) {
-    simplify(x.num, y.num, z.num);
-    simplify(x.den, y.den, z.den);
+constexpr void divide_by_gcd(rational& x, rational& y, rational& z) {
+    divide_by_gcd(x.num, y.num, z.num);
+    divide_by_gcd(x.den, y.den, z.den);
 }
 
 }

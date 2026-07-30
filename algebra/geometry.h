@@ -79,7 +79,7 @@ std::variant<None, Line3<T>, Plane3<T>> plane_intersection(const Plane3<T>& a, c
     Vec3<T> dir = cross(a.n, b.n);
     // point on both planes (note: this uses dir before it is scaled down below)
     const Vec3<T> orig = (cross(b.n, dir) * -a.d + cross(dir, a.n) * -b.d) / dot(dir, dir);
-    simplify(dir.x, dir.y, dir.z); // TODO generalize this (for floats it would be normalization, for bigints division by gcd)
+    divide_by_gcd(dir.x, dir.y, dir.z); // TODO generalize this (for floats it would be normalization, for bigints division by gcd)
     return Line3<T>{orig, dir};
 }
 

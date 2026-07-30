@@ -132,17 +132,17 @@ TEST_CASE("__PI leaf term") {
     }
 }
 
-TEST_CASE("simplify rationals") {
+TEST_CASE("divide rationals by their gcd") {
     {
         rational x(2), y(4), z(6);
-        simplify(x, y, z);
+        divide_by_gcd(x, y, z);
         REQUIRE(x == 1);
         REQUIRE(y == 2);
         REQUIRE(z == 3);
     }
     {
         rational x(1, 2), y(1, 4), z(1, 6);
-        simplify(x, y, z);
+        divide_by_gcd(x, y, z);
         REQUIRE(x == 1);
         REQUIRE(y == rational(1, 2));
         REQUIRE(z == rational(1, 3));
@@ -151,13 +151,13 @@ TEST_CASE("simplify rationals") {
         // ratios are preserved
         rational x(2, 3), y(4, 5), z(6, 7);
         const rational x0 = x, y0 = y, z0 = z;
-        simplify(x, y, z);
+        divide_by_gcd(x, y, z);
         REQUIRE(x * y0 == y * x0);
         REQUIRE(x * z0 == z * x0);
     }
     {
         rational x(2), y(4);
-        simplify(x, y);
+        divide_by_gcd(x, y);
         REQUIRE(x == 1);
         REQUIRE(y == 2);
     }
