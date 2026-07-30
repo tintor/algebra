@@ -557,6 +557,11 @@ to both sides.
 #### `T signed_area(const Ring2<T>& ring)`
 #### `T signed_area(const MultiPolygon2<T>& a)`
 - Throws for an unbounded region, which has no finite area.
+#### `bool operator==(const MultiPolygon2<T>& a, const MultiPolygon2<T>& b)`
+- Equality of the representation, not of the region: the same set of points has many
+  representations, and rotating a ring's vertex list or reordering the rings gives an unequal one.
+  For the region, ask whether the symmetric difference is empty: `(a ^ b).is_empty()`. The same holds
+  for `ArcPolygon2`.
 #### `bool is_ccw(const Ring2<T>& ring)`
 #### `void reverse(Ring2<T>& ring)`
 - Reverses the orientation of a ring, turning a shell into a hole and back.

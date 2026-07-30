@@ -336,6 +336,8 @@ constexpr ArcPolygon2<T> operator~(ArcPolygon2<T> a) {
     return a;
 }
 
+// Equality of the representation, not of the region, the same as for MultiPolygon2: a rotated vertex
+// list, a different ring order, or a straight edge split in two all compare unequal.
 template<typename T>
 constexpr bool operator==(const ArcPolygon2<T>& a, const ArcPolygon2<T>& b) {
     return a.complement == b.complement && a.rings == b.rings;
