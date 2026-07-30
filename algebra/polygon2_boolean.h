@@ -130,6 +130,28 @@ constexpr bool __inside(const MultiPolygon2<T>& p, const Vec2<T>& sample) {
 // Joins fragments into closed rings. Each fragment is oriented so the result's interior is on its
 // left, which makes the out degree of every vertex equal its in degree, so following unused
 // outgoing fragments always closes a ring.
+// Which fragment continues the ring at a vertex where several of them start. Every fragment has
+// the interior on its left, so the boundary is traced by turning as far left as the fragments
+// allow: the first one clockwise from the way we came. Taking an arbitrary one instead bounds the
+// same region, but merges two rings touching at a vertex into one ring that visits it twice.
+// `from` is the direction we arrived by, `a` and `b` are two outgoing candidates.
+template<typename T>
+constexpr bool __turns_left_of(const Vec2<T>& from, const Vec2<T>& a, const Vec2<T>& b) {
+    // classify each candidate by the half plane it lies in, relative to the way back
+    const Vec2<T> back = -from;
+    auto turn = [&back](const Vec2<T>& e) {
+        const T c = cross(back, e);
+        if (c < 0) return 0; // less than half a turn clockwise from back
+        if (c > 0) return 2; // more than half a turn
+        return dot(back, e) > 0 ? 3 : 1; // straight back, which is the last resort, or straight on
+    };
+    const int ta = turn(a), tb = turn(b);
+    if (ta != tb)
+        return ta < tb;
+    // within one half plane the cross product orders the candidates by angle
+    return cross(a, b) < 0;
+}
+
 template<typename T>
 constexpr std::vector<Ring2<T>> __stitch(std::vector<__Edge<T>> frags) {
     std::map<std::pair<T, T>, std::vector<size_t>> outgoing;
@@ -151,12 +173,13 @@ constexpr std::vector<Ring2<T>> __stitch(std::vector<__Edge<T>> frags) {
                 break;
             auto it = outgoing.find({to.x, to.y});
             size_t next = frags.size();
-            if (it != outgoing.end())
+            if (it != outgoing.end()) {
+                const Vec2<T> from = to - frags[cur].a;
                 for (size_t c : it->second)
-                    if (!used[c]) {
+                    if (!used[c] && (next == frags.size() ||
+                                     __turns_left_of(from, frags[c].b - frags[c].a, frags[next].b - frags[next].a)))
                         next = c;
-                        break;
-                    }
+            }
             if (next == frags.size())
                 break; // no continuation; the input was not a closed boundary
             cur = next;

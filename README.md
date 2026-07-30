@@ -583,6 +583,9 @@ to both sides.
 - Exact for an exact `T`, with no epsilon anywhere: every edge is cut at every crossing, each
   fragment is classified by sampling a point a provably safe step off its midpoint, and the
   surviving fragments are stitched into rings oriented with the interior on their left.
+- Where several fragments start at one vertex, the ring continues with the first one clockwise from
+  the way it arrived, so two lobes that touch at a vertex come out as two rings rather than as one
+  ring that visits the vertex twice.
 - Cost is quadratic in the number of edges, for the cutting and for the classification.
 - The result is not `simplify()`ed: cutting leaves collinear vertices where the inputs met.
 
