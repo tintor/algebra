@@ -831,7 +831,26 @@ constexpr int expr_cos::sign() const {
     throw unknown_sign_error(std::format("unknown sign of {}", static_cast<const expr*>(this)));
 }
 
+// expr_sum::sign() squares its two halves and recurses on the difference. That removes one
+// radical per level for a sum of plain square roots, but for nested radicals the expression
+// grows instead, so the nesting is bounded: past the bound the sign is reported as unknown
+// rather than spending an unbounded amount of time on it. Six levels is well past what the
+// decidable cases need; a sum of four square roots resolves in two.
+constexpr int MAX_SUM_SIGN_DEPTH = 6;
+
+// increments a counter for as long as it is alive, so the throws below cannot leak it
+struct __scoped_increment {
+    int& value;
+    constexpr __scoped_increment(int& value) : value(value) { value += 1; }
+    constexpr ~__scoped_increment() { value -= 1; }
+};
+
 constexpr int expr_sum::sign() const {
+    static thread_local int depth = 0;
+    if (depth >= MAX_SUM_SIGN_DEPTH)
+        throw unknown_sign_error(std::format("sign of {} nested deeper than {}", static_cast<const expr*>(this), MAX_SUM_SIGN_DEPTH));
+    const __scoped_increment guard(depth);
+
     std::vector<expr_ptr> positive, negative;
     bool sign_unknown = false;
     for (const auto& e: values) {
