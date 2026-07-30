@@ -334,3 +334,20 @@ TEST_CASE("formatting into a counted buffer") {
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
 }
+
+TEST_CASE("the sign of a nested sum terminates") {
+    using namespace algebra::literals;
+    // expr_sum::sign() squares its positive and its negative half and recurses on the difference,
+    // which grows the expression for nested radicals instead of shrinking it. Building the
+    // expression already asks for signs, through the cancellation checks in make_sum.
+    expr_ptr e = sqrt(2_e);
+    for (int i = 0; i < 6; i++)
+        e = sqrt(2_e + e);
+    // e converges to 2 from below, so the value here is about 2 - 1.7320 - 0.1428 > 0
+    const expr_ptr d = e - sqrt(3_e) - 1_e/7_e;
+    const auto s = safe_sign(d);
+    if (s != std::nullopt)
+        REQUIRE(*s == 1);
+    // an undecided sign must not cost anything to ask for a second time
+    REQUIRE(safe_sign(d) == s);
+}
