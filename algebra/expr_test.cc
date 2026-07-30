@@ -334,3 +334,27 @@ TEST_CASE("formatting into a counted buffer") {
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
 }
+
+TEST_CASE("roots do not distribute over an operand of unknown sign") {
+    using namespace algebra::literals;
+    const expr_ptr x = make_var("x");
+    const expr_ptr y = make_var("y");
+
+    // sqrt(x^2) is |x|, not x, so the exponents must not be folded for a base that may be negative
+    REQUIRE(!identical(sqrt(pow(x, 2)), x));
+    REQUIRE(is_power(sqrt(pow(x, 2))));
+    REQUIRE(is_power(power_base(sqrt(pow(x, 2)))));
+    // and sqrt(x*y) is not sqrt(x)*sqrt(y)
+    REQUIRE(!is_product(sqrt(x * y)));
+    REQUIRE(is_power(sqrt(x * y)));
+
+    // an integer exponent is sound for either sign, and still folds
+    REQUIRE(identical(pow(pow(x, 2), rational(3)), pow(x, 6)));
+    REQUIRE(is_product(pow(x * y, rational(2))));
+
+    // a base known to be non negative folds as before
+    REQUIRE(identical(sqrt(sqrt(2_e)), pow(2_e, rational(1, 4))));
+    REQUIRE(identical(sqrt(pow(PI_EXPR, 2)), PI_EXPR));
+    REQUIRE(format("{}", sqrt(2_e * PI_EXPR)) == "sqrt(2)*sqrt(π)");
+    REQUIRE(sqrt(2_e) * sqrt(3_e) == sqrt(6_e));
+}
