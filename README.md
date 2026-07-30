@@ -40,7 +40,8 @@ int main(int argc, char* argv[]) {
 - multiplication and division currently use `O(N^2)` algorithms where N is number of 64-bit words used
   (`mul_karatsuba()` and `divide_bz()` are available, but are not used by the operators yet)
 - the boolean and buffer operations on 2d regions are quadratic in the number of edges
-- `real<Base>` division is not exact: it rounds to a fixed number of digits
+- `real<Base>` division is not exact: it truncates to `REAL_DIV_DIGITS` digits below the point,
+  or to the count passed to `divide()`
 
 ### Headers
 
@@ -213,6 +214,10 @@ and a base: `b`/`B` for binary, `o` for octal, `d` for decimal, `x`/`X` for hexa
 - The nearest value with `digits` digits after the point, with halves going away from zero.
 #### `void real::normalize()`
 - Moves trailing factors of `Base` from `num` into `exp`.
+#### `real<B> divide(const real<B>& a, const real<B>& b, int digits)`
+#### `real<B>& divide_in_place(real<B>& a, I b, int digits)`
+- Division is the one inexact operation on `real<B>`: the quotient is truncated towards zero after
+  `digits` digits below the point. `operator/` and `operator/=` keep `REAL_DIV_DIGITS` of them.
 #### `std::string real::str() const`
 
 ## `class xrational`
