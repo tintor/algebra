@@ -334,3 +334,92 @@ TEST_CASE("formatting into a counted buffer") {
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
 }
+
+TEST_CASE("make_sum and make_product") {
+    using namespace algebra::literals;
+    // make_sum gathers the rationals, folds repeats into a coefficient, and cancels opposites
+    REQUIRE(format("{}", make_sum({2_e, 3_e, sqrt(5_e)})) == "5 + sqrt(5)");
+    REQUIRE(format("{}", make_sum({sqrt(5_e), sqrt(5_e)})) == "2*sqrt(5)");
+    REQUIRE(make_sum({}) == 0);
+    REQUIRE(make_sum({7_e}) == 7);
+    REQUIRE(make_sum({sqrt(5_e), -sqrt(5_e)}) == 0);
+    REQUIRE(make_sum({2_e, -2_e}) == 0);
+    REQUIRE(make_sum({sqrt(5_e), sqrt(5_e), sqrt(5_e)}) == 3 * sqrt(5_e));
+
+    // make_product gathers the rationals, and repeats become a power
+    REQUIRE(format("{}", make_product({2_e, 3_e, sqrt(5_e)})) == "6*sqrt(5)");
+    REQUIRE(make_product({}) == 1);
+    REQUIRE(make_product({7_e}) == 7);
+    REQUIRE(make_product({sqrt(5_e), sqrt(5_e)}) == 5);
+    REQUIRE(make_product({2_e, 1_e}) == 2);
+    REQUIRE(make_product({sqrt(2_e), sqrt(3_e)}) == sqrt(6_e));
+
+    // a rational coefficient of one disappears rather than staying as a factor
+    REQUIRE(is_power(make_product({1_e, sqrt(5_e)})));
+}
+
+TEST_CASE("subvec and needs_parenthesis") {
+    using namespace algebra::literals;
+    const std::vector<expr_ptr> v{2_e, 3_e, 5_e};
+    REQUIRE(subvec(v, 0).size() == 3);
+    REQUIRE(subvec(v, 1).size() == 2);
+    REQUIRE(subvec(v, 3).empty());
+    REQUIRE(subvec(v, 1)[0] == 3);
+
+    // an atom prints without brackets, anything with structure needs them
+    REQUIRE(!needs_parenthesis(7_e));
+    REQUIRE(!needs_parenthesis(sqrt(5_e)));
+    REQUIRE(!needs_parenthesis(cbrt(5_e)));
+    REQUIRE(!needs_parenthesis(PI_EXPR));
+    REQUIRE(!needs_parenthesis(E_EXPR));
+    REQUIRE(!needs_parenthesis(sin(2_e)));
+    REQUIRE(needs_parenthesis(1_e / 2_e));           // a rational, which prints as num/den
+    REQUIRE(needs_parenthesis(sqrt(2_e) + sqrt(3_e)));
+    REQUIRE(needs_parenthesis(sqrt(2_e) * PI_EXPR));
+    REQUIRE(needs_parenthesis(pow(PI_EXPR, rational(2))));  // a power of anything else
+}
+
+TEST_CASE("negation_value and the negation node") {
+    using namespace algebra::literals;
+    const expr_ptr s = sqrt(5_e);
+    const expr_ptr n = -s;
+    REQUIRE(is_negation(n));
+    REQUIRE(negation_value(n) == s);
+    REQUIRE(identical(negation_value(n), s));
+    REQUIRE(n->sign() == -1);
+
+    // negating twice returns the original node rather than stacking two
+    REQUIRE(!is_negation(-n));
+    REQUIRE(identical(-n, s));
+
+    // a rational negates by value, and a sum negates termwise
+    REQUIRE(-7_e == -7);
+    REQUIRE(format("{}", -(sqrt(2_e) + sqrt(3_e))) == "-sqrt(2) - sqrt(3)");
+}
+
+TEST_CASE("comparison operators over expressions") {
+    using namespace algebra::literals;
+    REQUIRE(sqrt(2_e) < sqrt(3_e));
+    REQUIRE(sqrt(3_e) > sqrt(2_e));
+    REQUIRE(sqrt(2_e) <= sqrt(2_e));
+    REQUIRE(sqrt(2_e) >= sqrt(2_e));
+    REQUIRE(sqrt(4_e) == 2);
+    REQUIRE(sqrt(2_e) != 2);
+    REQUIRE(2 < sqrt(5_e));
+    REQUIRE(3 > sqrt(5_e));
+    REQUIRE(0 == sqrt(2_e) - sqrt(2_e));
+
+    // a comparison that cannot be decided reports that, rather than guessing
+    REQUIRE_THROWS_AS(make_var("x") < 0, unknown_sign_error);
+    REQUIRE(safe_sign(make_var("x") - make_var("x")) == 0); // structurally equal cancels
+}
+
+TEST_CASE("division of expressions") {
+    using namespace algebra::literals;
+    REQUIRE(6_e / 3_e == 2);
+    REQUIRE(rational_value(1_e / 2_e) == rational(1, 2));
+    REQUIRE(sqrt(2_e) / sqrt(2_e) == 1);
+    REQUIRE(1_e / sqrt(2_e) * sqrt(2_e) == 1);
+    REQUIRE_THROWS(1_e / 0_e);
+    REQUIRE_THROWS(sqrt(2_e) / 0_e);
+}
