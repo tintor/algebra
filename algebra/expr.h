@@ -8,27 +8,54 @@
 
 namespace algebra {
 
-template<typename T>
-std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b) {
-    std::vector<T> c;
+struct expr;
+
+// A handle on a node of an expression tree. Not an alias for std::shared_ptr<expr>: the operators
+// further down would then apply to every shared_ptr visible from a scope with
+// `using namespace algebra`, and the comparisons, which are not templates, would beat
+// std::shared_ptr's own -- a pointer identity test would silently become a symbolic value
+// comparison that can throw unknown_sign_error.
+class expr_ptr {
+    std::shared_ptr<expr> _p;
+public:
+    constexpr expr_ptr() {}
+    constexpr expr_ptr(std::nullptr_t) {}
+    // Explicit, and a template so that a shared_ptr to a concrete node is taken in one step: an
+    // implicit conversion from std::shared_ptr<expr> would put the operators below back within
+    // reach of every shared_ptr<expr>, which is what this class exists to prevent.
+    template<typename T> requires std::convertible_to<T*, expr*>
+    explicit constexpr expr_ptr(std::shared_ptr<T> p) : _p(std::move(p)) {}
+
+    constexpr expr* get() const { return _p.get(); }
+    constexpr expr* operator->() const { return _p.get(); }
+    constexpr expr& operator*() const { return *_p; }
+    constexpr explicit operator bool() const { return static_cast<bool>(_p); }
+    constexpr bool operator==(std::nullptr_t) const { return !_p; }
+    // for the rare caller that needs the shared_ptr itself
+    constexpr const std::shared_ptr<expr>& shared() const { return _p; }
+};
+
+// The vectors below hold the operands of a sum or a product. These are deliberately not templates:
+// an operator+ on std::vector<T> for every T is visible from any scope with
+// `using namespace algebra`.
+inline std::vector<expr_ptr> operator+(const std::vector<expr_ptr>& a, const std::vector<expr_ptr>& b) {
+    std::vector<expr_ptr> c;
     c.reserve(a.size() + b.size());
     c = a;
     std::copy(b.begin(), b.end(), std::back_inserter(c));
     return c;
 }
 
-template<typename T>
-std::vector<T> operator+(const std::vector<T>& a, const T& b) {
-    std::vector<T> c;
+inline std::vector<expr_ptr> operator+(const std::vector<expr_ptr>& a, const expr_ptr& b) {
+    std::vector<expr_ptr> c;
     c.reserve(a.size() + 1);
     c = a;
     c.push_back(b);
     return c;
 }
 
-template<typename T>
-std::vector<T> operator+(const T& a, const std::vector<T>& b) {
-    std::vector<T> c;
+inline std::vector<expr_ptr> operator+(const expr_ptr& a, const std::vector<expr_ptr>& b) {
+    std::vector<expr_ptr> c;
     c.reserve(1 + b.size());
     c.push_back(a);
     std::copy(b.begin(), b.end(), std::back_inserter(c));
@@ -50,9 +77,6 @@ class unknown_sign_error : public std::runtime_error {
 public:
     unknown_sign_error(std::string m) : std::runtime_error(m) {}
 };
-
-struct expr;
-using expr_ptr = std::shared_ptr<expr>;
 
 struct expr {
     virtual ~expr() {}
@@ -196,11 +220,11 @@ constexpr bool is_product_rx(expr_ptr a) { return is_product(a) && product_value
 
 // ==========
 
-constexpr expr_ptr make_integer(const integer& a) { return std::make_shared<expr_integer>(a); }
+constexpr expr_ptr make_integer(const integer& a) { return expr_ptr(std::make_shared<expr_integer>(a)); }
 constexpr expr_ptr make_rational(const rational& a) {
     if (a.is_integer())
         return make_integer(a.num);
-    return std::make_shared<expr_rational>(a);
+    return expr_ptr(std::make_shared<expr_rational>(a));
 }
 
 namespace literals {
@@ -210,8 +234,8 @@ constexpr auto operator""_e(const char* s) { return make_rational(rational(s)); 
 // inline, so every translation unit shares one object rather than making its own
 inline const expr_ptr ZERO_EXPR = make_integer(0);
 inline const expr_ptr ONE_EXPR = make_integer(1);
-inline const expr_ptr E_EXPR = std::make_shared<expr_e>();
-inline const expr_ptr PI_EXPR = std::make_shared<expr_pi>();
+inline const expr_ptr E_EXPR(std::make_shared<expr_e>());
+inline const expr_ptr PI_EXPR(std::make_shared<expr_pi>());
 
 constexpr expr_ptr operator+(expr_ptr a, expr_ptr b);
 constexpr expr_ptr operator-(expr_ptr a, expr_ptr b);
@@ -371,7 +395,7 @@ constexpr expr_ptr make_sum(std::vector<expr_ptr> v) {
         return v[0];
     if (v.size() == 2)
         return v[0] + v[1];
-    return make_shared<expr_sum>(std::move(v));
+    return expr_ptr(std::make_shared<expr_sum>(std::move(v)));
 }
 
 // TODO a + 2 * a -> 3 * a
@@ -406,7 +430,7 @@ constexpr expr_ptr operator+(expr_ptr a, expr_ptr b) {
     if (is_product_rx(b) && identical(product_values(b)[1], a))
         return make_rational(rational_value(product_values(b)[0]) + 1) * a;
 
-    return std::make_shared<expr_sum>(std::vector<expr_ptr>{a, b});
+    return expr_ptr(std::make_shared<expr_sum>(std::vector<expr_ptr>{a, b}));
 }
 
 constexpr expr_ptr operator-(expr_ptr a) {
@@ -422,7 +446,7 @@ constexpr expr_ptr operator-(expr_ptr a) {
     }
     if (is_product(a) && is_rational(product_values(a)[0]))
         return make_rational(-rational_value(product_values(a)[0])) * make_product(subvec(product_values(a), 1));
-    return std::make_shared<expr_negation>(a);
+    return expr_ptr(std::make_shared<expr_negation>(a));
 }
 
 constexpr expr_ptr make_product(std::vector<expr_ptr> v) {
@@ -463,7 +487,7 @@ constexpr expr_ptr make_product(std::vector<expr_ptr> v) {
         return v[0];
     if (v.size() == 2)
         return v[0] * v[1];
-    return std::make_shared<expr_product>(std::move(v));
+    return expr_ptr(std::make_shared<expr_product>(std::move(v)));
 }
 
 constexpr expr_ptr operator*(expr_ptr a, expr_ptr b) {
@@ -503,15 +527,15 @@ constexpr expr_ptr operator*(expr_ptr a, expr_ptr b) {
     if (is_product(b))
         return make_product(a + product_values(b));
 
-    return std::make_shared<expr_product>(std::vector<expr_ptr>{a, b});
+    return expr_ptr(std::make_shared<expr_product>(std::vector<expr_ptr>{a, b}));
 }
 
 constexpr expr_ptr sin(expr_ptr a) {
-    return std::make_shared<expr_sin>(a);
+    return expr_ptr(std::make_shared<expr_sin>(a));
 }
 
 constexpr expr_ptr cos(expr_ptr a) {
-    return std::make_shared<expr_cos>(a);
+    return expr_ptr(std::make_shared<expr_cos>(a));
 }
 
 constexpr expr_ptr pow(expr_ptr a, const rational& b) {
@@ -545,7 +569,7 @@ constexpr expr_ptr pow(expr_ptr a, const rational& b) {
             e = pow(e, b);
         return make_product(v);
     }
-    return std::make_shared<expr_power>(a, b);
+    return expr_ptr(std::make_shared<expr_power>(a, b));
 }
 
 constexpr expr_ptr sqrt(expr_ptr a) { using namespace algebra::literals; return pow(a, 1/2_q); }

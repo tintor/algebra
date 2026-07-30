@@ -234,7 +234,11 @@ compatible roots.
 #### `void xrational::invert()`
 
 ## `class expr` / `class expr_ptr`
-- `expr_ptr` is an alias for `std::shared_ptr<expr>`.
+- `expr_ptr` holds a `std::shared_ptr<expr>` and offers `get()`, `operator->`, `operator*`,
+  a comparison against `nullptr` and `shared()` for the pointer itself. It is a class of its own
+  rather than an alias, so that the value comparisons below cannot be found for a plain
+  `std::shared_ptr`, where they would beat its pointer comparison. Construct one from a
+  `std::shared_ptr` to a node explicitly, or through the `make_*` functions.
 - Node types: `expr_integer`, `expr_rational`, `expr_power`, `expr_sum`, `expr_product`,
   `expr_negation`, `expr_sin`, `expr_cos`, `expr_pi`, `expr_e`, `expr_var`.
 - Constants: `ZERO_EXPR`, `ONE_EXPR`, `PI_EXPR`, `E_EXPR`.

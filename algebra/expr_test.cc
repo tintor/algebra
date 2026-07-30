@@ -86,7 +86,7 @@ TEST_CASE("structural simplification") {
 static expr_ptr make_var(std::string name) {
     auto v = std::make_shared<expr_var>();
     v->name = std::move(name);
-    return v;
+    return expr_ptr(v);
 }
 
 TEST_CASE("node predicates and accessors") {
@@ -151,8 +151,8 @@ TEST_CASE("identical") {
     // different node kinds are never identical
     REQUIRE(!identical(make_integer(3), sqrt(3_e)));
     REQUIRE(!identical(E_EXPR, PI_EXPR));
-    REQUIRE(identical(E_EXPR, std::make_shared<expr_e>()));
-    REQUIRE(identical(PI_EXPR, std::make_shared<expr_pi>()));
+    REQUIRE(identical(E_EXPR, expr_ptr(std::make_shared<expr_e>())));
+    REQUIRE(identical(PI_EXPR, expr_ptr(std::make_shared<expr_pi>())));
     // nested
     REQUIRE(identical(sqrt(2_e) + sqrt(3_e), sqrt(2_e) + sqrt(3_e)));
     REQUIRE(!identical(sqrt(2_e) + sqrt(3_e), sqrt(2_e) + sqrt(5_e)));
@@ -302,7 +302,7 @@ TEST_CASE("sign of a matrix") {
     one.cols = 1;
     one.data.push_back(make_integer(-5));
     REQUIRE(one.sign() == -1);
-    REQUIRE(safe_sign(std::make_shared<expr_matrix>(one)) == -1);
+    REQUIRE(safe_sign(expr_ptr(std::make_shared<expr_matrix>(one))) == -1);
 
     expr_matrix empty;
     empty.rows = 0;
@@ -333,4 +333,35 @@ TEST_CASE("formatting into a counted buffer") {
     char buf2[128] = {};
     const auto r2 = std::format_to_n(buf2, sizeof(buf2) - 1, "{}", deep);
     REQUIRE(std::string(buf2, r2.out) == std::format("{}", deep));
+}
+
+template<typename T> constexpr bool has_plus = requires (T a) { a + a; };
+
+TEST_CASE("expr_ptr is its own type") {
+    using namespace algebra::literals;
+    // The operators below belong to expr_ptr, not to std::shared_ptr: a shared_ptr comparison next
+    // to `using namespace algebra` has to keep comparing pointers, and std::vector has to keep
+    // having no operator+ at all.
+    const std::shared_ptr<expr> p = make_integer(2).shared();
+    const std::shared_ptr<expr> q = make_integer(2).shared();
+    REQUIRE(p != q);          // two nodes, two addresses
+    REQUIRE(p == p);
+    REQUIRE(!(p < p));
+    static_assert(!has_plus<std::vector<int>>);
+    static_assert(!has_plus<std::shared_ptr<expr>>);
+    static_assert(has_plus<expr_ptr>);
+    static_assert(has_plus<std::vector<expr_ptr>>);
+
+    // and the value comparison still works on expr_ptr itself
+    REQUIRE(make_integer(2) == make_integer(2));
+    REQUIRE(!identical(make_integer(2), make_integer(3)));
+    REQUIRE(2_e == 2);
+
+    // the pieces of shared_ptr that the tree needs
+    const expr_ptr a = sqrt(5_e);
+    REQUIRE(a);
+    REQUIRE(a->sign() == 1);
+    REQUIRE(a.get() != nullptr);
+    REQUIRE(expr_ptr() == nullptr);
+    REQUIRE(a != nullptr);
 }
