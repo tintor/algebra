@@ -274,3 +274,30 @@ TEST_CASE("randomized boolean operations against pointwise membership") {
             }
     }
 }
+
+TEST_CASE("a vertex shared by two lobes gives two rings") {
+    // The two squares meet only at (1,1), where four fragments come together. Which outgoing
+    // fragment continues the ring decides whether the result is two rings or one ring that visits
+    // the shared vertex twice; both bound the same region, but only the first is a boundary.
+    const P a(box(0, 1, 1, 2)), b(box(1, 0, 2, 1));
+    const P u = a | b;
+    require_same_region(u, [&](const V& p) { return contains(a, p) || contains(b, p); });
+    REQUIRE(signed_area(u) == 2);
+    REQUIRE(u.rings.size() == 2);
+    for (const R& r : u.rings) {
+        REQUIRE(r.size() == 4);
+        REQUIRE(signed_area2(r) == 2);
+    }
+
+    // the same vertex on the other diagonal, which the fragment order happened to get right
+    const P c(box(0, 0, 1, 1)), d(box(1, 1, 2, 2));
+    REQUIRE((c | d).rings.size() == 2);
+
+    // and a difference that leaves two lobes touching at (2,2)
+    const P e = (P(box(0, 0, 4, 4)) - P(box(0, 0, 2, 2))) - P(box(2, 2, 4, 4));
+    require_same_region(e, [&](const V& p) {
+        return contains(P(box(0, 0, 4, 4)), p) && !contains(P(box(0, 0, 2, 2)), p) && !contains(P(box(2, 2, 4, 4)), p);
+    });
+    REQUIRE(signed_area(e) == 8);
+    REQUIRE(e.rings.size() == 2);
+}
