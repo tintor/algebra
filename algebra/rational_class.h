@@ -154,7 +154,11 @@ constexpr rational operator-(const rational& a) { return {-a.num, a.den}; }
 
 constexpr rational& operator+=(rational& a, const rational& b);
 constexpr rational operator+(const rational& a, const rational& b);
-constexpr rational operator+(const rational& a, const integral auto& b) { return {a.num + b * a.den, a.den}; }
+// Adding a whole number keeps the denominator, and gcd(num + b*den, den) == gcd(num, den) == 1, so
+// the result is already in lowest terms: normalized() skips the gcd the constructor would compute.
+constexpr rational operator+(const rational& a, const integral auto& b) {
+    return rational::normalized(a.num + b * a.den, a.den);
+}
 constexpr rational operator+(const integral auto& a, const rational& b) { return b + a; }
 
 constexpr rational& operator-=(rational& a, const rational& b);
@@ -328,8 +332,13 @@ constexpr rational operator-(const rational& a, const rational& b) {
     return rational{std::move(p), a.den * b.den};
 }
 
-constexpr rational operator-(const rational& a, const integral auto& b) { return {a.num - b * a.den, a.den}; }
-constexpr rational operator-(const integral auto& a, const rational& b) { return {a * b.den - b.num, b.den}; }
+// as with operator+ above, subtracting a whole number cannot introduce a common factor
+constexpr rational operator-(const rational& a, const integral auto& b) {
+    return rational::normalized(a.num - b * a.den, a.den);
+}
+constexpr rational operator-(const integral auto& a, const rational& b) {
+    return rational::normalized(a * b.den - b.num, b.den);
+}
 
 constexpr rational& operator*=(rational& a, const rational& b) {
     a.num *= b.num;

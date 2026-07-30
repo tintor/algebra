@@ -645,3 +645,40 @@ TEST_CASE("parse rejects malformed input") {
     REQUIRE(rational("2.5e-2") == rational(1, 40));
     REQUIRE_THROWS(rational("1e999999999"));
 }
+
+TEST_CASE("adding a whole number keeps lowest terms") {
+    // gcd(num + b*den, den) == gcd(num, den) == 1, so no common factor can appear and the gcd the
+    // constructor would compute is skipped. These check the result really is canonical.
+    auto canonical = [](const rational& r) {
+        return gcd(r.num, r.den) == 1 && !r.den.is_negative() && !r.den.is_zero()
+            && (!r.num.is_zero() || r.den.is_one());
+    };
+
+    std::mt19937_64 rng(53);
+    std::uniform_int_distribution<int> small(-20, 20), pos(1, 30);
+    for (int i = 0; i < 5'000; i++) {
+        const rational a(small(rng), pos(rng));
+        const int b = small(rng);
+        for (const rational& r : {a + b, b + a, a - b, b - a, a + integer(b), a - integer(b)}) {
+            REQUIRE(canonical(r));
+        }
+        REQUIRE(a + b == a + rational(b));
+        REQUIRE(b + a == rational(b) + a);
+        REQUIRE(a - b == a - rational(b));
+        REQUIRE(b - a == rational(b) - a);
+    }
+
+    // the one way the result can be zero: a is a whole number, so its denominator is already one
+    REQUIRE((rational(2) - 2).num == 0);
+    REQUIRE((rational(2) - 2).den == 1);
+    REQUIRE((2 - rational(2)).den == 1);
+    REQUIRE(canonical(rational(2) - 2));
+    REQUIRE(canonical(rational(-7) + 7));
+
+    // a denominator above one cannot cancel to zero, since gcd(num, den) == 1 means den does not
+    // divide num
+    REQUIRE(canonical(rational(1, 3) - 1));
+    REQUIRE((rational(1, 3) - 1) == rational(-2, 3));
+    REQUIRE((1 - rational(1, 3)) == rational(2, 3));
+    REQUIRE((rational(-1, 3) + 1) == rational(2, 3));
+}
