@@ -274,3 +274,34 @@ TEST_CASE("randomized boolean operations against pointwise membership") {
             }
     }
 }
+
+TEST_CASE("the result has no collinear vertices") {
+    // Cutting splits every edge at every crossing, so the vertices where the inputs met survive in
+    // the middle of a straight run unless the result is simplified.
+    const P a(box(0, 0, 1, 1)), b(box(1, 0, 2, 1));
+    const P u = a | b;
+    require_same_region(u, [&](const V& p) { return contains(a, p) || contains(b, p); });
+    REQUIRE(u.rings.size() == 1);
+    REQUIRE(u.rings[0].size() == 4); // (1,0) and (1,1) are redundant
+    REQUIRE(signed_area(u) == 2);
+
+    // an overlap leaves two redundant vertices per edge
+    const P c(box(0, 0, 4, 2)), d(box(1, 0, 3, 2));
+    const P v = c | d;
+    REQUIRE(v.rings.size() == 1);
+    REQUIRE(v.rings[0].size() == 4);
+    REQUIRE(signed_area(v) == 8);
+
+    // a hole keeps its own four vertices
+    const P w = P(box(0, 0, 4, 4)) - P(box(1, 1, 2, 2));
+    REQUIRE(w.rings.size() == 2);
+    REQUIRE(w.rings[0].size() == 4);
+    REQUIRE(w.rings[1].size() == 4);
+    REQUIRE(signed_area(w) == 15);
+
+    // simplifying again changes nothing
+    P again = u;
+    simplify(again);
+    REQUIRE(again.rings.size() == 1);
+    REQUIRE(again.rings[0].size() == 4);
+}

@@ -216,6 +216,10 @@ constexpr MultiPolygon2<T> boolean_op(BoolOp op, const MultiPolygon2<T>& a, cons
     }
 
     out.rings = __stitch(kept);
+    // Cutting split every edge at every crossing, so without this the vertices where the inputs met
+    // stay in the middle of a straight run. Removing them costs one linear pass and shortens every
+    // later operation, which is quadratic in the number of edges.
+    simplify(out);
     return out;
 }
 
