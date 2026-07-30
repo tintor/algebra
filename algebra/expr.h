@@ -330,13 +330,29 @@ constexpr expr_ptr make_sum(std::vector<expr_ptr> v) {
     if (a.num.sign())
         v.insert(v.begin(), make_rational(a));
 
+    // The two scans below ask whether a pair of terms is equal, or opposite, by value. Building the
+    // difference and taking its sign answers that, but it is the expensive way round: operator-
+    // recurses back into make_sum, so a matching pair pays for a whole subexpression. The
+    // structural test settles a match first, and it is what the negation cases below turn on.
+    // (An interval arithmetic pre-check to reject a mismatch was measured 35% slower: bounds() of a
+    // radical is dearer than the difference it would avoid.)
+    auto equal_value = [](const expr_ptr& x, const expr_ptr& y) {
+        return identical(x, y) || safe_sign(x - y) == 0;
+    };
+    auto opposite_value = [](const expr_ptr& x, const expr_ptr& y) {
+        if (is_negation(y) && identical(negation_value(y), x))
+            return true;
+        if (is_negation(x) && identical(negation_value(x), y))
+            return true;
+        return safe_sign(x + y) == 0;
+    };
+
     // a + b + a -> 2*a + b
     for (size_t i = 0; i < v.size(); i++) {
         int count = 1;
         size_t j = v.size() - 1;
         while (j > i) {
-            if (safe_sign(v[i] - v[j]) == 0) {
-            //if (identical(v[i], v[j])) {
+            if (equal_value(v[i], v[j])) {
                 count += 1;
                 v[j] = v.back();
                 v.pop_back();
@@ -351,7 +367,7 @@ constexpr expr_ptr make_sum(std::vector<expr_ptr> v) {
     for (size_t i = 0; i < v.size(); i++) {
         bool matched = false;
         for (size_t j = i + 1; j < v.size(); j++) {
-            if (safe_sign(v[i] + v[j]) == 0) {
+            if (opposite_value(v[i], v[j])) {
                 v[j] = v.back();
                 v.pop_back();
                 matched = true;
