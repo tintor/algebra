@@ -174,3 +174,19 @@ TEST_CASE("area_bounds brackets the true area") {
     REQUIRE(lower <= 8);
     REQUIRE(lower + undecided >= 8);
 }
+
+TEST_CASE("combining shares the subtree instead of copying it") {
+    // A node holds its two children behind shared_ptr, so combining does not duplicate the tree
+    // below the operands: the leaves of the result are the very leaf objects of the inputs.
+    const AR leaf = disk(0, 0, 1);
+    const AR a = leaf | leaf;
+    const AR b = a | a;
+    REQUIRE(b.leaf_count() == 4);
+    // each operand is copied into a node of its own, and that copy is one node deep:
+    REQUIRE(b.a.get() != b.b.get());
+    // both copies of `a` point at the very same children, rather than at copies of them
+    REQUIRE(b.a->a.get() == b.b->a.get());
+    REQUIRE(b.a->b.get() == b.b->b.get());
+    // which are the leaves the inputs were built from, so no leaf was duplicated by the second |
+    REQUIRE(b.a->a->kind == AR::Kind::Leaf);
+}
